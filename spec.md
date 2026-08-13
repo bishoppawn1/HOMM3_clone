@@ -36,7 +36,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 ### 4.1 Movement — Prototype
 
-- The Western Marches use a large, scrollable 72-by-45 logical map. Its central field is one region within a broader landscape of woodland, hills, winding roads, a curved eastern coast, irregular forests, and serpentine mountain ranges, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
+- The Western Marches use a large, scrollable 72-by-45 logical map. Its central field is one region within a broader landscape of woodland, softly textured hill country, narrow winding dirt roads, a curved eastern coast, irregular forests, and serpentine mountain ranges, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
 - A commander spends one movement point to enter an orthogonally adjacent passable tile.
 - Water, mountains, and dense forest are impassable. Sparse woodland and hills remain passable and decorative.
 - Modular painted mountain and dense-forest assets retain their native proportions and overlap only nearby blocker cells, so their visible footprint tracks the underlying impassable area while still reading as continuous ranges and woods. Dense forest is set back by at least two logical tiles from road terrain, and painted roads render above soft foliage edges so routes remain clear and readable.
@@ -53,7 +53,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
-- **Bandit-camp spoils:** most resource pickups appear inside the visibly enclosed footprint of a bandit camp. Selecting any supplies in an occupied camp routes the commander to its bandits first; the contained resources can only be collected after victory. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
+- **Bandit-camp spoils:** most resource pickups are scattered in a compact ring around a visibly distinct bandit camp, without an artificial enclosure or label. Selecting any nearby supplies while the camp is occupied routes the commander to its bandits first and reports that the bandits must be defeated; the supplies can only be collected after victory. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
 - **Neutral city:** is a persistent settlement, never a pickup. Freehaven is protected by a separate nearby bandit force: entering the city before defeating that force is refused, and victory over the defenders transfers the city to the player.
 - **Hostile army:** opens the tactical hex battlefield. Victory removes the hostile site and awards its listed spoils; retreat or defeat leaves it in place.
 
@@ -131,7 +131,7 @@ The Cities tab first lists every settlement currently controlled by the player. 
 
 The prototype contains a five-tier construction tree with more than twenty-five structures across economy, civic, military, and defense branches. The visible tree includes foundational buildings, city-tier upgrades, production buildings, research institutions, recruitment buildings, walls, and late-city capstones.
 
-Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit and provides minus, plus, direct numeric entry, and maximum controls so the player can choose an exact quantity before paying the combined cost. Left-clicking or keyboard-activating a unit row expands an inspector showing its battlefield role, attack, defense, damage, health, speed, initiative, ranged status, ammunition, and individual gold cost. A commander must physically occupy that city's adventure-map entrance to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment.
+Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit and provides minus, plus, direct numeric entry, and maximum controls so the player can choose an exact quantity before paying the combined cost. Left-clicking or keyboard-activating a unit row expands an inspector showing its battlefield role, attack, defense, damage, health, speed, initiative, ranged status, ammunition, and individual gold cost. A commander must physically occupy that city's adventure-map entrance to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment. Recruitment also respects the commander's stack capacity: each stack holds at most 50 troops, excess troops of the same line automatically form another stack, and a commander may carry no more than 10 stacks total.
 
 ### 8.2 Building tree — Prototype
 
@@ -147,7 +147,7 @@ The defense branch includes Palisade, Garrison, Stone Walls, and Citadel. A Garr
 
 ## 9. Armies and tactical combat — Prototype
 
-Adventure-map encounters deploy both armies onto a 21-by-13 odd-row-offset hex battlefield. Its 273 hexes are approximately twice the former battlefield area while keeping individual units legible. Each troop type forms one stack, and each stack tracks its troop count through total health. A stack records the age profile with which it entered combat, ensuring the names and statistics shown in the city inspector match the values used in battle. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, firing range, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
+Adventure-map encounters deploy both armies onto a 21-by-13 odd-row-offset hex battlefield. Its 273 hexes are approximately twice the former battlefield area while keeping individual units legible. A troop line is divided into stacks of at most 50 soldiers when combat begins, up to the commander's 10-stack limit, and every stack tracks its troop count through total health. A stack records the age profile with which it entered combat, ensuring the names, portrait, and statistics shown in the city inspector match the values used in battle. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, firing range, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
 
 ### 9.1 Turn order and orders — Prototype
 
@@ -168,7 +168,7 @@ Melee stacks may move up to their full speed into a free hex adjacent to a targe
 
 Ranged stacks begin with a limited number of shots and may fire in any direction without straight-line targeting. A target must be within the unit's explicit hex range: Ancient Slingers reach 6 hexes, and later ranged identities improve gradually to a maximum of 9. An engaged ranged stack may make a melee attack at half damage.
 
-The currently acting stack is identified in the initiative strip, its army card, its battlefield hex, and the instruction banner for both player and enemy turns. Movement is animated from the origin hex to the destination hex, including movement performed automatically by enemy stacks and movement that precedes a melee strike. Reduced-motion preferences shorten these animations.
+The currently acting stack is identified in the initiative strip, its army card, its battlefield hex, and the instruction banner for both player and enemy turns. Each military line uses a purpose-made historical portrait that changes in every age rather than a text glyph. Battlefield markers display the stack's current and maximum total health directly below the portrait, while army cards provide the same health numerically and as a bar. Movement is animated from the origin hex to the destination hex, including movement performed automatically by enemy stacks and movement that precedes a melee strike. Reduced-motion preferences shorten these animations.
 
 ### 9.3 Outcomes — Prototype
 
@@ -195,7 +195,7 @@ Freehaven's bandit force stands outside the city as its own encounter. Attemptin
 - Use End Month to advance the calendar and refresh movement.
 - Open the Campaign Chronicle to review recent events.
 - At a guarded encounter, choose **Deploy on the battlefield** to enter tactical combat, or **Hold position** to step back to the previous map tile without engaging. Holding position does not refund movement already spent approaching the enemy, and the enemy remains in control.
-- On the battlefield, select a gold hex to move or a red enemy stack to attack. Use **Wait**, **Defend**, or **Retreat** for the other available orders.
+- On the battlefield, right-click a gold hex to move or a red enemy stack to attack. Left-click does not issue a tactical order. Keyboard users can focus an eligible hex and press Enter or Space. Use **Wait**, **Defend**, or **Retreat** for the other available orders.
 
 The interface must remain usable on desktop and mobile layouts and expose meaningful accessible labels.
 

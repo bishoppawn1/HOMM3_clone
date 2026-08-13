@@ -44,6 +44,22 @@ test("every age has distinct city and producer artwork", async () => {
   ]));
 });
 
+test("every troop line has an age-specific portrait and combat uses right-click orders with health feedback", async () => {
+  const ages = ["ancient", "classical", "medieval", "gunpowder", "industrial", "modern"];
+  const units = ["spearmen", "slingers", "scouts", "swordsmen", "horsemen"];
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+    ...ages.flatMap((age) => units.map((unit) => access(new URL(`public/assets/units/${age}-${unit}.png`, root)))),
+  ]);
+  assert.match(page, /assets\/units\/\$\{eraVisualFamily\(era\)\}-\$\{unitId\}\.png/);
+  assert.match(page, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); handleHex\(tile, stack\); \}\}/);
+  assert.match(page, /className="unit-health"/);
+  assert.match(page, /Right-click a yellow hex to move/);
+  assert.match(styles, /\.combat-unit>img/);
+  assert.match(styles, /\.unit-health>small/);
+});
+
 test("the map uses proportioned terrain, winding roads, enemies, pickups, and subtle territory tint", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
@@ -54,15 +70,19 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.match(page, /className={`territory-fill/);
   assert.match(page, /pickup-\$\{pickup\}/);
   assert.match(page, /enemy-bandits\.webp/);
-  assert.match(page, /map-bandit-camp/);
-  assert.match(page, /Bandit camp spoils/);
+  assert.doesNotMatch(page, /map-bandit-camp/);
+  assert.doesNotMatch(page, /Bandit camp spoils/);
   assert.match(page, /const adventureRoads/);
   assert.match(page, /const terrainArtwork/);
-  assert.match(page, /C 14 11 22 14\.5/);
+  assert.match(page, /className="hill-ground"/);
+  assert.match(page, /className="road-rut"/);
+  assert.doesNotMatch(page, /terrain-glyph/);
   assert.match(page, /terrainPatchBounds/);
   assert.doesNotMatch(page, /className="territory-layer"/);
   assert.match(styles, /\.terrain-patch\{[^}]*height:auto/);
-  assert.match(styles, /\.map-bandit-camp/);
+  assert.match(styles, /\.site\.enemy:before/);
+  assert.match(styles, /\.hill-ground/);
+  assert.doesNotMatch(styles, /\.terrain-glyph/);
   assert.doesNotMatch(styles, /object-fit:fill/);
 });
 
@@ -138,7 +158,7 @@ test("the tactical battlefield renders an interlocking point-top honeycomb", asy
   ]);
   assert.match(page, /top: `\$\{row \* \.75 \/ verticalSpan \* 100\}%`/);
   assert.match(page, /left: `\$\{\(col \+ \(row % 2\) \* \.5\)/);
-  assert.match(page, /className="hex-battlefield">/);
+  assert.match(page, /className="hex-battlefield"/);
   assert.match(page, /within \$\{activeUnit\.range\} hexes/);
   assert.match(page, /Range \$\{unit\.range\}/);
   assert.match(styles, /clip-path:polygon\(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%\)/);

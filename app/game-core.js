@@ -4,6 +4,8 @@ export const MAP_HEIGHT = 45;
 export const MAX_MOVEMENT = 16;
 export const COMBAT_WIDTH = 21;
 export const COMBAT_HEIGHT = 13;
+export const MAX_TROOPS_PER_STACK = 50;
+export const MAX_COMMANDER_STACKS = 10;
 
 export const ERAS = ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"];
 
@@ -178,6 +180,18 @@ export function unitForEra(unitId, era = "Ancient") {
 
 export function unitsForEra(era) {
   return UNITS.map((unit) => unitForEra(unit.id, era));
+}
+
+export function armyStackCount(army) {
+  return UNITS.reduce((total, unit) => total + Math.ceil(Math.max(0, army[unit.id] ?? 0) / MAX_TROOPS_PER_STACK), 0);
+}
+
+export function maxRecruitableIntoArmy(army, unitId) {
+  if (!UNITS.some((unit) => unit.id === unitId)) return 0;
+  const otherStacks = UNITS.filter((unit) => unit.id !== unitId)
+    .reduce((total, unit) => total + Math.ceil(Math.max(0, army[unit.id] ?? 0) / MAX_TROOPS_PER_STACK), 0);
+  const maximumForLine = Math.max(0, MAX_COMMANDER_STACKS - otherStacks) * MAX_TROOPS_PER_STACK;
+  return Math.max(0, maximumForLine - Math.max(0, army[unitId] ?? 0));
 }
 
 const BATTLEFIELD_PATTERNS = {
@@ -385,15 +399,16 @@ function enemyArmyFor(battle) {
   ];
 }
 
-function makeCombatStack(side, unitId, count, position, era) {
+function makeCombatStack(side, unitId, count, position, era, ordinal = 1) {
   const unit = unitById(unitId, era);
   return {
-    id: `${side}-${unitId}`,
+    id: `${side}-${unitId}${ordinal > 1 ? `-${ordinal}` : ""}`,
     side,
     unitId,
     era,
     position,
     totalHealth: count * unit.health,
+    maxHealth: count * unit.health,
     shots: unit.shots ?? 0,
     waited: false,
     defending: false,
@@ -401,6 +416,21 @@ function makeCombatStack(side, unitId, count, position, era) {
     done: false,
     movementUsed: 0,
   };
+}
+
+function commanderCombatStacks(army) {
+  return UNITS.flatMap((unit) => {
+    const stacks = [];
+    let remaining = Math.max(0, army[unit.id] ?? 0);
+    let ordinal = 1;
+    while (remaining > 0) {
+      const count = Math.min(MAX_TROOPS_PER_STACK, remaining);
+      stacks.push({ unitId: unit.id, count, ordinal });
+      remaining -= count;
+      ordinal += 1;
+    }
+    return stacks;
+  });
 }
 
 function nextCombatStack(combat) {
@@ -519,11 +549,12 @@ function continueCombat(combat) {
 export function startCombat(game) {
   if (!game.pendingBattle || game.combat) return game;
   const formationRows = [2, 4, 6, 8, 10];
-  const playerPositions = formationRows.map((row) => combatTile(row, 1));
+  const playerPositions = [1, 3].flatMap((column) => formationRows.map((row) => combatTile(row, column)));
   const enemyPositions = formationRows.map((row) => combatTile(row, COMBAT_WIDTH - 2));
-  const playerArmy = UNITS.map((unit) => [unit.id, game.army[unit.id] ?? 0]).filter(([, count]) => count > 0);
+  const playerArmy = commanderCombatStacks(game.army);
   if (!playerArmy.length) return { ...game, pendingBattle: null, notice: "Marcellus has no troops available to fight. Recruit an army before returning." };
-  const playerStacks = playerArmy.map(([unitId, count], index) => makeCombatStack("player", unitId, count, playerPositions[index], game.era));
+  if (playerArmy.length > MAX_COMMANDER_STACKS) return { ...game, pendingBattle: null, notice: `Marcellus cannot command more than ${MAX_COMMANDER_STACKS} stacks. Reorganize the army before returning.` };
+  const playerStacks = playerArmy.map(({ unitId, count, ordinal }, index) => makeCombatStack("player", unitId, count, playerPositions[index], game.era, ordinal));
   const enemyStacks = enemyArmyFor(game.pendingBattle).map(([unitId, count], index) => makeCombatStack("enemy", unitId, count, enemyPositions[index], game.era));
   const obstacles = BATTLEFIELD_PATTERNS[game.pendingBattle.type] ?? BATTLEFIELD_PATTERNS.field;
   const combat = continueCombat({
@@ -603,22 +634,22 @@ export function createGame() {
   const quarryRaiders = adventureTile(41, 27);
   const southernRaiders = adventureTile(61, 34);
   const pickupGuards = {
-    [adventureTile(24, 11)]: raiderPass,
-    [adventureTile(26, 12)]: raiderPass,
-    [adventureTile(31, 14)]: raiderPass,
-    [adventureTile(34, 15)]: raiderPass,
-    [adventureTile(54, 11)]: freehavenBandits,
-    [adventureTile(56, 12)]: freehavenBandits,
+    [adventureTile(27, 12)]: raiderPass,
+    [adventureTile(31, 12)]: raiderPass,
+    [adventureTile(27, 15)]: raiderPass,
+    [adventureTile(29, 15)]: raiderPass,
+    [adventureTile(55, 13)]: freehavenBandits,
+    [adventureTile(58, 12)]: freehavenBandits,
     [adventureTile(59, 15)]: freehavenBandits,
-    [adventureTile(63, 16)]: freehavenBandits,
-    [adventureTile(38, 24)]: quarryRaiders,
-    [adventureTile(40, 25)]: quarryRaiders,
-    [adventureTile(43, 29)]: quarryRaiders,
-    [adventureTile(45, 31)]: quarryRaiders,
-    [adventureTile(57, 31)]: southernRaiders,
-    [adventureTile(59, 32)]: southernRaiders,
+    [adventureTile(55, 16)]: freehavenBandits,
+    [adventureTile(39, 26)]: quarryRaiders,
+    [adventureTile(42, 25)]: quarryRaiders,
+    [adventureTile(43, 28)]: quarryRaiders,
+    [adventureTile(39, 29)]: quarryRaiders,
+    [adventureTile(59, 33)]: southernRaiders,
+    [adventureTile(62, 32)]: southernRaiders,
     [adventureTile(63, 35)]: southernRaiders,
-    [adventureTile(65, 37)]: southernRaiders,
+    [adventureTile(62, 36)]: southernRaiders,
   };
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
@@ -641,10 +672,10 @@ export function createGame() {
       [adventureTile(12, 10)]: "dust",
       [adventureTile(36, 14)]: "knowledge",
       [adventureTile(18, 21)]: "timber",
-      [adventureTile(24, 11)]: "gold", [adventureTile(26, 12)]: "stone", [adventureTile(31, 14)]: "timber", [adventureTile(34, 15)]: "dust",
-      [adventureTile(54, 11)]: "gold", [adventureTile(56, 12)]: "timber", [adventureTile(59, 15)]: "stone", [adventureTile(63, 16)]: "dust",
-      [adventureTile(38, 24)]: "stone", [adventureTile(40, 25)]: "gold", [adventureTile(43, 29)]: "timber", [adventureTile(45, 31)]: "dust",
-      [adventureTile(57, 31)]: "gold", [adventureTile(59, 32)]: "stone", [adventureTile(63, 35)]: "timber", [adventureTile(65, 37)]: "dust",
+      [adventureTile(27, 12)]: "gold", [adventureTile(31, 12)]: "stone", [adventureTile(27, 15)]: "timber", [adventureTile(29, 15)]: "dust",
+      [adventureTile(55, 13)]: "gold", [adventureTile(58, 12)]: "timber", [adventureTile(59, 15)]: "stone", [adventureTile(55, 16)]: "dust",
+      [adventureTile(39, 26)]: "stone", [adventureTile(42, 25)]: "gold", [adventureTile(43, 28)]: "timber", [adventureTile(39, 29)]: "dust",
+      [adventureTile(59, 33)]: "gold", [adventureTile(62, 32)]: "stone", [adventureTile(63, 35)]: "timber", [adventureTile(62, 36)]: "dust",
     },
     pickupGuards,
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
@@ -725,7 +756,11 @@ export function routeCommand(game, plannedTarget, requestedTile) {
   const path = findPath(game, requestedTile);
   if (!path) return { type: "invalid", target: null, path: [] };
   const target = path[path.length - 1];
-  return { type: plannedTarget === target ? "travel" : "preview", target, path, reachablePath: path.slice(0, game.moves), futurePath: path.slice(game.moves) };
+  const guardingCamp = game.pickupGuards?.[requestedTile];
+  const notice = guardingCamp !== undefined && game.sites[guardingCamp]
+    ? "You must defeat the bandits before claiming these supplies."
+    : null;
+  return { type: plannedTarget === target ? "travel" : "preview", target, path, reachablePath: path.slice(0, game.moves), futurePath: path.slice(game.moves), notice };
 }
 
 export function moveAlongPath(game, path) {
@@ -771,7 +806,7 @@ export function collectAt(game) {
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
   const guardingCamp = game.pickupGuards?.[game.hero];
-  if (guardingCamp !== undefined && game.sites[guardingCamp]) return { ...game, notice: "These supplies are inside an occupied bandit camp. Defeat the camp before claiming them." };
+  if (guardingCamp !== undefined && game.sites[guardingCamp]) return { ...game, notice: "You must defeat the bandits before claiming these supplies." };
   const pickups = { ...game.pickups };
   delete pickups[game.hero];
   if (pickup === "knowledge") {
@@ -789,8 +824,9 @@ export function resolveBattle(game) {
   const combat = game.combat;
   if (!battle || !combat?.result) return game;
   const army = Object.fromEntries(UNITS.map((unit) => {
-    const stack = combat.stacks.find((item) => item.side === "player" && item.unitId === unit.id);
-    return [unit.id, combatStackCount(stack)];
+    const count = combat.stacks.filter((item) => item.side === "player" && item.unitId === unit.id)
+      .reduce((total, stack) => total + combatStackCount(stack), 0);
+    return [unit.id, count];
   }));
   if (combat.result !== "victory") {
     const capital = game.settlements.aurum;
@@ -909,7 +945,7 @@ export function recruitFromCity(game, cityId, unitId, amount = 1) {
   const cityBuildings = game.buildings[cityId] ?? [];
   const quantity = Number(amount);
   const totalCost = unit ? unit.cost * quantity : Infinity;
-  if (!city || city.owner !== "player" || game.hero !== city.tile || !unit || !Number.isInteger(quantity) || quantity < 1 || !cityBuildings.includes(unit.requires) || city.recruits[unitId] < quantity || game.gold < totalCost) return game;
+  if (!city || city.owner !== "player" || game.hero !== city.tile || !unit || !Number.isInteger(quantity) || quantity < 1 || !cityBuildings.includes(unit.requires) || city.recruits[unitId] < quantity || game.gold < totalCost || quantity > maxRecruitableIntoArmy(game.army, unitId)) return game;
   return { ...game, gold: game.gold - totalCost, army: { ...game.army, [unitId]: game.army[unitId] + quantity }, settlements: { ...game.settlements, [cityId]: { ...city, recruits: { ...city.recruits, [unitId]: city.recruits[unitId] - quantity } } }, notice: `${quantity} ${unit.name} joined Marcellus in ${city.name}.` };
 }
 

@@ -7,11 +7,14 @@ import {
   COMBAT_WIDTH,
   MAP_HEIGHT,
   MAP_WIDTH,
+  MAX_COMMANDER_STACKS,
   MAX_MOVEMENT,
+  MAX_TROOPS_PER_STACK,
   RESEARCH,
   adventureTile,
   advanceMonth,
   advanceEra,
+  armyStackCount,
   attackCombatStack,
   buildInCity,
   canMoveTo,
@@ -32,6 +35,7 @@ import {
   eraVisualFamily,
   findPath,
   isTerrainPassable,
+  maxRecruitableIntoArmy,
   moveAlongPath,
   moveCombatStack,
   performEnemyCombatTurn,
@@ -222,7 +226,7 @@ test("magical dust is a distinct collectible special resource", () => {
   assert.equal(collected.pickups[tile], undefined);
 });
 
-test("most resource pickups are contained inside visible raider camps", () => {
+test("most resource pickups sit in compact rings around visible raider camps", () => {
   const game = createGame();
   const resourceTiles = Object.entries(game.pickups).filter(([, pickup]) => pickup !== "knowledge");
   const guardedTiles = Object.entries(game.pickupGuards);
@@ -234,8 +238,10 @@ test("most resource pickups are contained inside visible raider camps", () => {
   for (const [tileText, guard] of guardedTiles) {
     const tile = Number(tileText);
     assert.equal(game.sites[guard] === "raiders" || game.sites[guard] === "freehaven-bandits", true);
-    const distance = Math.abs(tile % MAP_WIDTH - guard % MAP_WIDTH) + Math.abs(Math.floor(tile / MAP_WIDTH) - Math.floor(guard / MAP_WIDTH));
-    assert.equal(distance <= 9, true);
+    const horizontalDistance = Math.abs(tile % MAP_WIDTH - guard % MAP_WIDTH);
+    const verticalDistance = Math.abs(Math.floor(tile / MAP_WIDTH) - Math.floor(guard / MAP_WIDTH));
+    assert.equal(horizontalDistance + verticalDistance >= 2, true);
+    assert.equal(Math.max(horizontalDistance, verticalDistance) <= 2, true);
     perCamp.set(guard, (perCamp.get(guard) ?? 0) + 1);
   }
   assert.deepEqual([...perCamp.values()].sort(), [4, 4, 4, 4]);
@@ -248,6 +254,7 @@ test("targeting supplies inside a living camp routes to the bandits first", () =
   const route = findPath(game, cache);
   assert.equal(route.at(-1), camp);
   assert.equal(route.includes(cache), false);
+  assert.match(routeCommand(game, null, cache).notice, /must defeat the bandits/i);
 });
 
 test("supplies inside camps cannot be collected until their bandits are defeated", () => {
@@ -256,7 +263,7 @@ test("supplies inside camps cannot be collected until their bandits are defeated
   const cache = Number(Object.keys(initial.pickupGuards).find((tile) => initial.pickupGuards[tile] === camp));
   const refused = collectAt({ ...initial, hero: cache });
   assert.equal(refused.pickups[cache], initial.pickups[cache]);
-  assert.match(refused.notice, /inside an occupied bandit camp/i);
+  assert.match(refused.notice, /must defeat the bandits/i);
 
   const confronted = collectAt({ ...initial, hero: camp });
   const cleared = resolveBattle(markCombatVictory(confronted));
@@ -381,6 +388,49 @@ test("a player can recruit an exact selected quantity", () => {
   assert.equal(recruited.settlements.aurum.recruits.spearmen, game.settlements.aurum.recruits.spearmen - 5);
   assert.equal(recruited.gold, game.gold - 120);
   assert.equal(recruitFromCity(game, "aurum", "spearmen", 99), game);
+});
+
+test("recruitment fills 50-troop stacks and never exceeds ten commander stacks", () => {
+  const initial = createGame();
+  const army = { spearmen: 49, slingers: 150, scouts: 100, swordsmen: 100, horsemen: 100 };
+  const city = { ...initial.settlements.aurum, recruits: { ...initial.settlements.aurum.recruits, spearmen: 20 } };
+  const game = { ...initial, hero: city.tile, gold: 10000, army, settlements: { ...initial.settlements, aurum: city } };
+
+  assert.equal(MAX_TROOPS_PER_STACK, 50);
+  assert.equal(MAX_COMMANDER_STACKS, 10);
+  assert.equal(armyStackCount(game.army), 10);
+  assert.equal(maxRecruitableIntoArmy(game.army, "spearmen"), 1);
+
+  const filled = recruitFromCity(game, "aurum", "spearmen", 1);
+  assert.equal(filled.army.spearmen, 50);
+  assert.equal(armyStackCount(filled.army), 10);
+  assert.equal(maxRecruitableIntoArmy(filled.army, "spearmen"), 0);
+  assert.equal(recruitFromCity(filled, "aurum", "spearmen", 1), filled);
+});
+
+test("combat splits oversized troop lines and recombines every surviving stack", () => {
+  const initial = createGame();
+  const pendingBattle = { type: "field", name: "Stack Trial", strength: 18 };
+  const game = { ...initial, army: { spearmen: 101, slingers: 0, scouts: 0, swordsmen: 0, horsemen: 0 }, pendingBattle };
+  const deployed = startCombat(game);
+  const playerStacks = deployed.combat.stacks.filter((stack) => stack.side === "player");
+
+  assert.deepEqual(playerStacks.map((stack) => stack.id), ["player-spearmen", "player-spearmen-2", "player-spearmen-3"]);
+  assert.deepEqual(playerStacks.map((stack) => stack.totalHealth / unitForEra("spearmen", "Ancient").health), [50, 50, 1]);
+  assert.ok(playerStacks.every((stack) => stack.maxHealth === stack.totalHealth));
+
+  const victory = { ...deployed, combat: { ...deployed.combat, result: "victory", activeStackId: null } };
+  assert.equal(resolveBattle(victory).army.spearmen, 101);
+});
+
+test("combat deployment rejects armies above the ten-stack command limit", () => {
+  const initial = createGame();
+  const pendingBattle = { type: "field", name: "Stack Trial", strength: 18 };
+  const game = { ...initial, army: { spearmen: 101, slingers: 101, scouts: 101, swordsmen: 101, horsemen: 101 }, pendingBattle };
+  const blocked = startCombat(game);
+  assert.equal(armyStackCount(game.army), 15);
+  assert.equal(blocked.combat, null);
+  assert.match(blocked.notice, /cannot command more than 10 stacks/);
 });
 
 test("the fast scout line costs half as much as spearmen in every age", () => {

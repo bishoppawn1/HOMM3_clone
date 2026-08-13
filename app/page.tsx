@@ -9,6 +9,8 @@ import {
   MAP_HEIGHT,
   MAP_WIDTH,
   MAX_MOVEMENT,
+  MAX_COMMANDER_STACKS,
+  MAX_TROOPS_PER_STACK,
   RESEARCH,
   UNITS,
   createGame,
@@ -40,22 +42,22 @@ import {
   isTerrainPassable,
   unitForEra,
   unitsForEra,
+  armyStackCount,
+  maxRecruitableIntoArmy,
 } from "./game-core.js";
 
-const tileGlyph: Record<string, string> = { hill: "▲" };
 const MAP_PAN_STEP = 210;
 const MAP_PAN_DIRECTIONS: Record<string, readonly [number, number]> = {
   w: [0, -MAP_PAN_STEP], a: [-MAP_PAN_STEP, 0], s: [0, MAP_PAN_STEP], d: [MAP_PAN_STEP, 0],
 };
 
 const adventureRoads = [
-  "M 6 13 C 14 11 22 14.5 31 13 S 48 11.5 64 13",
-  "M 4 34 C 14 35.5 23 31 34 33 S 52 35.5 64 33",
-  "M 18 8 C 20 15 16.5 24 18.5 34",
-  "M 8 8 C 10 9 13 10.5 18 11.5",
-  "M 8 8 C 7.5 10 9 12 10 13",
-  "M 41 13 C 39.5 20 43 29 41 38",
-  "M 61 10 C 59.5 17 63 25 61 35",
+  "M 5 13.3 C 12 12.1 19 13.8 27 13.2 C 38 12.2 50 12.4 66 13.4",
+  "M 4 33.8 C 13 32.5 23 33.4 32 33 C 43 32.4 54 34.1 66 33.4",
+  "M 18.2 8 C 19.1 14 17.2 20 18.1 26 C 18.7 30 18.4 32 18.3 33.2",
+  "M 8 8.2 C 11 9.1 14.7 11 18.3 13.1",
+  "M 41 13 C 40.2 19 41.8 25 41.1 31 C 40.8 34 41.2 36 41 38",
+  "M 61 10 C 60.2 16 61.7 22 61.1 28 C 60.8 31 61.1 32.5 61 33.6",
 ];
 
 const terrainArtwork = [
@@ -85,7 +87,7 @@ const terrainArtwork = [
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
 type Settlement = { id: string; name: string; tile: number; footprint?: number[]; territory?: number[][]; blockedBy?: number | null; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
 type Producer = { id: string; name: string; kind: string; resource: string; amount: number; footprint: number[]; entrance: number; owner: string; garrison: number };
-type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; era?: string; position: number; totalHealth: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean; movementUsed: number };
+type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; era?: string; position: number; totalHealth: number; maxHealth?: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean; movementUsed: number };
 type CombatState = {
   width: number; height: number; round: number; activeStackId: string | null; result: "victory" | "defeat" | "retreat" | null;
   battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number; returnTile?: number};
@@ -117,10 +119,6 @@ export default function Home() {
   const readiness = useMemo(() => eraReadiness(game), [game]);
   const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
   const currentUnits = useMemo(() => unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null), [game.era]);
-  const banditCamps = useMemo(() => [...new Set(Object.values(game.pickupGuards))].map((guard) => ({
-    guard,
-    footprint: [guard, ...Object.entries(game.pickupGuards).filter(([, camp]) => camp === guard).map(([tile]) => Number(tile))],
-  })), [game.pickupGuards]);
   const visualEra = eraVisualFamily(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
@@ -158,6 +156,7 @@ export default function Home() {
     if (command.type === "preview") {
       setPlannedPath(command.path);
       setPlannedTarget(command.target);
+      if (command.notice) setGame({...game, notice: command.notice});
       return;
     }
     const city = settlementAt(game, command.target) as Settlement | null;
@@ -204,8 +203,8 @@ export default function Home() {
             <Stat value="2" label="Command" /><Stat value="1" label="Logistics" /><Stat value="3" label="Learning" />
           </div>
           <div className="army">
-            <p className="section-kicker">Field Army</p>
-            {currentUnits.map(unit => game.army[unit.id] > 0 && <Army key={unit.id} name={unit.name} count={game.army[unit.id]} icon={unit.icon} />)}
+            <p className="section-kicker">Field Army · {armyStackCount(game.army)}/{MAX_COMMANDER_STACKS} stacks</p>
+            {currentUnits.map(unit => game.army[unit.id] > 0 && <Army key={unit.id} name={unit.name} count={game.army[unit.id]} unitId={unit.id} era={game.era} />)}
           </div>
           <div className="movement">
             <span>Movement</span><strong>{game.moves}/{MAX_MOVEMENT}</strong>
@@ -220,6 +219,9 @@ export default function Home() {
           <div className="map-viewport" ref={mapViewport}>
           <div className={`map-grid era-${visualEra}`} style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
             <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+              <path className="hill-ground" d="M 30.5 0 C 35 1.2 39 -0.6 44 .4 C 48 1.4 51 4.5 50.2 8.8 C 45 10.8 38.5 9.7 32 10.2 C 29.8 7 29.3 3.2 30.5 0 Z" />
+              <path className="hill-ground" d="M 31 29 C 36 27.8 42 29.7 47 28.9 C 51 31.7 53 36.2 52.2 45 L 31.2 45 C 29.8 40 30.4 34.7 31 29 Z" />
+              <path className="hill-contour" d="M 32 4 C 37 2.3 43 3.8 48.5 2.2 M 33 7.3 C 38 5.6 43.5 7.6 48.8 5.8 M 32.5 34 C 38 31.8 45 34.3 50.5 32 M 32 39 C 38 36.5 45 40 51 37.2 M 33 43 C 39 41 45 43.4 50.8 41.2" />
               <path className="river-bank" d="M 67 0 C 69 6 65 11 67 17 C 69 23 64.5 28 66.5 34 C 68.5 39 65 42 67 45 L 72 45 L 72 0 Z" />
               <path className="river-shine" d="M 68.2 0 C 70 6 66.4 12 68 18 C 69.5 24 66 29 67.7 35 C 69 40 66.5 42 68 45" />
               {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-fill-${city.id}`} className={`territory-fill ${city.owner}`} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
@@ -230,8 +232,8 @@ export default function Home() {
             <svg className="road-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
               {adventureRoads.map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
               {adventureRoads.map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
+              {adventureRoads.map((path) => <path key={`rut-${path}`} className="road-rut" d={path} />)}
             </svg>
-            {banditCamps.map((camp) => <div key={`camp-${camp.guard}`} className={`map-bandit-camp ${game.sites[camp.guard] ? "occupied" : "cleared"}`} style={producerBounds(camp.footprint)} aria-hidden="true"><span>Bandit camp spoils</span></div>)}
             {BOARD.map((tile, index) => {
               const pickup = game.pickups[index];
               const guardedPickup = pickup && game.pickupGuards[index] !== undefined && game.sites[game.pickupGuards[index]] !== undefined;
@@ -254,7 +256,6 @@ export default function Home() {
                   aria-disabled={!passable}
                   aria-label={`Map position ${index + 1}, ${description}. ${passable ? "Press Enter twice or right-click twice to travel here." : "Travel is blocked here."}`}
                 >
-                  {tileGlyph[tile] && index % 3 === 0 && <span className="terrain-glyph" aria-hidden="true">{tileGlyph[tile]}</span>}
                   {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
                   {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={`assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
                   {(site === "raiders" || site === "freehaven-bandits") && <span className="site enemy" aria-hidden="true"><img src="assets/map-v2/enemy-bandits.webp" alt="" /></span>}
@@ -394,7 +395,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
       <div className="combat-turn-order" aria-label="Initiative order">
         {turnOrder.map(stack => {
           const unit = unitForEra(stack.unitId, stack.era ?? game.era)!;
-          return <span key={stack.id} className={`${stack.side} ${stack.id === combat.activeStackId ? "active" : ""} ${stack.done ? "done" : ""}`} title={`${stack.side === "player" ? "Marcellus" : "Guard"} ${unit.name}, initiative ${unit.initiative}`}>{unit.icon}<b>{stackCount(stack)}</b></span>;
+          return <span key={stack.id} className={`${stack.side} ${stack.id === combat.activeStackId ? "active" : ""} ${stack.done ? "done" : ""}`} title={`${stack.side === "player" ? "Marcellus" : "Guard"} ${unit.name}, initiative ${unit.initiative}`}><img src={unitPortrait(stack.unitId, stack.era ?? game.era)} alt="" /><b>{stackCount(stack)}</b></span>;
         })}
       </div>
       <div className="round-seal"><span>Round</span><b>{combat.round}</b></div>
@@ -409,10 +410,10 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
 
       <section className="battlefield-wrap">
         <div className="battlefield-instructions" aria-live="polite">
-          {combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> {combatMovementRemaining(combat, active.id)} movement left. Move again, attack a red target{activeUnit.ranged ? ` within ${activeUnit.range} hexes` : ""}, or defend to finish.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
+          {combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> {combatMovementRemaining(combat, active.id)} movement left. Right-click a yellow hex to move, right-click a red target{activeUnit.ranged ? ` within ${activeUnit.range} hexes` : ""} to attack, or defend to finish.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
         </div>
-        <div className="hex-battlefield">
-          {showMovement && movementAction && movingStack && movingUnit && <span key={movementAction.id} className="combat-moving-token" style={combatMovementStyle(movementAction.from, movementAction.to)} aria-hidden="true"><span className={`combat-unit ${movingStack.side} selected`}><i>{movingUnit.icon}</i><b>{stackCount(movingStack)}</b></span></span>}
+        <div className="hex-battlefield" onContextMenu={(event) => event.preventDefault()}>
+          {showMovement && movementAction && movingStack && movingUnit && <span key={movementAction.id} className="combat-moving-token" style={combatMovementStyle(movementAction.from, movementAction.to)} aria-hidden="true"><CombatUnitToken stack={movingStack} selected /></span>}
           {Array.from({length: COMBAT_WIDTH * COMBAT_HEIGHT}, (_, tile) => {
             const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
             const stack = stackAt.get(tile);
@@ -425,13 +426,15 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
               key={tile}
               className={`combat-hex ${canMove ? "reachable" : ""} ${canAttack ? "attackable" : ""} ${stack?.id === combat.activeStackId ? "active-stack" : ""} ${obstacle ? "blocked" : ""}`}
               style={combatHexPosition(row, col)}
-              onClick={() => handleHex(tile, stack)}
+              onClick={(event) => event.preventDefault()}
+              onContextMenu={(event) => { event.preventDefault(); handleHex(tile, stack); }}
+              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handleHex(tile, stack); } }}
               aria-label={label}
               disabled={Boolean(combat.result) || Boolean(obstacle) || (!canMove && !canAttack)}
               title={label}
             >
               {obstacle && <span className={`combat-obstacle ${obstacle}`} aria-hidden="true">{obstacleGlyph[obstacle]}</span>}
-              {stack && unit && <span className={`combat-unit ${stack.side} ${stack.id === combat.activeStackId ? "selected" : ""} ${showMovement && stack.id === movingStack?.id ? "movement-hidden" : ""}`} aria-hidden="true"><i>{unit.icon}</i><b>{stackCount(stack)}</b>{stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}{stack.id === combat.activeStackId && <strong className="active-marker">ACTING</strong>}</span>}
+              {stack && unit && <CombatUnitToken stack={stack} selected={stack.id === combat.activeStackId} hidden={showMovement && stack.id === movingStack?.id} />}
             </button>;
           })}
         </div>
@@ -447,7 +450,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
     </div>
 
     <footer className="combat-controls">
-      <div>{active && activeUnit && !combat.result ? <><span>{activeUnit.icon}</span><b>{activeUnit.name}</b><small>Movement {combatMovementRemaining(combat, active.id)}/{activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · Range ${activeUnit.range} · ${active.shots} shots` : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
+      <div>{active && activeUnit && !combat.result ? <><span><img src={unitPortrait(active.unitId, active.era ?? game.era)} alt="" /></span><b>{activeUnit.name}</b><small>Movement {combatMovementRemaining(combat, active.id)}/{activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · Range ${activeUnit.range} · ${active.shots} shots` : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
       <button disabled={!active || active.side !== "player" || active.waited || (active.movementUsed ?? 0) > 0 || Boolean(combat.result)} onClick={() => updateGame(waitCombatTurn)}>⌛ Wait</button>
       <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(defendCombatTurn)}>⛨ Defend</button>
       <button className="retreat-button" disabled={Boolean(combat.result)} onClick={() => updateGame(retreatCombat)}>⚑ Retreat</button>
@@ -481,6 +484,25 @@ function stackCount(stack: CombatStack) {
   return stack.totalHealth > 0 ? Math.ceil(stack.totalHealth / unit.health) : 0;
 }
 
+function unitPortrait(unitId: string, era: string) {
+  return `assets/units/${eraVisualFamily(era)}-${unitId}.png`;
+}
+
+function stackHealthPercent(stack: CombatStack) {
+  const maximum = stack.maxHealth ?? stack.totalHealth;
+  return maximum > 0 ? Math.max(0, Math.min(100, stack.totalHealth / maximum * 100)) : 0;
+}
+
+function CombatUnitToken({stack, selected = false, hidden = false}: {stack: CombatStack; selected?: boolean; hidden?: boolean}) {
+  const maximum = stack.maxHealth ?? stack.totalHealth;
+  return <span className={`combat-unit ${stack.side} ${selected ? "selected" : ""} ${hidden ? "movement-hidden" : ""}`} aria-hidden="true">
+    <img src={unitPortrait(stack.unitId, stack.era ?? "Ancient")} alt="" />
+    <b>{stackCount(stack)}</b>
+    <span className="unit-health"><i><u style={{width: `${stackHealthPercent(stack)}%`}} /></i><small>{stack.totalHealth}/{maximum}</small></span>
+    {stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}{selected && <strong className="active-marker">ACTING</strong>}
+  </span>;
+}
+
 function combatMovementStyle(from: number, to: number): React.CSSProperties {
   const point = (tile: number) => {
     const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
@@ -497,7 +519,7 @@ function CombatStackCard({stack, active}: {stack: CombatStack; active: boolean})
   const count = stackCount(stack);
   const topHealth = count > 0 ? stack.totalHealth - (count - 1) * unit.health : 0;
   return <article className={`combat-stack-card ${stack.side} ${active ? "active" : ""} ${count === 0 ? "fallen" : ""}`}>
-    <span>{unit.icon}</span><div><b>{unit.name}</b><small>{count > 0 ? `${count} troops · front rank ${topHealth}/${unit.health} health` : "Stack defeated"}</small><i><u style={{width: `${count > 0 ? topHealth / unit.health * 100 : 0}%`}} /></i></div>
+    <span><img src={unitPortrait(stack.unitId, stack.era ?? "Ancient")} alt="" /></span><div><b>{unit.name}</b><small>{count > 0 ? `${count} troops · ${stack.totalHealth}/${stack.maxHealth ?? stack.totalHealth} stack health · front rank ${topHealth}/${unit.health}` : "Stack defeated"}</small><i><u style={{width: `${stackHealthPercent(stack)}%`}} /></i></div>
     {unit.ranged && <em>{stack.shots} shots</em>}
   </article>;
 }
@@ -506,7 +528,7 @@ function Resource({icon, value, label}: {icon: string; value: number; label: str
   return <div title={label}><span>{icon}</span><b>{value.toLocaleString()}</b><small>{label}</small></div>;
 }
 function Stat({value, label}: {value: string; label: string}) { return <div><b>{value}</b><span>{label}</span></div>; }
-function Army({name, count, icon}: {name: string; count: number; icon: string}) { return <div className="army-row"><span>{icon}</span><div><b>{name}</b><small>{count} troops</small></div></div>; }
+function Army({name, count, unitId, era}: {name: string; count: number; unitId: string; era: string}) { return <div className="army-row"><span><img src={unitPortrait(unitId, era)} alt="" /></span><div><b>{name}</b><small>{count} troops · {Math.ceil(count / MAX_TROOPS_PER_STACK)} {Math.ceil(count / MAX_TROOPS_PER_STACK) === 1 ? "stack" : "stacks"}</small></div></div>; }
 
 function routeSegment(start: number, path: number[], className: string) {
   if (!path.length) return null;
@@ -553,6 +575,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
   const defense = cityDefense(game, city.id);
   const constructionUsed = Boolean(game.constructionThisTurn?.[city.id]);
   const cityTier = cityBuildings.includes("civic-forum") ? 3 : cityBuildings.includes("city-hall") ? 2 : 1;
+  const usedStacks = armyStackCount(game.army);
   return <section className="city-screen" aria-label={`${city.name} city management`}>
     <header className="city-screen-header">
       <button onClick={exitCity}>← Return to adventure map</button>
@@ -563,16 +586,17 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
       <aside className="city-recruitment">
         <p className="section-kicker">Hero & recruitment</p>
         <div className={`city-hero-card ${present ? "present" : "away"}`}><span>♞</span><div><b>Marcellus Vale</b><small>{present ? "Inside the city" : "Away on the map"}</small></div></div>
-        <p className="city-rule">{present ? "Recruitment buildings can transfer their available troops directly into this hero's army." : "A hero must stand on the city tile before any recruitment building can transfer troops."}</p>
+        <p className="city-rule">{present ? `Recruitment transfers troops into stacks of up to ${MAX_TROOPS_PER_STACK}. Marcellus currently commands ${usedStacks}/${MAX_COMMANDER_STACKS} stacks.` : "A hero must stand on the city tile before any recruitment building can transfer troops."}</p>
         <div className="recruit-buildings">{recruitableUnits.map(unit => {
           const source = BUILDINGS.find(building => building.id === unit.requires);
           const unlocked = cityBuildings.includes(unit.requires);
-          const maximum = Math.min(city.recruits[unit.id], Math.floor(game.gold / unit.cost));
+          const stackCapacity = maxRecruitableIntoArmy(game.army, unit.id);
+          const maximum = Math.min(city.recruits[unit.id], Math.floor(game.gold / unit.cost), stackCapacity);
           const amount = Math.min(Math.max(1, recruitAmounts[unit.id] ?? 1), Math.max(1, maximum));
           const chooseAmount = (value: number) => setRecruitAmounts((current) => ({...current, [unit.id]: Math.min(Math.max(1, value), Math.max(1, maximum))}));
           return <article key={unit.id} className={!unlocked ? "locked" : ""}>
             <header><span>{source?.icon}</span><div><b>{source?.name}</b><small>{unlocked ? "Operational" : "Not constructed"}</small></div></header>
-            <button type="button" className={`recruit-unit ${selectedUnitId === unit.id ? "selected" : ""}`} aria-expanded={selectedUnitId === unit.id} onClick={() => setSelectedUnitId(current => current === unit.id ? null : unit.id)}><span>{unit.icon}</span><div><b>{unit.name}</b><small>Tier {unit.tier} · {city.recruits[unit.id]} available · Click for details</small></div></button>
+            <button type="button" className={`recruit-unit ${selectedUnitId === unit.id ? "selected" : ""}`} aria-expanded={selectedUnitId === unit.id} onClick={() => setSelectedUnitId(current => current === unit.id ? null : unit.id)}><span><img src={unitPortrait(unit.id, game.era)} alt="" /></span><div><b>{unit.name}</b><small>Tier {unit.tier} · {city.recruits[unit.id]} available · Click for details</small></div></button>
             {selectedUnitId === unit.id && <div className="unit-inspector" role="region" aria-label={`${unit.name} statistics`}>
               <p>{unit.role}</p>
               <div><span><b>{unit.attack}</b>Attack</span><span><b>{unit.defense}</b>Defense</span><span><b>{unit.damage[0]}–{unit.damage[1]}</b>Damage</span><span><b>{unit.health}</b>Health</span><span><b>{unit.speed}</b>Speed</span><span><b>{unit.initiative}</b>Initiative</span></div>
