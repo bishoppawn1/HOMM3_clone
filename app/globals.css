@@ -156,3 +156,6 @@ h2 { font-size:20px; }
 .battle-actions button{min-width:190px}
 .battle-decline-button{border:1px solid #716443;background:#b9a77d;color:#3e382c;padding:12px 30px;font:600 10px var(--font-display);text-transform:uppercase;cursor:pointer}
 .battle-decline-button:hover{background:#d0bd8e}
+
+.combat-controls{grid-template-columns:1fr repeat(4,115px)}
+@media(max-width:820px){.combat-controls{grid-template-columns:1fr repeat(4,72px)}}

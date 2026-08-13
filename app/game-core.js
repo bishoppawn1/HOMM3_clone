@@ -609,6 +609,14 @@ export function waitCombatTurn(game) {
   return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, waiting), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} waited for an opening.`] }) };
 }
 
+export function finishCombatTurn(game) {
+  const combat = game.combat;
+  const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);
+  if (!combat || combat.result || !stack || stack.side !== "player") return game;
+  const finished = { ...stack, defending: false, done: true };
+  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, finished), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} ended its turn.`] }) };
+}
+
 export function defendCombatTurn(game) {
   const combat = game.combat;
   const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);

@@ -140,6 +140,7 @@ test("tactical combat exposes active-unit and movement feedback for both sides",
   assert.match(page, /Enemy selected:/);
   assert.match(page, /active-marker/);
   assert.match(page, /combat-moving-token/);
+  assert.match(page, /Finish Turn/);
   assert.match(styles, /@keyframes combat-stack-move/);
   assert.match(styles, /selected-stack-pulse/);
 });

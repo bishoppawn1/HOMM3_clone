@@ -31,6 +31,7 @@ import {
   createGame,
   declineBattle,
   defendCombatTurn,
+  finishCombatTurn,
   eraReadiness,
   eraVisualFamily,
   findPath,
@@ -704,6 +705,20 @@ test("player stacks can split movement across clicks and then attack", () => {
   const attacked = attackCombatStack(partialMove, "enemy-scouts");
   assert.ok(attacked.combat.stacks.find((stack) => stack.id === "enemy-scouts").totalHealth < defenderBefore);
   assert.equal(attacked.combat.stacks.find((stack) => stack.id === "player-scouts").done, true);
+});
+
+test("finish turn ends a partially moved stack without granting defense", () => {
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
+  const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
+  const destination = combatReachable(deployed.combat, active.id).find((tile) => combatPath(deployed.combat, active.id, tile).length === 1);
+  const moved = moveCombatStack(deployed, destination);
+  const finished = finishCombatTurn(moved);
+  const finishedStack = finished.combat.stacks.find((stack) => stack.id === active.id);
+  assert.equal(finishedStack.done, true);
+  assert.equal(finishedStack.defending, false);
+  assert.notEqual(finished.combat.activeStackId, active.id);
+  assert.match(finished.combat.log.at(-1), /ended its turn/);
 });
 
 test("melee defenders retaliate once and wait or defend changes the current round", () => {

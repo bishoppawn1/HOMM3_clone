@@ -25,6 +25,7 @@ import {
   combatReachable,
   declineBattle,
   defendCombatTurn,
+  finishCombatTurn,
   moveCombatStack,
   performEnemyCombatTurn,
   recruitFromCity,
@@ -410,7 +411,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
 
       <section className="battlefield-wrap">
         <div className="battlefield-instructions" aria-live="polite">
-          {combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> {combatMovementRemaining(combat, active.id)} movement left. Right-click a yellow hex to move, right-click a red target{activeUnit.ranged ? ` within ${activeUnit.range} hexes` : ""} to attack, or defend to finish.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
+          {combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> {combatMovementRemaining(combat, active.id)} movement left. Right-click a yellow hex to move, right-click a red target{activeUnit.ranged ? ` within ${activeUnit.range} hexes` : ""} to attack, or finish the turn.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
         </div>
         <div className="hex-battlefield" onContextMenu={(event) => event.preventDefault()}>
           {showMovement && movementAction && movingStack && movingUnit && <span key={movementAction.id} className="combat-moving-token" style={combatMovementStyle(movementAction.from, movementAction.to)} aria-hidden="true"><CombatUnitToken stack={movingStack} selected /></span>}
@@ -452,6 +453,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
     <footer className="combat-controls">
       <div>{active && activeUnit && !combat.result ? <><span><img src={unitPortrait(active.unitId, active.era ?? game.era)} alt="" /></span><b>{activeUnit.name}</b><small>Movement {combatMovementRemaining(combat, active.id)}/{activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · Range ${activeUnit.range} · ${active.shots} shots` : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
       <button disabled={!active || active.side !== "player" || active.waited || (active.movementUsed ?? 0) > 0 || Boolean(combat.result)} onClick={() => updateGame(waitCombatTurn)}>⌛ Wait</button>
+      <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(finishCombatTurn)}>✓ Finish Turn</button>
       <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(defendCombatTurn)}>⛨ Defend</button>
       <button className="retreat-button" disabled={Boolean(combat.result)} onClick={() => updateGame(retreatCombat)}>⚑ Retreat</button>
     </footer>
