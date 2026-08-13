@@ -9,9 +9,9 @@ export const BOARD = [
 ];
 
 export const RESEARCH = [
-  { id: "surveying", name: "Surveying", icon: "⌖", bonus: 180, description: "Improves travel and reveals nearby territory." },
-  { id: "bronze", name: "Bronze Working", icon: "⚒", bonus: 160, description: "Unlocks stronger arms and civic tools." },
-  { id: "records", name: "Written Records", icon: "≡", bonus: 200, description: "Improves administration and research." },
+  { id: "surveying", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, description: "Improves travel and reveals nearby territory." },
+  { id: "bronze", name: "Bronze Working", icon: "⚒", cost: 220, bonus: 110, description: "Unlocks stronger arms and civic tools." },
+  { id: "records", name: "Written Records", icon: "≡", cost: 260, bonus: 130, description: "Improves administration and research." },
 ];
 
 export const BUILDINGS = [
@@ -22,11 +22,11 @@ export const BUILDINGS = [
 
 export function createGame() {
   return {
-    year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero: 23, moves: 5,
-    gold: 760, wood: 35, food: 90, research: 210, cities: 1, victories: 0,
-    techs: [], buildings: [], researchChoice: null,
-    pickups: { 2: "knowledge", 10: "timber", 18: "enemy", 27: "city", 31: "food" },
-    notice: "Aurum yielded 75 gold. Scouts report an old scholars' hut to the north.",
+    year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero: 24, moves: 5,
+    gold: 760, wood: 35, food: 90, research: 70, cities: 1, victories: 0,
+    techs: [], buildings: [], activeResearch: null, techProgress: {}, researchChoice: null,
+    pickups: { 2: "knowledge", 10: "timber", 17: "capital", 18: "enemy", 26: "city", 31: "food" },
+    notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
     log: ["The campaign began in Year 1.", "Marcellus Vale departed Aurum."],
   };
 }
@@ -41,6 +41,7 @@ export function canMoveTo(game, index) {
 export function collectAt(game) {
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
+  if (pickup === "capital") return { ...game, notice: "Marcellus returned to Aurum, the heart of your realm." };
   const pickups = { ...game.pickups };
   delete pickups[game.hero];
   if (pickup === "knowledge") {
@@ -56,8 +57,58 @@ export function collectAt(game) {
 export function chooseResearch(game, techId) {
   const choice = game.researchChoice?.find((tech) => tech.id === techId);
   if (!choice) return game;
-  const total = game.research + choice.bonus;
-  return { ...game, research: total, techs: [...game.techs, techId], researchChoice: null, notice: `${choice.name} advanced by ${choice.bonus} research.`, log: [...game.log, `Scholars shared their knowledge of ${choice.name}.`] };
+  const previous = game.techProgress[techId] ?? 0;
+  const progress = Math.min(choice.cost, previous + choice.bonus);
+  const completed = progress >= choice.cost;
+  return {
+    ...game,
+    techProgress: { ...game.techProgress, [techId]: progress },
+    techs: completed && !game.techs.includes(techId) ? [...game.techs, techId] : game.techs,
+    activeResearch: completed && game.activeResearch === techId ? null : game.activeResearch,
+    researchChoice: null,
+    notice: `${choice.name} gained ${choice.bonus} research progress.`,
+    log: [...game.log, `Scholars shared their knowledge of ${choice.name}.`],
+  };
+}
+
+export function startResearch(game, techId) {
+  const technology = RESEARCH.find((tech) => tech.id === techId);
+  if (!technology || game.techs.includes(techId)) return game;
+  const previous = game.techProgress[techId] ?? 0;
+  const needed = technology.cost - previous;
+  const spent = Math.min(needed, game.research);
+  const progress = previous + spent;
+  const completed = progress >= technology.cost;
+  return {
+    ...game,
+    research: game.research - spent,
+    techProgress: { ...game.techProgress, [techId]: progress },
+    techs: completed ? [...game.techs, techId] : game.techs,
+    activeResearch: completed ? null : techId,
+    notice: completed
+      ? `${technology.name} was completed using stored research.`
+      : `${technology.name} is now the active research project.`,
+    log: completed ? [...game.log, `Researchers completed ${technology.name}.`] : game.log,
+  };
+}
+
+function applyResearch(game, amount) {
+  if (!game.activeResearch) return { ...game, research: game.research + amount };
+  const technology = RESEARCH.find((tech) => tech.id === game.activeResearch);
+  if (!technology) return { ...game, activeResearch: null, research: game.research + amount };
+  const previous = game.techProgress[technology.id] ?? 0;
+  const available = game.research + amount;
+  const spent = Math.min(technology.cost - previous, available);
+  const progress = previous + spent;
+  const completed = progress >= technology.cost;
+  return {
+    ...game,
+    research: available - spent,
+    techProgress: { ...game.techProgress, [technology.id]: progress },
+    techs: completed && !game.techs.includes(technology.id) ? [...game.techs, technology.id] : game.techs,
+    activeResearch: completed ? null : game.activeResearch,
+    log: completed ? [...game.log, `Researchers completed ${technology.name}.`] : game.log,
+  };
 }
 
 export function advanceMonth(game) {
@@ -66,7 +117,8 @@ export function advanceMonth(game) {
   const researchIncome = 35 + (game.buildings.includes("archive") ? 25 : 0);
   const foodIncome = game.buildings.includes("granary") ? 20 : 0;
   const yearMessage = nextYear > game.year ? `Year ${nextYear} begins. Annual growth has been assessed.` : `${MONTHS[nextMonth - 1]} begins.`;
-  return { ...game, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: 5, gold: game.gold + 75 * game.cities, food: game.food + foodIncome, research: game.research + researchIncome, notice: `${yearMessage} Cities produced ${75 * game.cities} gold and ${researchIncome} research.`, log: [...game.log, yearMessage] };
+  const produced = applyResearch(game, researchIncome);
+  return { ...produced, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: 5, gold: game.gold + 75 * game.cities, food: game.food + foodIncome, notice: `${yearMessage} Cities produced ${75 * game.cities} gold and ${researchIncome} research.`, log: [...produced.log, yearMessage] };
 }
 
 export function buildInCapital(game, buildingId) {

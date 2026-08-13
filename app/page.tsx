@@ -10,6 +10,7 @@ import {
   advanceMonth,
   collectAt,
   chooseResearch,
+  startResearch,
   buildInCapital,
   eraReadiness,
 } from "./game-core.js";
@@ -22,11 +23,12 @@ const tileGlyph: Record<string, string> = {
   road: "═",
 };
 
-type ResearchChoice = { id: string; name: string; icon: string; bonus: number; description: string };
+type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
 type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
   gold: number; wood: number; food: number; research: number; cities: number; victories: number;
-  techs: string[]; buildings: string[]; researchChoice: ResearchChoice[] | null;
+  techs: string[]; buildings: string[]; activeResearch: string | null;
+  techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
   pickups: Record<number, string>; notice: string; log: string[];
 };
 
@@ -101,6 +103,7 @@ export default function Home() {
                   {occupant === "knowledge" && <span className="site knowledge"><b>⌂</b><em>KNOWLEDGE HUT</em></span>}
                   {occupant === "timber" && <span className="site pickup"><b>▰</b><em>TIMBER</em></span>}
                   {occupant === "food" && <span className="site pickup food"><b>●</b><em>PROVISIONS</em></span>}
+                  {occupant === "capital" && <span className="site capital"><b>♜</b><em>AURUM · CAPITAL</em></span>}
                   {occupant === "city" && <span className="site city"><b>♜</b><em>FREE TOWN</em></span>}
                   {occupant === "enemy" && <span className="site enemy"><b>⚑</b><em>RAIDERS</em></span>}
                   {game.hero === index && <span className="hero"><b>♞</b><em>VALE</em></span>}
@@ -121,9 +124,17 @@ export default function Home() {
               <p className="section-kicker">Current age</p>
               <h2>{game.era} Age</h2>
               <p className="muted">Complete the age&apos;s knowledge and prove your civilization is ready to advance.</p>
-              <div className="research-meter"><span><i style={{width: `${Math.min(100, game.research / 10)}%`}} /></span><b>{game.research}/1,000</b></div>
+              <div className="research-guidance"><b>+{35 + (game.buildings.includes("archive") ? 25 : 0)} each month</b><span>{game.activeResearch ? "New points go to the selected study." : "No active study. Points are being saved."}</span></div>
               <div className="tech-list">
-                {RESEARCH.map((tech) => <div key={tech.id} className={game.techs.includes(tech.id) ? "tech done" : "tech"}><span>{game.techs.includes(tech.id) ? "✓" : tech.icon}</span><div><b>{tech.name}</b><small>{tech.description}</small></div></div>)}
+                {RESEARCH.map((tech) => {
+                  const completed = game.techs.includes(tech.id);
+                  const active = game.activeResearch === tech.id;
+                  const progress = game.techProgress[tech.id] ?? 0;
+                  return <button key={tech.id} disabled={completed} onClick={() => setGame(g => startResearch(g, tech.id))} className={`tech ${completed ? "done" : ""} ${active ? "active-tech" : ""}`}>
+                    <span>{completed ? "✓" : tech.icon}</span>
+                    <div><b>{tech.name}</b><small>{tech.description}</small><i><u style={{width: `${Math.min(100, progress / tech.cost * 100)}%`}} /></i><em>{completed ? "Completed" : active ? `${progress}/${tech.cost} · Researching` : `${progress}/${tech.cost} · Select`}</em></div>
+                  </button>;
+                })}
               </div>
               <p className="section-kicker readiness-title">Era readiness</p>
               <ul className="checklist">{readiness.checks.map((item) => <li key={item.label} className={item.met ? "met" : ""}><span>{item.met ? "✓" : "○"}</span>{item.label}</li>)}</ul>

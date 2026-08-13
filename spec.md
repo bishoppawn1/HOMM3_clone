@@ -65,9 +65,11 @@ Additional strategic materials may appear in later ages, but each must have a cl
 
 ## 6. Research and technology
 
-### 6.1 Research track — Prototype foundation
+### 6.1 Research projects — Prototype
 
-Each age has a technology tree with economic, civic, military, and logistical branches. Research accumulates monthly and through map discoveries. Technologies unlock buildings, units, capabilities, or passive improvements.
+Each age has technologies with economic, civic, military, and logistical branches. Technologies unlock buildings, units, capabilities, or passive improvements.
+
+The player selects one technology as the active research project. Monthly research points are automatically applied to that project's individual cost. If no technology is selected, new points remain in an unspent pool and never expire. Selecting a project immediately applies any stored points to it, up to its remaining cost. There is no combined age-wide progress meter; progress is displayed separately on each technology.
 
 The prototype contains Surveying, Bronze Working, and Written Records as its first Ancient Age technologies.
 
@@ -139,6 +141,10 @@ The full tree will include civic administration, scholarship, trade, food produc
 - Armies contain historically grounded human soldiers and equipment; there are no mythical creatures.
 
 The prototype adventure-map raider encounter currently resolves automatically. This is explicitly a placeholder for the tactical battle system.
+
+### 9.1 Settlement placement
+
+Every settlement must occupy passable terrain and be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map. The prototype capital, Aurum, is a prominent central landmark; neutral Free Towns appear only on traversable land.
 
 ## 10. Interface and controls — Prototype
 
