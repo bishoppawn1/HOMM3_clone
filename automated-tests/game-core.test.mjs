@@ -23,6 +23,7 @@ import {
   combatPath,
   combatReachable,
   createGame,
+  declineBattle,
   defendCombatTurn,
   eraReadiness,
   eraVisualFamily,
@@ -195,6 +196,23 @@ test("Freehaven requires a garrison battle and remains on the map after conquest
   assert.equal(conquered.settlements.freehaven.owner, "player");
   assert.equal(conquered.settlements.freehaven.tile, 179);
   assert.equal(conquered.cities, 2);
+});
+
+test("a commander may hold position instead of entering a prompted battle", () => {
+  const game = createGame();
+  const route = findPath(game, 307);
+  const approached = moveAlongPath(game, route);
+  const returnTile = route.at(-2) ?? game.hero;
+  assert.equal(approached.hero, 307);
+  assert.equal(approached.pendingBattle.type, "field");
+  assert.equal(approached.pendingBattle.returnTile, returnTile);
+
+  const held = declineBattle(approached);
+  assert.equal(held.hero, returnTile);
+  assert.equal(held.pendingBattle, null);
+  assert.equal(held.sites[307], "raiders");
+  assert.equal(held.moves, approached.moves);
+  assert.match(held.notice, /held position/i);
 });
 
 test("troops can only be recruited while the commander is inside an owned city", () => {

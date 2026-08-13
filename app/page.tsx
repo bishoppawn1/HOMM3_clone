@@ -19,6 +19,7 @@ import {
   attackCombatStack,
   combatCanAttack,
   combatReachable,
+  declineBattle,
   defendCombatTurn,
   moveCombatStack,
   performEnemyCombatTurn,
@@ -44,7 +45,7 @@ type Producer = { id: string; name: string; kind: string; resource: string; amou
 type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; position: number; totalHealth: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean };
 type CombatState = {
   width: number; height: number; round: number; activeStackId: string | null; result: "victory" | "defeat" | "retreat" | null;
-  battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number};
+  battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number; returnTile?: number};
   stacks: CombatStack[]; obstacles: {tile: number; kind: string}[]; log: string[];
   actionSerial: number;
   lastAction: {id: number; type: "move" | "melee" | "ranged"; stackId: string; from: number; to: number; target?: number; path?: number[]} | null;
@@ -55,7 +56,7 @@ type GameState = {
   army: Record<string, number>; techs: string[]; buildings: Record<string, string[]>; activeResearch: string | null;
   constructionThisTurn: Record<string, boolean>;
   techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
-  pendingBattle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number} | null;
+  pendingBattle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number; returnTile?: number} | null;
   combat: CombatState | null;
   settlements: Record<string, Settlement>; sites: Record<number, string>;
   producers: Record<string, Producer>;
@@ -255,8 +256,11 @@ export default function Home() {
           <section className="choice-modal battle-modal" role="dialog" aria-modal="true" aria-labelledby="battle-title">
             <span className="discovery-mark">⚔</span><p className="section-kicker">Battle required</p>
             <h2 id="battle-title">{game.pendingBattle.name} blocks your advance</h2>
-            <p>Enemy strength: {game.pendingBattle.strength}. Defeat the guarding force to take lasting control of this location.</p>
-            <button className="battle-button" onClick={() => setGame(g => startCombat(g))}>Deploy on the battlefield</button>
+            <p>Enemy strength: {game.pendingBattle.strength}. Deploy to fight, or hold outside the enemy position and choose another action.</p>
+            <div className="battle-actions">
+              <button className="battle-button" onClick={() => setGame(g => startCombat(g))}>Deploy on the battlefield</button>
+              <button className="battle-decline-button" onClick={() => setGame(g => declineBattle(g))}>Hold position</button>
+            </div>
           </section>
         </div>
       )}

@@ -122,3 +122,8 @@ h2 { font-size:20px; }
 @keyframes selected-stack-pulse{from{transform:scale(.94);opacity:.72}to{transform:scale(1.13);opacity:1}}
 @keyframes combat-stack-move{0%{left:var(--from-x);top:var(--from-y);transform:translate(-50%,-50%) scale(1)}45%{transform:translate(-50%,-58%) scale(1.12)}100%{left:var(--to-x);top:var(--to-y);transform:translate(-50%,-50%) scale(1)}}
 @media(prefers-reduced-motion:reduce){.combat-unit.selected:after,.combat-moving-token{animation-duration:.01ms;animation-iteration-count:1}}
+
+.battle-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.battle-actions button{min-width:190px}
+.battle-decline-button{border:1px solid #716443;background:#b9a77d;color:#3e382c;padding:12px 30px;font:600 10px var(--font-display);text-transform:uppercase;cursor:pointer}
+.battle-decline-button:hover{background:#d0bd8e}

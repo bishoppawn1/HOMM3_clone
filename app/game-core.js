@@ -569,10 +569,25 @@ export function moveAlongPath(game, path) {
   let next = game;
   for (const tile of path) {
     if (!canMoveTo(next, tile)) break;
+    const returnTile = next.hero;
     next = collectAt({ ...next, hero: tile, moves: next.moves - 1 });
+    if (next.pendingBattle) next = { ...next, pendingBattle: { ...next.pendingBattle, returnTile } };
     if (next.researchChoice || next.pendingBattle) break;
   }
   return next;
+}
+
+export function declineBattle(game) {
+  const battle = game.pendingBattle;
+  if (!battle || game.combat) return game;
+  const hero = Number.isInteger(battle.returnTile) ? battle.returnTile : game.hero;
+  return {
+    ...game,
+    hero,
+    pendingBattle: null,
+    notice: `Marcellus held position outside ${battle.name}. The enemy remains in control.`,
+    log: [...game.log, `Held position rather than engaging ${battle.name}.`],
+  };
 }
 
 export function collectAt(game) {

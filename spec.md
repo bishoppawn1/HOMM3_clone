@@ -195,7 +195,7 @@ Every settlement occupies a multi-cell visual footprint with one passable entran
 - Select one of two options when a Knowledge Hut opens.
 - Use End Month to advance the calendar and refresh movement.
 - Open the Campaign Chronicle to review recent events.
-- At a guarded encounter, choose **Deploy on the battlefield** to enter tactical combat.
+- At a guarded encounter, choose **Deploy on the battlefield** to enter tactical combat, or **Hold position** to step back to the previous map tile without engaging. Holding position does not refund movement already spent approaching the enemy, and the enemy remains in control.
 - On the battlefield, select a gold hex to move or a red enemy stack to attack. Use **Wait**, **Defend**, or **Retreat** for the other available orders.
 
 The interface must remain usable on desktop and mobile layouts and expose meaningful accessible labels.
