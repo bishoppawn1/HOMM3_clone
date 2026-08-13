@@ -22,3 +22,12 @@ test("GitHub Pages workflow builds and deploys the static export", async () => {
   assert.match(config, /output:\s*["']export["']/);
   assert.match(config, /HOMM3_clone/);
 });
+
+test("branch-based GitHub Pages serves the game instead of the README", async () => {
+  const [html] = await Promise.all([
+    readFile(new URL("index.html", root), "utf8"),
+    access(new URL(".nojekyll", root)),
+  ]);
+  assert.match(html, /Through the Ages/);
+  assert.match(html, /HOMM3_clone\/_next/);
+});

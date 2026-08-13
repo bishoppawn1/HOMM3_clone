@@ -172,7 +172,7 @@ The interface must remain usable on desktop and mobile layouts and expose meanin
 ## 12. Technical architecture
 
 - Next.js and React provide the static browser interface.
-- The site exports as static assets for GitHub Pages.
+- The site exports as static assets for GitHub Pages. A generated root snapshot supports the repository's current branch-based Pages source, and `.nojekyll` preserves Next.js asset directories.
 - Pure game rules live in `app/game-core.js` and are exercised by Node's built-in test runner.
 - Interface code lives in `app/page.tsx`; visual styling lives in `app/globals.css`.
 - Automated coverage lives in `automated-tests/`.

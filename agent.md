@@ -4,7 +4,7 @@ This file is the human-readable working agreement for anyone making automated ch
 
 - Work from the repository root and make production changes on `main`, unless the user explicitly requests a review branch.
 - Treat `origin/main` as the version published by GitHub Pages. Do not leave completed work only on a detached worktree or an unpublished branch.
-- Before pushing, run `npm test`, `npm run build`, and inspect `git diff` for accidental files or unrelated changes.
+- Before pushing, run `npm test`, `npm run pages:snapshot`, and inspect `git diff` for accidental files or unrelated changes. The snapshot keeps the game compatible with the repository's branch-based GitHub Pages source.
 - Push completed, verified changes to `origin main` when credentials and the remote are available. Never rewrite published history or force-push unless the user explicitly requests it.
 - Update `spec.md` whenever gameplay rules, terminology, requirements, controls, data structures, or scope change.
 - Put automated tests in `automated-tests/`. Every new gameplay rule or regression fix needs focused test coverage.

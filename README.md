@@ -9,8 +9,8 @@ npm install
 npm run dev
 ```
 
-Run the automated suite with `npm test` and create the production build with `npm run build`.
+Run the automated suite with `npm test`, create a production build with `npm run build`, and refresh the branch-compatible GitHub Pages snapshot with `npm run pages:snapshot`.
 
-The `main` branch deploys automatically to GitHub Pages through `.github/workflows/deploy-pages.yml`.
+The `main` branch deploys through GitHub Pages. A committed static snapshot supports the repository's current branch-publishing setting, while `.github/workflows/deploy-pages.yml` also verifies and deploys the static export through Actions.
 
 See [spec.md](spec.md) for the game design and [AGENTS.md](AGENTS.md) for repository working rules.
