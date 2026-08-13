@@ -49,7 +49,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
 - **Neutral city:** is a persistent settlement, never a pickup. Entering its tile begins a fight against its garrison; only victory transfers control.
-- **Hostile army:** resolves a placeholder victory in the prototype and will later open tactical combat.
+- **Hostile army:** opens the tactical hex battlefield. Victory removes the hostile site and awards its listed spoils; retreat or defeat leaves it in place.
 
 Consumed sites do not reappear merely because a month or year passes.
 
@@ -147,18 +147,35 @@ The military branch contains separate recruitment sources: Militia Yard for Spea
 
 The defense branch includes Palisade, Garrison, Stone Walls, and Citadel. A Garrison creates a small permanent city guard. Those defenders contribute only when an enemy attacks the city: they never appear as a recruitable field unit and cannot be transferred into a hero's army. The guard grows slowly and remains intentionally small; fortifications add separate defense strength.
 
-## 9. Armies and tactical combat — Planned
+## 9. Armies and tactical combat — Prototype
 
-- Battles take place on a discrete battlefield, expected to use hexes.
-- Units fight in stacks and have count, health, attack, defense, damage, movement, initiative, and morale.
-- Positioning, terrain, line of sight, retaliation, formations, ranged attacks, and siege defenses matter.
-- Commanders provide leadership, logistics, doctrines, and limited battlefield orders.
-- Engineering, medicine, artillery, espionage, and tactics replace spellcasting.
-- Armies contain historically grounded human soldiers and equipment; there are no mythical creatures.
+Adventure-map encounters deploy both armies onto a 15-by-9 odd-row-offset hex battlefield. Each troop type forms one stack, and each stack tracks its troop count through total health. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
 
-The prototype adventure-map raider encounter currently resolves automatically. This is explicitly a placeholder for the tactical battle system.
+### 9.1 Turn order and orders — Prototype
 
-### 9.1 Settlement placement
+- Living stacks act in descending initiative order. Player stacks win ties against enemy stacks.
+- A stack may move to a reachable empty hex, attack an eligible enemy, wait once for the later initiative phase, or defend.
+- Movement uses shortest-path traversal across adjacent hexes and cannot exceed the active stack's speed.
+- Waiting postpones the stack until all non-waiting stacks have acted. Waiting stacks then act from lower to higher initiative.
+- Defending ends the stack's action and adds 3 defense until the next round.
+- When every living stack has acted, a new round resets retaliation, waiting, and defense state.
+- Enemy stacks use the same movement, attack, line-of-sight, and obstacle rules as the player.
+
+### 9.2 Battlefield positioning — Prototype
+
+Field, producer, and settlement encounters use distinct fixed obstacle arrangements. Trees, boulders, stored timber, carts, rubble, and barricades mark impassable hexes. Living stacks also occupy and block their own hex. Reachable player movement is highlighted in gold, eligible enemy targets are highlighted in red, and every hex exposes an accessible description.
+
+Melee stacks may move up to their full speed into a free hex adjacent to a target and attack in the same action. A surviving melee defender retaliates immediately, but only once per round. A stack killed by the initial strike cannot retaliate.
+
+Ranged stacks begin with a limited number of shots. They may fire only when they have ammunition, are not engaged by an adjacent enemy, and have a clear hex line of sight. Obstacles and intervening living stacks block line of sight. Ranged damage is halved beyond ten hexes. An engaged ranged stack may make a melee attack at half damage.
+
+### 9.3 Outcomes — Prototype
+
+Victory transfers a guarded settlement or producer to the player, or removes a defeated hostile field site, and writes surviving player stack counts back to the campaign army. Retreat preserves current survivors, returns the commander to Aurum, and leaves the enemy location under neutral or hostile control. Defeat follows the same campaign return but may leave no surviving troops. A commander with no field troops cannot deploy.
+
+Morale, formations, elevation, destructible siege defenses, commander abilities, engineering, medicine, artillery, and more advanced enemy tactics remain planned. These systems must remain historically grounded and replace rather than imitate spellcasting. Armies contain human soldiers and equipment; there are no mythical creatures.
+
+### 9.4 Settlement placement
 
 Every settlement must occupy passable terrain and be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a guarded neutral city on traversable land and remains visible after conquest.
 
@@ -173,6 +190,8 @@ Every settlement must occupy passable terrain and be reachable using an appropri
 - Select one of two options when a Knowledge Hut opens.
 - Use End Month to advance the calendar and refresh movement.
 - Open the Campaign Chronicle to review recent events.
+- At a guarded encounter, choose **Deploy on the battlefield** to enter tactical combat.
+- On the battlefield, select a gold hex to move or a red enemy stack to attack. Use **Wait**, **Defend**, or **Retreat** for the other available orders.
 
 The interface must remain usable on desktop and mobile layouts and expose meaningful accessible labels.
 
@@ -195,4 +214,4 @@ The interface must remain usable on desktop and mobile layouts and expose meanin
 
 ## 13. Testing requirements
 
-Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, and era readiness. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.
+Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, era readiness, hex adjacency and distance, battlefield pathfinding and obstacles, ranged line of sight and ammunition, retaliation, wait and defend state, retreat, and tactical battle outcomes. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.

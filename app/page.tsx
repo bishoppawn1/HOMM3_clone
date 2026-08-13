@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import {
   BOARD,
   BUILDINGS,
+  COMBAT_HEIGHT,
+  COMBAT_WIDTH,
   MAP_HEIGHT,
   MAP_WIDTH,
   MAX_MOVEMENT,
@@ -14,8 +16,16 @@ import {
   chooseResearch,
   startResearch,
   buildInCity,
+  attackCombatStack,
+  combatCanAttack,
+  combatReachable,
+  defendCombatTurn,
+  moveCombatStack,
   recruitFromCity,
+  retreatCombat,
   resolveBattle,
+  startCombat,
+  waitCombatTurn,
   routeCommand,
   moveAlongPath,
   producerAt,
@@ -29,6 +39,12 @@ const tileGlyph: Record<string, string> = { forest: "♣", hill: "▲" };
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
 type Settlement = { id: string; name: string; tile: number; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
 type Producer = { id: string; name: string; kind: string; resource: string; amount: number; footprint: number[]; entrance: number; owner: string; garrison: number };
+type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; position: number; totalHealth: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean };
+type CombatState = {
+  width: number; height: number; round: number; activeStackId: string | null; result: "victory" | "defeat" | "retreat" | null;
+  battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number};
+  stacks: CombatStack[]; obstacles: {tile: number; kind: string}[]; log: string[];
+};
 type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
   gold: number; wood: number; stone: number; magicDust: number; research: number; cities: number; victories: number;
@@ -36,6 +52,7 @@ type GameState = {
   constructionThisTurn: Record<string, boolean>;
   techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
   pendingBattle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number} | null;
+  combat: CombatState | null;
   settlements: Record<string, Settlement>; sites: Record<number, string>;
   producers: Record<string, Producer>;
   pickups: Record<number, string>; notice: string; log: string[];
@@ -91,7 +108,9 @@ export default function Home() {
         </div>
       </header>
 
-      {activeCity?.owner === "player" ? (
+      {game.combat ? (
+        <CombatScreen game={game} updateGame={setGame} />
+      ) : activeCity?.owner === "player" ? (
         <CityScreen game={game} city={activeCity} updateGame={setGame} exitCity={() => setSelectedCity(null)} />
       ) : (
       <section className="world">
@@ -204,10 +223,10 @@ export default function Home() {
       </section>
       )}
 
-      <footer className="turnbar">
+      {!game.combat && <footer className="turnbar">
         <div><span className="section-kicker">Month&apos;s report</span><p>{game.notice}</p></div>
         <button onClick={() => { setGame(advanceMonth); setPlannedPath([]); setPlannedTarget(null); }}><span>End {game.monthName}</span><small>Begin the next month →</small></button>
-      </footer>
+      </footer>}
 
       {game.researchChoice && (
         <div className="modal-backdrop" role="presentation">
@@ -221,18 +240,134 @@ export default function Home() {
           </section>
         </div>
       )}
-      {game.pendingBattle && (
+      {game.pendingBattle && !game.combat && (
         <div className="modal-backdrop" role="presentation">
           <section className="choice-modal battle-modal" role="dialog" aria-modal="true" aria-labelledby="battle-title">
             <span className="discovery-mark">⚔</span><p className="section-kicker">Battle required</p>
             <h2 id="battle-title">{game.pendingBattle.name} blocks your advance</h2>
             <p>Enemy strength: {game.pendingBattle.strength}. Defeat the guarding force to take lasting control of this location.</p>
-            <button className="battle-button" onClick={() => setGame(g => resolveBattle(g))}>Fight for control</button>
+            <button className="battle-button" onClick={() => setGame(g => startCombat(g))}>Deploy on the battlefield</button>
           </section>
         </div>
       )}
     </main>
   );
+}
+
+function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Dispatch<React.SetStateAction<GameState>>}) {
+  const combat = game.combat!;
+  const active = combat.stacks.find(stack => stack.id === combat.activeStackId) ?? null;
+  const activeUnit = active ? UNITS.find(unit => unit.id === active.unitId) : null;
+  const reachable = new Set(active?.side === "player" ? combatReachable(combat, active.id) : []);
+  const attackable = new Set(combat.stacks
+    .filter(stack => active && stack.side !== active.side && stackCount(stack) > 0 && combatCanAttack(combat, active.id, stack.id))
+    .map(stack => stack.id));
+  const obstacles = new Map(combat.obstacles.map(obstacle => [obstacle.tile, obstacle.kind]));
+  const stackAt = new Map(combat.stacks.filter(stack => stackCount(stack) > 0).map(stack => [stack.position, stack]));
+  const turnOrder = [...combat.stacks].filter(stack => stackCount(stack) > 0).sort((a, b) => {
+    const aUnit = UNITS.find(unit => unit.id === a.unitId)!;
+    const bUnit = UNITS.find(unit => unit.id === b.unitId)!;
+    return bUnit.initiative - aUnit.initiative || (a.side === "player" ? -1 : 1);
+  });
+  const playerAlive = combat.stacks.filter(stack => stack.side === "player" && stackCount(stack) > 0);
+  const enemyAlive = combat.stacks.filter(stack => stack.side === "enemy" && stackCount(stack) > 0);
+  const obstacleGlyph: Record<string, string> = { tree: "♣", boulder: "⬟", timber: "▰", cart: "▥", barricade: "╫", rubble: "▦" };
+
+  function handleHex(tile: number, stack: CombatStack | undefined) {
+    if (combat.result || !active || active.side !== "player") return;
+    if (stack && attackable.has(stack.id)) updateGame(current => attackCombatStack(current, stack.id));
+    else if (!stack && reachable.has(tile)) updateGame(current => moveCombatStack(current, tile));
+  }
+
+  return <section className="combat-screen" aria-label={`Tactical battle at ${combat.battle.name}`}>
+    <header className="combat-header">
+      <div><span className="section-kicker">Tactical engagement</span><h2>{combat.battle.name}</h2><p>Round {combat.round} · Odd-row hex battlefield</p></div>
+      <div className="combat-turn-order" aria-label="Initiative order">
+        {turnOrder.map(stack => {
+          const unit = UNITS.find(item => item.id === stack.unitId)!;
+          return <span key={stack.id} className={`${stack.side} ${stack.id === combat.activeStackId ? "active" : ""} ${stack.done ? "done" : ""}`} title={`${stack.side === "player" ? "Marcellus" : "Guard"} ${unit.name}, initiative ${unit.initiative}`}>{unit.icon}<b>{stackCount(stack)}</b></span>;
+        })}
+      </div>
+      <div className="round-seal"><span>Round</span><b>{combat.round}</b></div>
+    </header>
+
+    <div className="combat-body">
+      <aside className="combat-army player-army">
+        <p className="section-kicker">Marcellus&apos;s army</p>
+        <h3>{playerAlive.reduce((total, stack) => total + stackCount(stack), 0)} troops standing</h3>
+        {combat.stacks.filter(stack => stack.side === "player").map(stack => <CombatStackCard key={stack.id} stack={stack} active={stack.id === combat.activeStackId} />)}
+      </aside>
+
+      <section className="battlefield-wrap">
+        <div className="battlefield-instructions" aria-live="polite">
+          {combat.result ? "The engagement is over." : active && activeUnit ? <><b>{activeUnit.name} act now.</b> Gold hexes are movement; red targets can be attacked.</> : "Resolving the enemy turn…"}
+        </div>
+        <div className="hex-battlefield" style={{gridTemplateColumns: `repeat(${COMBAT_WIDTH * 2 + 1}, 1fr)`, gridTemplateRows: `repeat(${COMBAT_HEIGHT}, 1fr)`}}>
+          {Array.from({length: COMBAT_WIDTH * COMBAT_HEIGHT}, (_, tile) => {
+            const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
+            const stack = stackAt.get(tile);
+            const obstacle = obstacles.get(tile);
+            const canAttack = stack ? attackable.has(stack.id) : false;
+            const canMove = !stack && reachable.has(tile);
+            const unit = stack ? UNITS.find(item => item.id === stack.unitId)! : null;
+            const label = obstacle ? `Impassable ${obstacle}` : stack && unit ? `${stack.side === "player" ? "Allied" : "Enemy"} ${unit.name}, ${stackCount(stack)} remaining${canAttack ? ", attack available" : ""}` : `Battlefield hex ${tile + 1}${canMove ? ", movement available" : ""}`;
+            return <button
+              key={tile}
+              className={`combat-hex ${canMove ? "reachable" : ""} ${canAttack ? "attackable" : ""} ${stack?.id === combat.activeStackId ? "active-stack" : ""} ${obstacle ? "blocked" : ""}`}
+              style={{gridColumn: `${col * 2 + (row % 2) + 1} / span 2`, gridRow: row + 1}}
+              onClick={() => handleHex(tile, stack)}
+              aria-label={label}
+              disabled={Boolean(combat.result) || Boolean(obstacle) || (!canMove && !canAttack)}
+              title={label}
+            >
+              {obstacle && <span className={`combat-obstacle ${obstacle}`} aria-hidden="true">{obstacleGlyph[obstacle]}</span>}
+              {stack && unit && <span className={`combat-unit ${stack.side}`} aria-hidden="true"><i>{unit.icon}</i><b>{stackCount(stack)}</b>{stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}</span>}
+            </button>;
+          })}
+        </div>
+        <div className="combat-key"><span><i className="move-key" /> Reachable</span><span><i className="attack-key" /> Attack</span><span><i className="blocked-key" /> Impassable</span></div>
+      </section>
+
+      <aside className="combat-army enemy-army">
+        <p className="section-kicker">Defending force</p>
+        <h3>{enemyAlive.reduce((total, stack) => total + stackCount(stack), 0)} troops standing</h3>
+        {combat.stacks.filter(stack => stack.side === "enemy").map(stack => <CombatStackCard key={stack.id} stack={stack} active={stack.id === combat.activeStackId} />)}
+        <div className="battle-log"><p className="section-kicker">Battle record</p><ol>{combat.log.slice(-7).reverse().map((entry, index) => <li key={`${entry}-${index}`}>{entry}</li>)}</ol></div>
+      </aside>
+    </div>
+
+    <footer className="combat-controls">
+      <div>{active && activeUnit && !combat.result ? <><span>{activeUnit.icon}</span><b>{activeUnit.name}</b><small>Speed {activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · ${active.shots} shots` : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
+      <button disabled={!active || active.side !== "player" || active.waited || Boolean(combat.result)} onClick={() => updateGame(waitCombatTurn)}>⌛ Wait</button>
+      <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(defendCombatTurn)}>⛨ Defend</button>
+      <button className="retreat-button" disabled={Boolean(combat.result)} onClick={() => updateGame(retreatCombat)}>⚑ Retreat</button>
+    </footer>
+
+    {combat.result && <div className="combat-result" role="dialog" aria-modal="true" aria-labelledby="combat-result-title">
+      <section>
+        <span>{combat.result === "victory" ? "⚔" : "⚑"}</span>
+        <p className="section-kicker">Battle concluded</p>
+        <h2 id="combat-result-title">{combat.result === "victory" ? "Victory" : combat.result === "retreat" ? "Orderly retreat" : "Defeat"}</h2>
+        <p>{combat.result === "victory" ? `${combat.battle.name} has fallen. Surviving stacks will return to the campaign army.` : `Marcellus will return to Aurum with ${playerAlive.reduce((total, stack) => total + stackCount(stack), 0)} surviving troops.`}</p>
+        <button onClick={() => updateGame(resolveBattle)}>{combat.result === "victory" ? "Claim the battlefield" : "Return to Aurum"}</button>
+      </section>
+    </div>}
+  </section>;
+}
+
+function stackCount(stack: CombatStack) {
+  const unit = UNITS.find(item => item.id === stack.unitId)!;
+  return stack.totalHealth > 0 ? Math.ceil(stack.totalHealth / unit.health) : 0;
+}
+
+function CombatStackCard({stack, active}: {stack: CombatStack; active: boolean}) {
+  const unit = UNITS.find(item => item.id === stack.unitId)!;
+  const count = stackCount(stack);
+  const topHealth = count > 0 ? stack.totalHealth - (count - 1) * unit.health : 0;
+  return <article className={`combat-stack-card ${stack.side} ${active ? "active" : ""} ${count === 0 ? "fallen" : ""}`}>
+    <span>{unit.icon}</span><div><b>{unit.name}</b><small>{count > 0 ? `${count} troops · front rank ${topHealth}/${unit.health} health` : "Stack defeated"}</small><i><u style={{width: `${count > 0 ? topHealth / unit.health * 100 : 0}%`}} /></i></div>
+    {unit.ranged && <em>{stack.shots} shots</em>}
+  </article>;
 }
 
 function Resource({icon, value, label}: {icon: string; value: number; label: string}) {

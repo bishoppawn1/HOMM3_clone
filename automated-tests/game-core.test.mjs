@@ -3,26 +3,52 @@ import test from "node:test";
 import {
   BOARD,
   BUILDINGS,
+  COMBAT_HEIGHT,
+  COMBAT_WIDTH,
   MAP_HEIGHT,
   MAP_WIDTH,
   MAX_MOVEMENT,
   RESEARCH,
   advanceMonth,
+  attackCombatStack,
   buildInCity,
   canMoveTo,
   chooseResearch,
   cityDefense,
   collectAt,
+  combatCanAttack,
+  combatDistance,
+  combatHasLineOfSight,
+  combatNeighbors,
+  combatPath,
+  combatReachable,
   createGame,
+  defendCombatTurn,
   eraReadiness,
   findPath,
   moveAlongPath,
   producerAt,
   recruitFromCity,
+  retreatCombat,
   resolveBattle,
   routeCommand,
+  startCombat,
   startResearch,
+  waitCombatTurn,
 } from "../app/game-core.js";
+
+function markCombatVictory(game) {
+  const started = startCombat(game);
+  return {
+    ...started,
+    combat: {
+      ...started.combat,
+      activeStackId: null,
+      result: "victory",
+      stacks: started.combat.stacks.map((stack) => stack.side === "enemy" ? { ...stack, totalHealth: 0 } : stack),
+    },
+  };
+}
 
 test("the calendar has twelve monthly turns and restores sixteen movement", () => {
   const next = advanceMonth({ ...createGame(), month: 12, monthName: "December", year: 4, moves: 0 });
@@ -152,7 +178,10 @@ test("Freehaven requires a garrison battle and remains on the map after conquest
   const confronted = collectAt({ ...createGame(), hero: 75 });
   assert.equal(confronted.pendingBattle.type, "siege");
   assert.equal(confronted.cities, 1);
-  const conquered = resolveBattle(confronted);
+  const deployed = startCombat(confronted);
+  assert.equal(deployed.combat.width, COMBAT_WIDTH);
+  assert.equal(deployed.combat.obstacles.some((obstacle) => obstacle.kind === "barricade"), true);
+  const conquered = resolveBattle(markCombatVictory(confronted));
   assert.equal(conquered.pendingBattle, null);
   assert.equal(conquered.settlements.freehaven.owner, "player");
   assert.equal(conquered.settlements.freehaven.tile, 75);
@@ -276,13 +305,81 @@ test("guarded producers require victory before generating monthly timber and sto
   const initial = createGame();
   const sawmillBattle = collectAt({ ...initial, hero: initial.producers.pinewater.entrance });
   assert.equal(sawmillBattle.pendingBattle.type, "producer");
-  const sawmillCaptured = resolveBattle(sawmillBattle);
+  const sawmillCaptured = resolveBattle(markCombatVictory(sawmillBattle));
   assert.equal(sawmillCaptured.producers.pinewater.owner, "player");
   const quarryBattle = collectAt({ ...sawmillCaptured, hero: initial.producers.redcliff.entrance });
-  const bothCaptured = resolveBattle(quarryBattle);
+  const bothCaptured = resolveBattle(markCombatVictory(quarryBattle));
   const produced = advanceMonth(bothCaptured);
   assert.equal(produced.wood, bothCaptured.wood + 10);
   assert.equal(produced.stone, bothCaptured.stone + 8);
+});
+
+test("tactical combat uses a fifteen-by-nine odd-row hex battlefield", () => {
+  assert.equal(COMBAT_WIDTH, 15);
+  assert.equal(COMBAT_HEIGHT, 9);
+  assert.deepEqual(new Set(combatNeighbors(16)), new Set([15, 17, 1, 2, 31, 32]));
+  assert.equal(combatDistance(16, 32), 1);
+  assert.equal(combatDistance(15, 29), 14);
+});
+
+test("battlefield movement respects stack speed, occupied hexes, and impassable obstacles", () => {
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
+  assert.equal(active.unitId, "scouts");
+  const reachable = combatReachable(deployed.combat);
+  assert.equal(reachable.includes(36), false);
+  assert.equal(reachable.includes(37), false);
+  assert.equal(reachable.includes(45), false);
+  assert.equal(reachable.every((tile) => combatDistance(active.position, tile) <= 6), true);
+  assert.equal(combatPath(deployed.combat, active.id, 36), null);
+});
+
+test("obstacles and intervening stacks block ranged line of sight", () => {
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  assert.equal(combatHasLineOfSight(deployed.combat, 45, 59), true);
+  const obstructed = { ...deployed.combat, obstacles: [...deployed.combat.obstacles, { tile: 51, kind: "boulder" }] };
+  assert.equal(combatHasLineOfSight(obstructed, 45, 59), false);
+});
+
+test("ranged stacks spend shots and inflict deterministic casualties", () => {
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const combat = { ...deployed.combat, activeStackId: "player-slingers" };
+  assert.equal(combatCanAttack(combat, "player-slingers", "enemy-slingers"), true);
+  const before = combat.stacks.find((stack) => stack.id === "enemy-slingers").totalHealth;
+  const attacked = attackCombatStack({ ...deployed, combat }, "enemy-slingers");
+  assert.equal(attacked.combat.stacks.find((stack) => stack.id === "player-slingers").shots, 7);
+  assert.ok(attacked.combat.stacks.find((stack) => stack.id === "enemy-slingers").totalHealth < before);
+});
+
+test("melee defenders retaliate once and wait or defend changes the current round", () => {
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const arrangedStacks = deployed.combat.stacks.map((stack) => {
+    if (stack.id === "player-scouts") return { ...stack, position: 60 };
+    if (stack.id === "enemy-scouts") return { ...stack, position: 61, totalHealth: 120, done: true };
+    if (stack.side === "enemy") return { ...stack, totalHealth: 0 };
+    return stack;
+  });
+  const arranged = { ...deployed, combat: { ...deployed.combat, activeStackId: "player-scouts", stacks: arrangedStacks } };
+  const attacked = attackCombatStack(arranged, "enemy-scouts");
+  assert.equal(attacked.combat.stacks.find((stack) => stack.id === "enemy-scouts").retaliated, true);
+  assert.equal(attacked.combat.log.filter((entry) => entry.includes("retaliated against")).length, 1);
+
+  const waited = waitCombatTurn(deployed);
+  assert.equal(waited.combat.stacks.find((stack) => stack.id === "player-scouts").waited, true);
+  assert.equal(waited.combat.stacks.find((stack) => stack.id === "player-scouts").done, false);
+  const defended = defendCombatTurn(deployed);
+  assert.equal(defended.combat.stacks.find((stack) => stack.id === "player-scouts").defending, true);
+  assert.equal(defended.combat.stacks.find((stack) => stack.id === "player-scouts").done, true);
+});
+
+test("retreat preserves survivors, returns the commander to Aurum, and leaves the enemy site", () => {
+  const initial = collectAt({ ...createGame(), hero: 112 });
+  const retreated = resolveBattle(retreatCombat(startCombat(initial)));
+  assert.equal(retreated.hero, retreated.settlements.aurum.tile);
+  assert.equal(retreated.combat, null);
+  assert.equal(retreated.pendingBattle, null);
+  assert.equal(retreated.sites[112], "raiders");
+  assert.deepEqual(retreated.army, initial.army);
 });
 
 test("era advancement requires every concrete readiness condition", () => {

@@ -2,6 +2,8 @@ export const MONTHS = ["January", "February", "March", "April", "May", "June", "
 export const MAP_WIDTH = 20;
 export const MAP_HEIGHT = 12;
 export const MAX_MOVEMENT = 16;
+export const COMBAT_WIDTH = 15;
+export const COMBAT_HEIGHT = 9;
 
 const terrainRows = [
   "fffffppppppphhhhhwww",
@@ -58,19 +60,409 @@ export const BUILDINGS = [
 ];
 
 export const UNITS = [
-  { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard" },
-  { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range" },
-  { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 55, requires: "scout-camp" },
-  { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii" },
-  { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable" },
+  { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard", attack: 4, defense: 5, damage: [2, 3], health: 10, speed: 4, initiative: 4, ranged: false },
+  { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range", attack: 4, defense: 3, damage: [2, 3], health: 8, speed: 4, initiative: 5, ranged: true, shots: 8 },
+  { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 55, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false },
+  { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false },
+  { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false },
 ];
+
+const BATTLEFIELD_PATTERNS = {
+  field: [
+    { tile: 36, kind: "tree" }, { tile: 37, kind: "tree" },
+    { tile: 82, kind: "boulder" }, { tile: 98, kind: "boulder" },
+  ],
+  producer: [
+    { tile: 37, kind: "timber" }, { tile: 38, kind: "timber" },
+    { tile: 52, kind: "cart" }, { tile: 97, kind: "boulder" },
+  ],
+  siege: [
+    { tile: 25, kind: "barricade" }, { tile: 55, kind: "barricade" },
+    { tile: 85, kind: "barricade" }, { tile: 115, kind: "barricade" },
+    { tile: 69, kind: "rubble" },
+  ],
+};
+
+function unitById(unitId) {
+  return UNITS.find((unit) => unit.id === unitId);
+}
+
+function combatStackCount(stack) {
+  if (!stack || stack.totalHealth <= 0) return 0;
+  return Math.ceil(stack.totalHealth / unitById(stack.unitId).health);
+}
+
+function combatCoordinates(tile) {
+  return { row: Math.floor(tile / COMBAT_WIDTH), col: tile % COMBAT_WIDTH };
+}
+
+function combatTile(row, col) {
+  return row * COMBAT_WIDTH + col;
+}
+
+function combatTileExists(row, col) {
+  return row >= 0 && row < COMBAT_HEIGHT && col >= 0 && col < COMBAT_WIDTH;
+}
+
+export function combatNeighbors(tile) {
+  const { row, col } = combatCoordinates(tile);
+  const diagonals = row % 2 === 0
+    ? [[-1, -1], [-1, 0], [1, -1], [1, 0]]
+    : [[-1, 0], [-1, 1], [1, 0], [1, 1]];
+  return [[0, -1], [0, 1], ...diagonals]
+    .map(([rowOffset, colOffset]) => [row + rowOffset, col + colOffset])
+    .filter(([nextRow, nextCol]) => combatTileExists(nextRow, nextCol))
+    .map(([nextRow, nextCol]) => combatTile(nextRow, nextCol));
+}
+
+function offsetToCube(tile) {
+  const { row, col } = combatCoordinates(tile);
+  const x = col - (row - (row & 1)) / 2;
+  const z = row;
+  return { x, y: -x - z, z };
+}
+
+function cubeToTile({ x, z }) {
+  const row = z;
+  const col = x + (row - (row & 1)) / 2;
+  return combatTile(row, col);
+}
+
+function roundCube(cube) {
+  let x = Math.round(cube.x), y = Math.round(cube.y), z = Math.round(cube.z);
+  const xDiff = Math.abs(x - cube.x), yDiff = Math.abs(y - cube.y), zDiff = Math.abs(z - cube.z);
+  if (xDiff > yDiff && xDiff > zDiff) x = -y - z;
+  else if (yDiff > zDiff) y = -x - z;
+  else z = -x - y;
+  return { x, y, z };
+}
+
+export function combatDistance(from, to) {
+  const a = offsetToCube(from), b = offsetToCube(to);
+  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z - b.z));
+}
+
+function livingCombatStacks(combat) {
+  return combat.stacks.filter((stack) => combatStackCount(stack) > 0);
+}
+
+function occupiedCombatTiles(combat, ignoredStackId = null) {
+  return new Set(livingCombatStacks(combat).filter((stack) => stack.id !== ignoredStackId).map((stack) => stack.position));
+}
+
+function blockedCombatTiles(combat) {
+  return new Set(combat.obstacles.map((obstacle) => obstacle.tile));
+}
+
+function findCombatRoute(combat, stackId, destinations, maximumDistance = Infinity) {
+  const stack = combat.stacks.find((item) => item.id === stackId);
+  if (!stack || combatStackCount(stack) <= 0) return null;
+  const goals = new Set(destinations);
+  if (goals.has(stack.position)) return [];
+  const occupied = occupiedCombatTiles(combat, stackId);
+  const blocked = blockedCombatTiles(combat);
+  const queue = [stack.position];
+  const previous = new Map([[stack.position, null]]);
+  const distance = new Map([[stack.position, 0]]);
+  while (queue.length) {
+    const current = queue.shift();
+    for (const neighbor of combatNeighbors(current)) {
+      if (previous.has(neighbor) || occupied.has(neighbor) || blocked.has(neighbor)) continue;
+      const nextDistance = distance.get(current) + 1;
+      if (nextDistance > maximumDistance) continue;
+      previous.set(neighbor, current);
+      distance.set(neighbor, nextDistance);
+      if (goals.has(neighbor)) {
+        const route = [];
+        let step = neighbor;
+        while (step !== stack.position) {
+          route.unshift(step);
+          step = previous.get(step);
+        }
+        return route;
+      }
+      queue.push(neighbor);
+    }
+  }
+  return null;
+}
+
+export function combatPath(combat, stackId, destination) {
+  return findCombatRoute(combat, stackId, [destination]);
+}
+
+export function combatReachable(combat, stackId = combat?.activeStackId) {
+  const stack = combat?.stacks.find((item) => item.id === stackId);
+  if (!stack || combatStackCount(stack) <= 0) return [];
+  const occupied = occupiedCombatTiles(combat, stack.id);
+  const blocked = blockedCombatTiles(combat);
+  const queue = [stack.position];
+  const distance = new Map([[stack.position, 0]]);
+  while (queue.length) {
+    const current = queue.shift();
+    for (const neighbor of combatNeighbors(current)) {
+      if (distance.has(neighbor) || occupied.has(neighbor) || blocked.has(neighbor)) continue;
+      const nextDistance = distance.get(current) + 1;
+      if (nextDistance > unitById(stack.unitId).speed) continue;
+      distance.set(neighbor, nextDistance);
+      queue.push(neighbor);
+    }
+  }
+  return [...distance.keys()].filter((tile) => tile !== stack.position);
+}
+
+export function combatHasLineOfSight(combat, from, to) {
+  const distance = combatDistance(from, to);
+  if (distance <= 1) return true;
+  const start = offsetToCube(from), end = offsetToCube(to);
+  const blocked = blockedCombatTiles(combat);
+  const occupied = occupiedCombatTiles(combat);
+  for (let step = 1; step < distance; step += 1) {
+    const amount = step / distance;
+    const cube = roundCube({
+      x: start.x + (end.x - start.x) * amount,
+      y: start.y + (end.y - start.y) * amount,
+      z: start.z + (end.z - start.z) * amount,
+    });
+    const tile = cubeToTile(cube);
+    if (blocked.has(tile) || occupied.has(tile)) return false;
+  }
+  return true;
+}
+
+function enemyAdjacent(combat, stack) {
+  const neighbors = new Set(combatNeighbors(stack.position));
+  return livingCombatStacks(combat).some((other) => other.side !== stack.side && neighbors.has(other.position));
+}
+
+function attackPlan(combat, attacker, defender) {
+  if (!attacker || !defender || attacker.side === defender.side || combatStackCount(attacker) <= 0 || combatStackCount(defender) <= 0) return null;
+  const unit = unitById(attacker.unitId);
+  if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker) && combatHasLineOfSight(combat, attacker.position, defender.position)) {
+    return { ranged: true, route: [] };
+  }
+  const destinations = combatNeighbors(defender.position).filter((tile) => tile === attacker.position || (!occupiedCombatTiles(combat, attacker.id).has(tile) && !blockedCombatTiles(combat).has(tile)));
+  const route = findCombatRoute(combat, attacker.id, destinations, unit.speed);
+  return route ? { ranged: false, route } : null;
+}
+
+export function combatCanAttack(combat, attackerId, defenderId) {
+  const attacker = combat?.stacks.find((stack) => stack.id === attackerId);
+  const defender = combat?.stacks.find((stack) => stack.id === defenderId);
+  return Boolean(attackPlan(combat, attacker, defender));
+}
+
+function enemyArmyFor(battle) {
+  const strength = battle.strength;
+  if (battle.type === "siege") return [
+    ["spearmen", Math.max(8, Math.ceil(strength * .55))],
+    ["slingers", Math.max(4, Math.ceil(strength * .28))],
+    ["swordsmen", Math.max(2, Math.floor(strength * .1))],
+  ];
+  return [
+    ["spearmen", Math.max(6, Math.ceil(strength * .55))],
+    ["slingers", Math.max(3, Math.ceil(strength * .26))],
+    ["scouts", Math.max(2, Math.floor(strength * .1))],
+  ];
+}
+
+function makeCombatStack(side, unitId, count, position) {
+  const unit = unitById(unitId);
+  return {
+    id: `${side}-${unitId}`,
+    side,
+    unitId,
+    position,
+    totalHealth: count * unit.health,
+    shots: unit.shots ?? 0,
+    waited: false,
+    defending: false,
+    retaliated: false,
+    done: false,
+  };
+}
+
+function nextCombatStack(combat) {
+  const sortByInitiative = (direction) => (a, b) => {
+    const initiative = unitById(b.unitId).initiative - unitById(a.unitId).initiative;
+    if (initiative !== 0) return initiative * direction;
+    if (a.side !== b.side) return a.side === "player" ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  };
+  const ready = livingCombatStacks(combat).filter((stack) => !stack.done && !stack.waited).sort(sortByInitiative(1));
+  if (ready.length) return ready[0];
+  const waiting = livingCombatStacks(combat).filter((stack) => !stack.done && stack.waited).sort(sortByInitiative(-1));
+  return waiting[0] ?? null;
+}
+
+function combatOutcome(combat) {
+  const playerAlive = livingCombatStacks(combat).some((stack) => stack.side === "player");
+  const enemyAlive = livingCombatStacks(combat).some((stack) => stack.side === "enemy");
+  if (!enemyAlive) return "victory";
+  if (!playerAlive) return "defeat";
+  return null;
+}
+
+function replaceCombatStack(combat, stack) {
+  return { ...combat, stacks: combat.stacks.map((item) => item.id === stack.id ? stack : item) };
+}
+
+function strikeCombatStack(combat, attackerId, defenderId, ranged, retaliation = false) {
+  const attacker = combat.stacks.find((stack) => stack.id === attackerId);
+  const defender = combat.stacks.find((stack) => stack.id === defenderId);
+  if (!attacker || !defender) return combat;
+  const attackerUnit = unitById(attacker.unitId), defenderUnit = unitById(defender.unitId);
+  const attackerCount = combatStackCount(attacker), before = combatStackCount(defender);
+  const defense = defenderUnit.defense + (defender.defending ? 3 : 0);
+  const difference = attackerUnit.attack - defense;
+  const attackModifier = difference >= 0 ? 1 + Math.min(3, difference * .05) : 1 / (1 + Math.abs(difference) * .025);
+  const rangeModifier = ranged && combatDistance(attacker.position, defender.position) > 10 ? .5 : 1;
+  const meleeShootingModifier = !ranged && attackerUnit.ranged ? .5 : 1;
+  const baseDamage = attackerCount * (attackerUnit.damage[0] + attackerUnit.damage[1]) / 2;
+  const damage = Math.max(1, Math.round(baseDamage * attackModifier * rangeModifier * meleeShootingModifier));
+  const updatedDefender = { ...defender, totalHealth: Math.max(0, defender.totalHealth - damage) };
+  const after = combatStackCount(updatedDefender);
+  const label = retaliation ? " retaliated against " : " struck ";
+  const entry = `${attackerUnit.name}${label}${defenderUnit.name} for ${damage} damage${before > after ? ` (${before - after} lost)` : ""}.`;
+  return { ...replaceCombatStack(combat, updatedDefender), log: [...combat.log, entry] };
+}
+
+function performCombatAttack(combat, attackerId, defenderId) {
+  let attacker = combat.stacks.find((stack) => stack.id === attackerId);
+  const defender = combat.stacks.find((stack) => stack.id === defenderId);
+  const plan = attackPlan(combat, attacker, defender);
+  if (!plan) return combat;
+  if (plan.route.length) {
+    attacker = { ...attacker, position: plan.route.at(-1) };
+    combat = replaceCombatStack(combat, attacker);
+  }
+  if (plan.ranged) {
+    attacker = { ...attacker, shots: attacker.shots - 1 };
+    combat = replaceCombatStack(combat, attacker);
+  }
+  combat = strikeCombatStack(combat, attackerId, defenderId, plan.ranged);
+  const survivingDefender = combat.stacks.find((stack) => stack.id === defenderId);
+  const survivingAttacker = combat.stacks.find((stack) => stack.id === attackerId);
+  if (!plan.ranged && combatStackCount(survivingDefender) > 0 && !survivingDefender.retaliated && combatStackCount(survivingAttacker) > 0) {
+    combat = replaceCombatStack(combat, { ...survivingDefender, retaliated: true });
+    combat = strikeCombatStack(combat, defenderId, attackerId, false, true);
+  }
+  const finalAttacker = combat.stacks.find((stack) => stack.id === attackerId);
+  return replaceCombatStack(combat, { ...finalAttacker, done: true, defending: false });
+}
+
+function nearestEnemyStacks(combat, stack) {
+  return livingCombatStacks(combat)
+    .filter((target) => target.side !== stack.side)
+    .sort((a, b) => combatDistance(stack.position, a.position) - combatDistance(stack.position, b.position) || a.totalHealth - b.totalHealth || a.id.localeCompare(b.id));
+}
+
+function performEnemyTurn(combat) {
+  const stack = combat.stacks.find((item) => item.id === combat.activeStackId);
+  if (!stack || stack.side !== "enemy") return combat;
+  const targets = nearestEnemyStacks(combat, stack);
+  const attackTarget = targets.find((target) => combatCanAttack(combat, stack.id, target.id));
+  if (attackTarget) return performCombatAttack(combat, stack.id, attackTarget.id);
+  const destinations = new Set();
+  for (const target of targets) for (const tile of combatNeighbors(target.position)) destinations.add(tile);
+  const route = findCombatRoute(combat, stack.id, [...destinations]);
+  if (route?.length) {
+    const movement = route.slice(0, unitById(stack.unitId).speed);
+    const moved = { ...stack, position: movement.at(-1), done: true };
+    return { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} advanced ${movement.length} hex${movement.length === 1 ? "" : "es"}.`] };
+  }
+  return replaceCombatStack(combat, { ...stack, defending: true, done: true });
+}
+
+function continueCombat(combat) {
+  let next = { ...combat, activeStackId: null };
+  for (let safety = 0; safety < 100; safety += 1) {
+    const result = combatOutcome(next);
+    if (result) return { ...next, result, activeStackId: null, log: [...next.log, result === "victory" ? "The enemy formation broke." : "Marcellus's field army was defeated."] };
+    let active = nextCombatStack(next);
+    if (!active) {
+      const stacks = next.stacks.map((stack) => ({ ...stack, done: false, waited: false, defending: false, retaliated: false }));
+      next = { ...next, round: next.round + 1, stacks, log: [...next.log, `Round ${next.round + 1} began.`] };
+      active = nextCombatStack(next);
+    }
+    next = { ...next, activeStackId: active.id };
+    if (active.side === "player") return next;
+    next = performEnemyTurn(next);
+    next = { ...next, activeStackId: null };
+  }
+  return next;
+}
+
+export function startCombat(game) {
+  if (!game.pendingBattle || game.combat) return game;
+  const playerPositions = [15, 45, 60, 90, 120];
+  const enemyPositions = [29, 59, 74, 104, 134];
+  const playerArmy = UNITS.map((unit) => [unit.id, game.army[unit.id] ?? 0]).filter(([, count]) => count > 0);
+  if (!playerArmy.length) return { ...game, pendingBattle: null, notice: "Marcellus has no troops available to fight. Recruit an army before returning." };
+  const playerStacks = playerArmy.map(([unitId, count], index) => makeCombatStack("player", unitId, count, playerPositions[index]));
+  const enemyStacks = enemyArmyFor(game.pendingBattle).map(([unitId, count], index) => makeCombatStack("enemy", unitId, count, enemyPositions[index]));
+  const obstacles = BATTLEFIELD_PATTERNS[game.pendingBattle.type] ?? BATTLEFIELD_PATTERNS.field;
+  const combat = continueCombat({
+    width: COMBAT_WIDTH,
+    height: COMBAT_HEIGHT,
+    battle: { ...game.pendingBattle },
+    round: 1,
+    stacks: [...playerStacks, ...enemyStacks],
+    obstacles,
+    activeStackId: null,
+    result: null,
+    log: [`Battle for ${game.pendingBattle.name} began.`],
+  });
+  return { ...game, combat, notice: `Battle joined at ${game.pendingBattle.name}.` };
+}
+
+export function moveCombatStack(game, destination) {
+  const combat = game.combat;
+  if (!combat || combat.result) return game;
+  const stack = combat.stacks.find((item) => item.id === combat.activeStackId);
+  if (!stack || stack.side !== "player") return game;
+  const route = findCombatRoute(combat, stack.id, [destination], unitById(stack.unitId).speed);
+  if (!route?.length) return game;
+  const moved = { ...stack, position: destination, done: true, defending: false };
+  const next = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} moved ${route.length} hex${route.length === 1 ? "" : "es"}.`] };
+  return { ...game, combat: continueCombat(next) };
+}
+
+export function attackCombatStack(game, defenderId) {
+  const combat = game.combat;
+  if (!combat || combat.result) return game;
+  const attacker = combat.stacks.find((stack) => stack.id === combat.activeStackId);
+  if (!attacker || attacker.side !== "player" || !combatCanAttack(combat, attacker.id, defenderId)) return game;
+  return { ...game, combat: continueCombat(performCombatAttack(combat, attacker.id, defenderId)) };
+}
+
+export function waitCombatTurn(game) {
+  const combat = game.combat;
+  const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);
+  if (!combat || combat.result || !stack || stack.side !== "player" || stack.waited) return game;
+  const waiting = { ...stack, waited: true };
+  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, waiting), log: [...combat.log, `${unitById(stack.unitId).name} waited for an opening.`] }) };
+}
+
+export function defendCombatTurn(game) {
+  const combat = game.combat;
+  const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);
+  if (!combat || combat.result || !stack || stack.side !== "player") return game;
+  const defending = { ...stack, defending: true, done: true };
+  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, defending), log: [...combat.log, `${unitById(stack.unitId).name} took a defensive stance.`] }) };
+}
+
+export function retreatCombat(game) {
+  if (!game.combat || game.combat.result) return game;
+  return { ...game, combat: { ...game.combat, result: "retreat", activeStackId: null, log: [...game.combat.log, "Marcellus ordered a retreat."] } };
+}
 
 export function createGame() {
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero: 170, moves: MAX_MOVEMENT,
     gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
     army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0 },
-    techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null,
+    techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null, combat: null,
     constructionThisTurn: {},
     buildings: { aurum: ["town-hall", "militia-yard", "archery-range", "scout-camp"], freehaven: ["town-hall", "militia-yard"] },
     settlements: {
@@ -198,23 +590,38 @@ export function collectAt(game) {
 
 export function resolveBattle(game) {
   const battle = game.pendingBattle;
-  if (!battle) return game;
-  const armyStrength = game.army.spearmen + game.army.slingers + game.army.scouts * 2 + game.army.swordsmen * 3 + game.army.horsemen * 4;
-  if (armyStrength < battle.strength) return { ...game, pendingBattle: null, notice: "The garrison held. Recruit more troops before another assault." };
-  const army = { ...game.army, spearmen: Math.max(0, game.army.spearmen - 4), slingers: Math.max(0, game.army.slingers - 2) };
+  const combat = game.combat;
+  if (!battle || !combat?.result) return game;
+  const army = Object.fromEntries(UNITS.map((unit) => {
+    const stack = combat.stacks.find((item) => item.side === "player" && item.unitId === unit.id);
+    return [unit.id, combatStackCount(stack)];
+  }));
+  if (combat.result !== "victory") {
+    const capital = game.settlements.aurum;
+    const resultName = combat.result === "retreat" ? "retreated" : "was defeated";
+    return {
+      ...game,
+      hero: capital.tile,
+      army,
+      pendingBattle: null,
+      combat: null,
+      notice: `Marcellus ${resultName} to ${capital.name}. The enemy still controls ${battle.name}.`,
+      log: [...game.log, `Marcellus ${resultName} at ${battle.name}.`],
+    };
+  }
   if (battle.type === "siege") {
     const settlement = game.settlements[battle.settlementId];
     const settlements = { ...game.settlements, [battle.settlementId]: { ...settlement, owner: "player", garrison: 0 } };
-    return { ...game, army, settlements, cities: game.cities + 1, victories: game.victories + 1, pendingBattle: null, notice: `${settlement.name} has been conquered and added to your Cities list.`, log: [...game.log, `Captured ${settlement.name} after defeating its garrison.`] };
+    return { ...game, army, settlements, cities: game.cities + 1, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${settlement.name} has been conquered and added to your Cities list.`, log: [...game.log, `Captured ${settlement.name} after defeating its garrison.`] };
   }
   if (battle.type === "producer") {
     const producer = game.producers[battle.producerId];
     const producers = { ...game.producers, [producer.id]: { ...producer, owner: "player", garrison: 0 } };
-    return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, notice: `${producer.name} is secured. It will produce ${producer.amount} ${producer.resource === "wood" ? "timber" : producer.resource} each month.`, log: [...game.log, `Defeated the guards and took control of ${producer.name}.`] };
+    return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${producer.name} is secured. It will produce ${producer.amount} ${producer.resource === "wood" ? "timber" : producer.resource} each month.`, log: [...game.log, `Defeated the guards and took control of ${producer.name}.`] };
   }
   const sites = { ...game.sites };
   delete sites[game.hero];
-  return { ...game, army, sites, gold: game.gold + 120, victories: game.victories + 1, pendingBattle: null, notice: "The raiders were defeated; 120 gold was recovered.", log: [...game.log, "Defeated a company of raiders."] };
+  return { ...game, army, sites, gold: game.gold + 120, victories: game.victories + 1, pendingBattle: null, combat: null, notice: "The raiders were defeated; 120 gold was recovered.", log: [...game.log, "Defeated a company of raiders."] };
 }
 
 export function chooseResearch(game, techId) {
