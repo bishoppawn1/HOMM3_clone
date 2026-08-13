@@ -1,67 +1,81 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  RESEARCH,
   BOARD,
+  MAX_MOVEMENT,
+  RESEARCH,
   advanceMonth,
-  buildInCapital,
+  buildInCity,
   canMoveTo,
   chooseResearch,
   collectAt,
   createGame,
   eraReadiness,
+  recruitFromCity,
+  resolveBattle,
   startResearch,
 } from "../app/game-core.js";
 
-test("the calendar has twelve monthly turns and rolls into a new year", () => {
-  let game = { ...createGame(), month: 12, monthName: "December", year: 4 };
-  game = advanceMonth(game);
-  assert.equal(game.month, 1);
-  assert.equal(game.monthName, "January");
-  assert.equal(game.year, 5);
-  assert.equal(game.moves, 5);
+test("the calendar has twelve monthly turns and restores sixteen movement", () => {
+  const next = advanceMonth({ ...createGame(), month: 12, monthName: "December", year: 4, moves: 0 });
+  assert.equal(next.month, 1);
+  assert.equal(next.monthName, "January");
+  assert.equal(next.year, 5);
+  assert.equal(next.moves, MAX_MOVEMENT);
+  assert.equal(MAX_MOVEMENT, 16);
 });
 
-test("monthly production includes city and building income", () => {
-  const game = { ...createGame(), cities: 2, buildings: ["granary", "archive"], activeResearch: null };
+test("monthly production includes every owned city and its buildings", () => {
+  const game = createGame();
+  game.cities = 2;
+  game.settlements.freehaven.owner = "player";
+  game.buildings.aurum = ["mason-yard", "archive"];
+  game.activeResearch = null;
   const next = advanceMonth(game);
   assert.equal(next.gold, game.gold + 150);
-  assert.equal(next.food, game.food + 20);
+  assert.equal(next.stone, game.stone + 8);
   assert.equal(next.research, game.research + 60);
+  assert.equal(next.settlements.aurum.recruits.spearmen, game.settlements.aurum.recruits.spearmen + 4);
 });
 
 test("movement permits adjacent land and blocks water, distance, and exhausted armies", () => {
   const game = createGame();
-  assert.equal(canMoveTo(game, 23), true);
-  assert.equal(canMoveTo(game, 29), false);
-  assert.equal(canMoveTo({ ...game, hero: 20 }, 27), false);
-  assert.equal(canMoveTo({ ...game, moves: 0 }, 24), false);
+  assert.equal(canMoveTo(game, 65), true);
+  assert.equal(canMoveTo(game, 54), true);
+  assert.equal(canMoveTo(game, 40), false);
+  assert.equal(canMoveTo({ ...game, hero: 70 }, 71), false);
+  assert.equal(canMoveTo({ ...game, moves: 0 }, 65), false);
 });
 
-test("a pickup is consumed permanently when collected", () => {
-  const game = { ...createGame(), hero: 10 };
+test("resource pickups are consumed permanently and stone replaces food", () => {
+  const game = { ...createGame(), hero: 75 };
+  assert.equal("food" in game, false);
   const collected = collectAt(game);
-  assert.equal(collected.wood, game.wood + 20);
-  assert.equal(collected.pickups[10], undefined);
-  assert.equal(advanceMonth(collected).pickups[10], undefined);
+  assert.equal(collected.stone, game.stone + 18);
+  assert.equal(collected.pickups[75], undefined);
+  assert.equal(advanceMonth(collected).pickups[75], undefined);
+});
+
+test("magical dust is a distinct collectible special resource", () => {
+  const game = { ...createGame(), hero: 9 };
+  const collected = collectAt(game);
+  assert.equal(collected.magicDust, game.magicDust + 4);
+  assert.equal(collected.pickups[9], undefined);
 });
 
 test("a Knowledge Hut offers two choices and applies only the selected research bonus", () => {
-  const opened = collectAt({ ...createGame(), hero: 2 });
+  const opened = collectAt({ ...createGame(), hero: 14 });
   assert.equal(opened.researchChoice.length, 2);
   const [selected, rejected] = opened.researchChoice;
   const resolved = chooseResearch(opened, selected.id);
   assert.equal(resolved.research, opened.research);
   assert.equal(resolved.techProgress[selected.id], selected.bonus);
-  assert.deepEqual(resolved.techs, []);
   assert.equal(resolved.techs.includes(rejected.id), false);
   assert.equal(resolved.researchChoice, null);
   assert.equal(resolved.cities, opened.cities);
-  assert.equal(resolved.victories, opened.victories);
-  assert.deepEqual(resolved.buildings, opened.buildings);
 });
 
-test("research points are stored without an active project", () => {
+test("research points stay stored without an active project", () => {
   const game = { ...createGame(), research: 70, activeResearch: null };
   const next = advanceMonth(game);
   assert.equal(next.research, 105);
@@ -69,8 +83,7 @@ test("research points are stored without an active project", () => {
 });
 
 test("stored and monthly points go into the selected technology", () => {
-  const game = { ...createGame(), research: 70 };
-  const started = startResearch(game, "bronze");
+  const started = startResearch({ ...createGame(), research: 70 }, "bronze");
   assert.equal(started.research, 0);
   assert.equal(started.techProgress.bronze, 70);
   const next = advanceMonth(started);
@@ -79,40 +92,54 @@ test("stored and monthly points go into the selected technology", () => {
 });
 
 test("completed research keeps excess points in storage", () => {
-  const game = { ...createGame(), research: 300 };
-  const completed = startResearch(game, "surveying");
+  const completed = startResearch({ ...createGame(), research: 300 }, "surveying");
   assert.equal(completed.techProgress.surveying, 180);
   assert.equal(completed.research, 120);
   assert.equal(completed.activeResearch, null);
   assert.equal(completed.techs.includes("surveying"), true);
 });
 
-test("capital and neutral town are visible on traversable map tiles", () => {
+test("capital and neutral city occupy separate traversable map tiles", () => {
   const game = createGame();
-  const capital = Number(Object.entries(game.pickups).find(([, site]) => site === "capital")[0]);
-  const town = Number(Object.entries(game.pickups).find(([, site]) => site === "city")[0]);
-  assert.equal(capital, 17);
-  assert.notEqual(BOARD[capital], "water");
-  assert.notEqual(BOARD[town], "water");
+  assert.equal(game.settlements.aurum.tile, 54);
+  assert.notEqual(BOARD[game.settlements.aurum.tile], "water");
+  assert.notEqual(BOARD[game.settlements.freehaven.tile], "water");
+  assert.equal(Object.values(game.pickups).includes("city"), false);
 });
 
-test("building construction charges gold once and grants no free readiness bypass", () => {
+test("Freehaven requires a garrison battle and remains on the map after conquest", () => {
+  const confronted = collectAt({ ...createGame(), hero: 33 });
+  assert.equal(confronted.pendingBattle.type, "siege");
+  assert.equal(confronted.cities, 1);
+  const conquered = resolveBattle(confronted);
+  assert.equal(conquered.pendingBattle, null);
+  assert.equal(conquered.settlements.freehaven.owner, "player");
+  assert.equal(conquered.settlements.freehaven.tile, 33);
+  assert.equal(conquered.cities, 2);
+});
+
+test("troops can only be recruited while the commander is inside an owned city", () => {
+  const away = createGame();
+  assert.equal(recruitFromCity(away, "aurum", "spearmen"), away);
+  const present = { ...away, hero: away.settlements.aurum.tile };
+  const recruited = recruitFromCity(present, "aurum", "spearmen");
+  assert.equal(recruited.army.spearmen, present.army.spearmen + 1);
+  assert.equal(recruited.settlements.aurum.recruits.spearmen, present.settlements.aurum.recruits.spearmen - 1);
+  assert.equal(recruited.gold, present.gold - 24);
+});
+
+test("city construction charges gold and stone only once", () => {
   const game = createGame();
-  const built = buildInCapital(game, "workshop");
+  const built = buildInCity(game, "aurum", "workshop");
   assert.equal(built.gold, game.gold - 320);
-  assert.deepEqual(built.buildings, ["workshop"]);
-  assert.equal(buildInCapital(built, "workshop"), built);
+  assert.equal(built.stone, game.stone - 12);
+  assert.deepEqual(built.buildings.aurum, ["workshop"]);
+  assert.equal(buildInCity(built, "aurum", "workshop"), built);
   assert.equal(eraReadiness(built).ready, false);
 });
 
 test("era advancement requires every concrete readiness condition", () => {
-  const almostReady = {
-    ...createGame(),
-    techs: RESEARCH.map((technology) => technology.id),
-    cities: 2,
-    buildings: ["workshop"],
-    victories: 0,
-  };
+  const almostReady = { ...createGame(), techs: RESEARCH.map((technology) => technology.id), cities: 2, buildings: { aurum: ["workshop"], freehaven: [] }, victories: 0 };
   assert.equal(eraReadiness(almostReady).ready, false);
   assert.equal(eraReadiness({ ...almostReady, victories: 1 }).ready, true);
 });

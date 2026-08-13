@@ -36,16 +36,16 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 ### 4.1 Movement — Prototype
 
-- The map is a tile grid in the prototype; the final map may use a hex or isometric topology.
+- The map is a dense tile grid of small adventure-map squares; the final map may use a hex or isometric topology.
 - A commander spends one movement point to enter an orthogonally adjacent passable tile.
 - Water is impassable without an appropriate transport capability.
-- Movement refreshes each month.
+- A commander currently has 16 movement points, within the intended 10–20 range, and movement refreshes each month.
 
 ### 4.2 Map sites — Prototype
 
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
-- **Free Town:** joins the player's administration when reached in the prototype.
+- **Neutral city:** is a persistent settlement, never a pickup. Entering its tile begins a fight against its garrison; only victory transfers control.
 - **Hostile army:** resolves a placeholder victory in the prototype and will later open tactical combat.
 
 Consumed sites do not reappear merely because a month or year passes.
@@ -58,10 +58,11 @@ Mines, farms, timber camps, ports, trade posts, and similar controlled sites wil
 
 - **Gold:** construction, recruitment, upkeep, and commerce.
 - **Timber:** buildings, ships, and equipment.
-- **Food:** recruitment, population support, and campaigning.
+- **Stone:** buildings, defenses, roads, and major civic works.
+- **Magical dust:** a rare special resource collected from the map and reserved for exceptional technologies and late-game construction.
 - **Research:** progress through the current age's technology tree.
 
-Additional strategic materials may appear in later ages, but each must have a clear purpose and should not create needless bookkeeping.
+Food is not a player-managed resource. Additional strategic materials may appear in later ages, but each must have a clear purpose and should not create needless bookkeeping.
 
 ## 6. Research and technology
 
@@ -121,15 +122,17 @@ Cities belong to the civilization but must construct local infrastructure before
 
 ## 8. Cities and construction
 
-### 8.1 City screen — Prototype foundation
+### 8.1 Cities screen — Prototype
 
-Each city owns buildings and monthly production. Buildings cost resources, may require prior buildings or technologies, and may unlock new units or production bonuses.
+The Cities tab first lists every settlement currently controlled by the player. Selecting a city opens that city's own management view. Each city owns buildings, recruits, population, and monthly production. Buildings cost resources, may require prior buildings or technologies, and may unlock new units or production bonuses.
 
-The prototype capital, Aurum, can build a Granary, Civic Workshop, and Scribes' Archive.
+The prototype cities can build a Mason's Yard, Civic Workshop, and Scribes' Archive.
+
+Each owned city generates a stock of available troops over time. A commander must physically occupy that city's adventure-map tile to transfer available troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment into that commander.
 
 ### 8.2 Building tree — Planned
 
-The full tree will include civic administration, scholarship, trade, food production, industry, defenses, and multiple military branches. Cities should develop distinct roles rather than all converging on one optimal build order.
+The full tree will include civic administration, scholarship, trade, stone production, industry, defenses, and multiple military branches. Cities should develop distinct roles rather than all converging on one optimal build order.
 
 ## 9. Armies and tactical combat — Planned
 
@@ -144,12 +147,14 @@ The prototype adventure-map raider encounter currently resolves automatically. T
 
 ### 9.1 Settlement placement
 
-Every settlement must occupy passable terrain and be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map. The prototype capital, Aurum, is a prominent central landmark; neutral Free Towns appear only on traversable land.
+Every settlement must occupy passable terrain and be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a guarded neutral city on traversable land and remains visible after conquest.
 
 ## 10. Interface and controls — Prototype
 
 - Click an adjacent highlighted map tile to move.
-- Use Research and Aurum tabs to switch the side panel.
+- Use Research and Cities tabs to switch the side panel.
+- Select an owned city from the Cities list to enter its management view.
+- Move a commander onto an owned city before recruiting its available troops.
 - Select one of two options when a Knowledge Hut opens.
 - Use End Month to advance the calendar and refresh movement.
 - Open the Campaign Chronicle to review recent events.
