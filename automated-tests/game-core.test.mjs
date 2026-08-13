@@ -114,7 +114,7 @@ test("movement permits adjacent land and blocks water, mountains, dense forest, 
   assert.equal(canMoveTo({ ...game, moves: 0 }, adventureTile(12, 12)), false);
 });
 
-test("continuous blockers create two mountain passes and a guarded shortest approach", () => {
+test("continuous blockers create two mountain passes and routes detour around living raiders", () => {
   const game = createGame();
   for (let row = 0; row < MAP_HEIGHT; row += 1) {
     const spine = [17, 18, 19, 20, 21].map((col) => BOARD[adventureTile(col, row)]);
@@ -122,7 +122,18 @@ test("continuous blockers create two mountain passes and a guarded shortest appr
     else assert.equal(spine.includes("mountain"), true);
   }
   const freehavenRoute = findPath(game, game.settlements.freehaven.tile);
-  assert.equal(freehavenRoute.includes(siteTile(game, "raiders")), true);
+  assert.equal(freehavenRoute.some((tile) => game.sites[tile]), false);
+  const unguardedRoute = findPath({ ...game, sites: {} }, game.settlements.freehaven.tile);
+  assert.equal(unguardedRoute.length < freehavenRoute.length, true);
+  assert.equal(unguardedRoute.includes(siteTile(game, "raiders")), true);
+});
+
+test("deliberately targeting a raider site still plots a route into battle", () => {
+  const game = createGame();
+  const raiders = siteTile(game, "raiders");
+  const route = findPath(game, raiders);
+  assert.equal(route.at(-1), raiders);
+  assert.equal(route.slice(0, -1).some((tile) => game.sites[tile]), false);
 });
 
 test("every settlement and producer entrance remains connected to the capital", () => {
@@ -169,7 +180,9 @@ test("pathfinding rejects natural barriers but uses the guarded mountain passes"
 test("resource pickups are consumed permanently and stone replaces food", () => {
   const initial = createGame();
   const tile = pickupTile(initial, "stone");
-  const game = { ...initial, hero: tile };
+  const sites = { ...initial.sites };
+  delete sites[initial.pickupGuards[tile]];
+  const game = { ...initial, sites, hero: tile };
   assert.equal("food" in game, false);
   const collected = collectAt(game);
   assert.equal(collected.stone, game.stone + 18);
@@ -184,6 +197,40 @@ test("magical dust is a distinct collectible special resource", () => {
   const collected = collectAt(game);
   assert.equal(collected.magicDust, game.magicDust + 4);
   assert.equal(collected.pickups[tile], undefined);
+});
+
+test("most resource pickups form guarded clusters around raider camps", () => {
+  const game = createGame();
+  const resourceTiles = Object.entries(game.pickups).filter(([, pickup]) => pickup !== "knowledge");
+  const guardedTiles = Object.entries(game.pickupGuards);
+  assert.equal(resourceTiles.length, 18);
+  assert.equal(guardedTiles.length, 16);
+  assert.equal(resourceTiles.filter(([tile]) => game.pickupGuards[tile] === undefined).length, 2);
+
+  const perCamp = new Map();
+  for (const [tileText, guard] of guardedTiles) {
+    const tile = Number(tileText);
+    assert.equal(game.sites[guard] === "raiders" || game.sites[guard] === "freehaven-bandits", true);
+    const distance = Math.abs(tile % MAP_WIDTH - guard % MAP_WIDTH) + Math.abs(Math.floor(tile / MAP_WIDTH) - Math.floor(guard / MAP_WIDTH));
+    assert.equal(distance <= 4, true);
+    perCamp.set(guard, (perCamp.get(guard) ?? 0) + 1);
+  }
+  assert.deepEqual([...perCamp.values()].sort(), [4, 4, 4, 4]);
+});
+
+test("guarded caches cannot be collected until their raider camp is defeated", () => {
+  const initial = createGame();
+  const camp = siteTile(initial, "raiders");
+  const cache = Number(Object.keys(initial.pickupGuards).find((tile) => initial.pickupGuards[tile] === camp));
+  const refused = collectAt({ ...initial, hero: cache });
+  assert.equal(refused.pickups[cache], initial.pickups[cache]);
+  assert.match(refused.notice, /defeat their camp/i);
+
+  const confronted = collectAt({ ...initial, hero: camp });
+  const cleared = resolveBattle(markCombatVictory(confronted));
+  assert.equal(cleared.sites[camp], undefined);
+  const collected = collectAt({ ...cleared, hero: cache });
+  assert.equal(collected.pickups[cache], undefined);
 });
 
 test("a Knowledge Hut offers two choices and applies only the selected research bonus", () => {

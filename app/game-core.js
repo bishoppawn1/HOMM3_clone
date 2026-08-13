@@ -562,6 +562,26 @@ export function createGame() {
   const violetworks = adventureTile(42, 19);
   const raiderPass = adventureTile(19, 8);
   const freehavenBandits = adventureTile(39, 8);
+  const quarryRaiders = adventureTile(27, 18);
+  const southernRaiders = adventureTile(42, 22);
+  const pickupGuards = {
+    [adventureTile(15, 8)]: raiderPass,
+    [adventureTile(16, 7)]: raiderPass,
+    [adventureTile(16, 8)]: raiderPass,
+    [adventureTile(16, 9)]: raiderPass,
+    [adventureTile(38, 7)]: freehavenBandits,
+    [adventureTile(38, 8)]: freehavenBandits,
+    [adventureTile(39, 7)]: freehavenBandits,
+    [adventureTile(40, 9)]: freehavenBandits,
+    [adventureTile(25, 17)]: quarryRaiders,
+    [adventureTile(26, 17)]: quarryRaiders,
+    [adventureTile(28, 17)]: quarryRaiders,
+    [adventureTile(29, 18)]: quarryRaiders,
+    [adventureTile(40, 21)]: southernRaiders,
+    [adventureTile(41, 21)]: southernRaiders,
+    [adventureTile(43, 21)]: southernRaiders,
+    [adventureTile(44, 23)]: southernRaiders,
+  };
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
     gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
@@ -578,8 +598,17 @@ export function createGame() {
       redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(26, 23), adventureTile(27, 23), adventureTile(28, 23), adventureTile(26, 24), redcliff, adventureTile(28, 24)], entrance: redcliff, owner: "neutral", garrison: 32 },
       violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(41, 18), adventureTile(42, 18), adventureTile(43, 18), adventureTile(41, 19), violetworks, adventureTile(43, 19)], entrance: violetworks, owner: "neutral", garrison: 38 },
     },
-    sites: { [raiderPass]: "raiders", [freehavenBandits]: "freehaven-bandits" },
-    pickups: { [adventureTile(8, 5)]: "dust", [adventureTile(24, 8)]: "knowledge", [adventureTile(12, 14)]: "timber", [adventureTile(31, 22)]: "stone", [adventureTile(42, 24)]: "gold" },
+    sites: { [raiderPass]: "raiders", [freehavenBandits]: "freehaven-bandits", [quarryRaiders]: "raiders", [southernRaiders]: "raiders" },
+    pickups: {
+      [adventureTile(8, 5)]: "dust",
+      [adventureTile(24, 8)]: "knowledge",
+      [adventureTile(12, 14)]: "timber",
+      [adventureTile(15, 8)]: "gold", [adventureTile(16, 7)]: "stone", [adventureTile(16, 8)]: "timber", [adventureTile(16, 9)]: "dust",
+      [adventureTile(38, 7)]: "gold", [adventureTile(38, 8)]: "timber", [adventureTile(39, 7)]: "stone", [adventureTile(40, 9)]: "dust",
+      [adventureTile(25, 17)]: "stone", [adventureTile(26, 17)]: "gold", [adventureTile(28, 17)]: "timber", [adventureTile(29, 18)]: "dust",
+      [adventureTile(40, 21)]: "gold", [adventureTile(41, 21)]: "stone", [adventureTile(43, 21)]: "timber", [adventureTile(44, 23)]: "dust",
+    },
+    pickupGuards,
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
     log: ["The campaign began in Year 1.", "Marcellus Vale departed Aurum."],
   };
@@ -603,24 +632,25 @@ function destinationFor(game, tile) {
   return producer?.entrance ?? settlement?.tile ?? tile;
 }
 
-function isPassable(game, tile) {
+function isPassable(game, tile, routeTarget = null) {
   if (!isTerrainPassable(tile)) return false;
   const producer = producerAt(game, tile);
   const settlement = settlementAt(game, tile);
-  return (!producer || producer.entrance === tile) && (!settlement || settlement.tile === tile);
+  const hostileSite = game.sites[tile] === "raiders" || game.sites[tile] === "freehaven-bandits";
+  return (!producer || producer.entrance === tile) && (!settlement || settlement.tile === tile) && (!hostileSite || tile === routeTarget);
 }
 
 export function canMoveTo(game, index) {
   if (game.moves <= 0 || game.researchChoice || game.pendingBattle) return false;
   const fromRow = Math.floor(game.hero / MAP_WIDTH), fromCol = game.hero % MAP_WIDTH;
   const row = Math.floor(index / MAP_WIDTH), col = index % MAP_WIDTH;
-  return isPassable(game, index) && Math.abs(fromRow - row) + Math.abs(fromCol - col) === 1;
+  return isPassable(game, index, index) && Math.abs(fromRow - row) + Math.abs(fromCol - col) === 1;
 }
 
 export function findPath(game, requestedTile) {
   if (game.researchChoice || game.pendingBattle) return null;
   const target = destinationFor(game, requestedTile);
-  if (target === game.hero || !isPassable(game, target)) return null;
+  if (target === game.hero || !isPassable(game, target, target)) return null;
   const queue = [game.hero];
   const previous = new Map([[game.hero, null]]);
   while (queue.length) {
@@ -634,7 +664,7 @@ export function findPath(game, requestedTile) {
       col > 0 ? current - 1 : -1,
     ];
     for (const neighbor of neighbors) {
-      if (neighbor < 0 || previous.has(neighbor) || !isPassable(game, neighbor)) continue;
+      if (neighbor < 0 || previous.has(neighbor) || !isPassable(game, neighbor, target)) continue;
       previous.set(neighbor, current);
       if (neighbor === target) {
         const path = [];
@@ -700,6 +730,8 @@ export function collectAt(game) {
   if (site === "raiders") return { ...game, pendingBattle: { type: "field", name: "March Raiders", strength: 18 }, notice: "A raider company bars the road." };
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
+  const guardingCamp = game.pickupGuards?.[game.hero];
+  if (guardingCamp && game.sites[guardingCamp]) return { ...game, notice: "Nearby raiders guard this cache. Defeat their camp before claiming these resources." };
   const pickups = { ...game.pickups };
   delete pickups[game.hero];
   if (pickup === "knowledge") {

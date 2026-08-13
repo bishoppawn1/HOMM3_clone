@@ -64,7 +64,7 @@ type GameState = {
   combat: CombatState | null;
   settlements: Record<string, Settlement>; sites: Record<number, string>;
   producers: Record<string, Producer>;
-  pickups: Record<number, string>; notice: string; log: string[];
+  pickups: Record<number, string>; pickupGuards: Record<number, number>; notice: string; log: string[];
 };
 
 export default function Home() {
@@ -188,13 +188,14 @@ export default function Home() {
               const row = Math.floor(index / MAP_WIDTH);
               const col = index % MAP_WIDTH;
               const pickup = game.pickups[index];
+              const guardedPickup = pickup && game.pickupGuards[index] !== undefined && game.sites[game.pickupGuards[index]] !== undefined;
               const site = game.sites[index];
               const city = settlementAt(game, index) as Settlement | null;
               const producer = producerAt(game, index) as Producer | null;
               const onPath = plannedPath.includes(index);
               const passable = isTerrainPassable(index);
               const terrainName = tile.replace("dense-forest", "dense forest");
-              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
+              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", guarded by nearby raiders" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}

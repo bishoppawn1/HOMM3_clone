@@ -43,6 +43,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 - Continuous natural barriers divide the map into defensible regions. Their deliberate road passes and forest gaps create strategic chokepoints; the shortest approach to Freehaven crosses a guarded mountain pass, while a much longer southern passage remains available.
 - Every settlement and persistent producer entrance remains connected to the capital by passable terrain and roads. Barriers constrain approach directions without isolating interactive locations.
 - The first right-click on any passable destination previews the shortest available route. A second right-click on that same destination executes travel; right-clicking elsewhere replaces the preview.
+- Route selection treats every surviving hostile army as an obstacle when plotting toward an ordinary destination, choosing a safe detour where one exists. Deliberately selecting the hostile site itself still plots a route into that encounter.
 - A route may extend beyond the commander's remaining movement. The portion traversable this month is yellow and the future portion is gray. Confirming a long route moves only across the yellow portion and spends the available movement; the destination can be plotted again after movement refreshes.
 - Travel stops early if it encounters a battle or a Knowledge Hut choice.
 - A commander currently has 16 movement points, within the intended 10–20 range, and movement refreshes each month.
@@ -51,6 +52,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
+- **Guarded resource cache:** most resource pickups appear in four-item clusters close to a raider camp. They remain visible but cannot be collected while their linked camp survives. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
 - **Neutral city:** is a persistent settlement, never a pickup. Freehaven is protected by a separate nearby bandit force: entering the city before defeating that force is refused, and victory over the defenders transfers the city to the player.
 - **Hostile army:** opens the tactical hex battlefield. Victory removes the hostile site and awards its listed spoils; retreat or defeat leaves it in place.
 
