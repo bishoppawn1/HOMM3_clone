@@ -222,7 +222,6 @@ export default function Home() {
             <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
               <path className="hill-ground" d="M 30.5 0 C 35 1.2 39 -0.6 44 .4 C 48 1.4 51 4.5 50.2 8.8 C 45 10.8 38.5 9.7 32 10.2 C 29.8 7 29.3 3.2 30.5 0 Z" />
               <path className="hill-ground" d="M 31 29 C 36 27.8 42 29.7 47 28.9 C 51 31.7 53 36.2 52.2 45 L 31.2 45 C 29.8 40 30.4 34.7 31 29 Z" />
-              <path className="hill-contour" d="M 32 4 C 37 2.3 43 3.8 48.5 2.2 M 33 7.3 C 38 5.6 43.5 7.6 48.8 5.8 M 32.5 34 C 38 31.8 45 34.3 50.5 32 M 32 39 C 38 36.5 45 40 51 37.2 M 33 43 C 39 41 45 43.4 50.8 41.2" />
               <path className="river-bank" d="M 67 0 C 69 6 65 11 67 17 C 69 23 64.5 28 66.5 34 C 68.5 39 65 42 67 45 L 72 45 L 72 0 Z" />
               <path className="river-shine" d="M 68.2 0 C 70 6 66.4 12 68 18 C 69.5 24 66 29 67.7 35 C 69 40 66.5 42 68 45" />
               {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-fill-${city.id}`} className={`territory-fill ${city.owner}`} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
@@ -244,7 +243,7 @@ export default function Home() {
               const onPath = plannedPath.includes(index);
               const passable = isTerrainPassable(index);
               const terrainName = tile.replace("dense-forest", "dense forest");
-              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", inside an occupied bandit camp" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
+              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", guarded by nearby bandits" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}

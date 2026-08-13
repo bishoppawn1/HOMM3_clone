@@ -55,7 +55,7 @@ h2 { font-size:20px; }
 .terrain-layer { z-index:1; }
 .road-layer { z-index:3; overflow:visible; }
 .territory-fill{fill:#d5b75a0b;stroke:none}.territory-fill.neutral{fill:#a9443609}
-.hill-ground{fill:#9a8f6252;stroke:#c3b47b26;stroke-width:.45;vector-effect:non-scaling-stroke}.hill-contour{fill:none;stroke:#5c604035;stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke;filter:blur(.4px)}
+.hill-ground{fill:#9a8f6236;stroke:none;filter:blur(16px)}
 .river-bank { fill:#355f67; stroke:#2d4e4e; stroke-width:.4; vector-effect:non-scaling-stroke; }
 .river-shine { fill:none; stroke:#a7c1b777; stroke-width:2; stroke-linecap:round; stroke-dasharray:8 12; vector-effect:non-scaling-stroke; }
 .road-shadow,.road-ribbon,.road-rut { fill:none; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }

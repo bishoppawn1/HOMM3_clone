@@ -248,7 +248,7 @@ test("most resource pickups sit in compact rings around visible raider camps", (
   assert.deepEqual([...perCamp.values()].sort(), [4, 4, 4, 4]);
 });
 
-test("targeting supplies inside a living camp routes to the bandits first", () => {
+test("targeting supplies near a living camp routes to the bandits first", () => {
   const game = createGame();
   const camp = siteTile(game, "raiders");
   const cache = Number(Object.keys(game.pickupGuards).find((tile) => game.pickupGuards[tile] === camp));
@@ -258,7 +258,7 @@ test("targeting supplies inside a living camp routes to the bandits first", () =
   assert.match(routeCommand(game, null, cache).notice, /must defeat the bandits/i);
 });
 
-test("supplies inside camps cannot be collected until their bandits are defeated", () => {
+test("supplies near camps cannot be collected until their bandits are defeated", () => {
   const initial = createGame();
   const camp = siteTile(initial, "raiders");
   const cache = Number(Object.keys(initial.pickupGuards).find((tile) => initial.pickupGuards[tile] === camp));
