@@ -33,6 +33,7 @@ type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
   gold: number; wood: number; stone: number; magicDust: number; research: number; cities: number; victories: number;
   army: Record<string, number>; techs: string[]; buildings: Record<string, string[]>; activeResearch: string | null;
+  constructionThisTurn: Record<string, boolean>;
   techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
   pendingBattle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number} | null;
   settlements: Record<string, Settlement>; sites: Record<number, string>;
@@ -265,6 +266,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
   const cityBuildings = game.buildings[city.id] ?? [];
   const present = game.hero === city.tile;
   const defense = cityDefense(game, city.id);
+  const constructionUsed = Boolean(game.constructionThisTurn?.[city.id]);
   const cityTier = cityBuildings.includes("civic-forum") ? 3 : cityBuildings.includes("city-hall") ? 2 : 1;
   return <section className="city-screen" aria-label={`${city.name} city management`}>
     <header className="city-screen-header">
@@ -289,7 +291,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
         <div className="guard-card"><span>⛨</span><div><b>Permanent city guard</b><small>{city.defenders} troops · Cannot join a hero</small></div></div>
       </aside>
       <section className="city-construction">
-        <div className="construction-heading"><div><p className="section-kicker">Construction tree</p><h3>Develop {city.name}</h3></div><div className="tree-legend"><span>Economy</span><span>Civic</span><span>Military</span><span>Defense</span></div></div>
+        <div className="construction-heading"><div><p className="section-kicker">Construction tree</p><h3>Develop {city.name}</h3><p className={`construction-status ${constructionUsed ? "used" : "available"}`}>{constructionUsed ? "Construction complete for this turn. End the month to build again." : "Construction available: this city may complete one building this turn."}</p></div><div className="tree-legend"><span>Economy</span><span>Civic</span><span>Military</span><span>Defense</span></div></div>
         <div className="construction-tree full-tree">{BUILDINGS.map(building => {
           const built = cityBuildings.includes(building.id);
           const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
@@ -299,7 +301,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
             <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
             <small>{building.description}</small>
             {!built && !prerequisitesMet && <p>Requires {requirementNames}</p>}
-            {built ? <strong>✓ Built</strong> : <button disabled={!prerequisitesMet || !affordable} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</button>}
+            {built ? <strong>✓ Built</strong> : <button disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{constructionUsed ? "Built this turn" : <>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</>}</button>}
           </article>;
         })}</div>
       </section>

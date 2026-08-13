@@ -38,4 +38,6 @@ test("entering a city uses a dedicated full-screen management surface", async ()
   assert.match(page, /Return to adventure map/);
   assert.match(page, /construction-tree full-tree/);
   assert.match(page, /Permanent city guard/);
+  assert.match(page, /Construction available: this city may complete one building this turn/);
+  assert.match(page, /Construction complete for this turn/);
 });

@@ -71,6 +71,7 @@ export function createGame() {
     gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
     army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0 },
     techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null,
+    constructionThisTurn: {},
     buildings: { aurum: ["town-hall", "militia-yard", "archery-range", "scout-camp"], freehaven: ["town-hall", "militia-yard"] },
     settlements: {
       aurum: { id: "aurum", name: "Aurum", tile: 130, owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
@@ -275,7 +276,7 @@ export function advanceMonth(game) {
   const produced = applyResearch(game, researchIncome);
   const goldIncome = 75 * owned.length + bankIncome;
   const siteProduction = timberIncome || quarryIncome ? ` Controlled sites produced ${timberIncome} timber and ${quarryIncome} stone.` : "";
-  return { ...produced, settlements, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: MAX_MOVEMENT, gold: game.gold + goldIncome, wood: game.wood + timberIncome + cityTimberIncome, stone: game.stone + stoneIncome + quarryIncome, notice: `${yearMessage} Cities produced ${goldIncome} gold and ${researchIncome} research.${siteProduction}`, log: [...produced.log, yearMessage] };
+  return { ...produced, settlements, constructionThisTurn: {}, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: MAX_MOVEMENT, gold: game.gold + goldIncome, wood: game.wood + timberIncome + cityTimberIncome, stone: game.stone + stoneIncome + quarryIncome, notice: `${yearMessage} Cities produced ${goldIncome} gold and ${researchIncome} research.${siteProduction}`, log: [...produced.log, yearMessage] };
 }
 
 export function buildInCity(game, cityId, buildingId) {
@@ -283,12 +284,12 @@ export function buildInCity(game, cityId, buildingId) {
   const building = BUILDINGS.find((item) => item.id === buildingId);
   const cityBuildings = game.buildings[cityId] ?? [];
   const prerequisitesMet = building?.requires.every((required) => cityBuildings.includes(required));
-  if (!city || city.owner !== "player" || !building || cityBuildings.includes(buildingId) || !prerequisitesMet || game.gold < building.gold || game.wood < building.wood || game.stone < building.stone) return game;
+  if (!city || city.owner !== "player" || !building || game.constructionThisTurn?.[cityId] || cityBuildings.includes(buildingId) || !prerequisitesMet || game.gold < building.gold || game.wood < building.wood || game.stone < building.stone) return game;
   const recruitSeeds = { "archery-range": ["slingers", 3], "scout-camp": ["scouts", 1], "barracks-ii": ["swordsmen", 2], stable: ["horsemen", 1] };
   const seed = recruitSeeds[buildingId];
   const defenders = buildingId === "garrison" ? 8 : (city.defenders ?? 0);
   const settlements = seed || buildingId === "garrison" ? { ...game.settlements, [cityId]: { ...city, defenders, recruits: seed ? { ...city.recruits, [seed[0]]: city.recruits[seed[0]] + seed[1] } : city.recruits } } : game.settlements;
-  return { ...game, gold: game.gold - building.gold, wood: game.wood - building.wood, stone: game.stone - building.stone, settlements, buildings: { ...game.buildings, [cityId]: [...cityBuildings, buildingId] }, notice: `${building.name} completed in ${city.name}.`, log: [...game.log, `${city.name} completed its ${building.name}.`] };
+  return { ...game, gold: game.gold - building.gold, wood: game.wood - building.wood, stone: game.stone - building.stone, settlements, constructionThisTurn: { ...(game.constructionThisTurn ?? {}), [cityId]: true }, buildings: { ...game.buildings, [cityId]: [...cityBuildings, buildingId] }, notice: `${building.name} completed in ${city.name}. That city's construction is finished for this turn.`, log: [...game.log, `${city.name} completed its ${building.name}.`] };
 }
 
 export function recruitFromCity(game, cityId, unitId) {

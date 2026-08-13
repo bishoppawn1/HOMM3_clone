@@ -139,6 +139,8 @@ Each military recruitment building generates its own stock of available troops o
 
 Construction is presented as a branching, spatial prerequisite tree in the style of a classic adventure-strategy city screen. A building can be purchased only when all parent nodes are complete and the city has every listed resource. Built, available, unaffordable, and prerequisite-locked nodes must be visually distinct.
 
+Each city may complete at most one building per turn. Constructing in one city does not consume another owned city's construction opportunity. The construction limit resets for every city when the player ends the month, and the city screen must clearly show whether that city's construction opportunity is available or already used.
+
 The economy branch runs from Market, Mason's Yard, Warehouse, and Bank toward Trade Guild, Foundry, and Treasury. The civic branch runs from Town Hall through Archive and City Hall toward Workshop, Academy, Monument, Great Library, and Civic Forum. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce.
 
 The military branch contains separate recruitment sources: Militia Yard for Spearmen, Archery Range for Slingers, Scout Camp for Scouts, Tier II Barracks for Swordsmen, and Stable for Horsemen. It continues through Training Grounds, Siege Workshop, War College, and Cavalry School. Constructing a recruitment building seeds its first recruit pool; later months add more troops. Units remain visible but locked until their source building exists.

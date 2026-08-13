@@ -179,25 +179,51 @@ test("the Mason's Yard requires timber rather than stone", () => {
   assert.equal(buildInCity(built, "aurum", "mason-yard"), built);
 });
 
+test("each city may complete only one building per turn", () => {
+  const game = { ...createGame(), gold: 5000, wood: 500, stone: 500 };
+  const first = buildInCity(game, "aurum", "mason-yard");
+  const blocked = buildInCity(first, "aurum", "city-hall");
+  assert.equal(blocked, first);
+  assert.equal(first.constructionThisTurn.aurum, true);
+  assert.equal(first.buildings.aurum.includes("city-hall"), false);
+
+  const nextTurn = advanceMonth(first);
+  assert.deepEqual(nextTurn.constructionThisTurn, {});
+  const second = buildInCity(nextTurn, "aurum", "city-hall");
+  assert.equal(second.buildings.aurum.includes("city-hall"), true);
+});
+
+test("owned cities have independent construction opportunities", () => {
+  const game = { ...createGame(), gold: 5000, wood: 500, stone: 500 };
+  game.settlements.freehaven.owner = "player";
+  const aurumBuilt = buildInCity(game, "aurum", "mason-yard");
+  const bothBuilt = buildInCity(aurumBuilt, "freehaven", "market");
+  assert.equal(bothBuilt.buildings.aurum.includes("mason-yard"), true);
+  assert.equal(bothBuilt.buildings.freehaven.includes("market"), true);
+  assert.equal(bothBuilt.constructionThisTurn.aurum, true);
+  assert.equal(bothBuilt.constructionThisTurn.freehaven, true);
+});
+
 test("construction enforces the civic and military prerequisite tree", () => {
   const game = { ...createGame(), gold: 5000, wood: 300, stone: 300 };
   assert.equal(buildInCity(game, "aurum", "bank"), game);
   assert.equal(buildInCity(game, "aurum", "barracks-ii"), game);
   const masonry = buildInCity(game, "aurum", "mason-yard");
-  const city = buildInCity(masonry, "aurum", "city-hall");
+  const city = buildInCity(advanceMonth(masonry), "aurum", "city-hall");
   assert.equal(city.buildings.aurum.includes("city-hall"), true);
-  const workshop = buildInCity(city, "aurum", "workshop");
-  const archive = buildInCity(workshop, "aurum", "archive");
-  const market = buildInCity(archive, "aurum", "market");
-  const bank = buildInCity(market, "aurum", "bank");
+  const workshop = buildInCity(advanceMonth(city), "aurum", "workshop");
+  const archive = buildInCity(advanceMonth(workshop), "aurum", "archive");
+  const market = buildInCity(advanceMonth(archive), "aurum", "market");
+  const bank = buildInCity(advanceMonth(market), "aurum", "bank");
   assert.equal(bank.buildings.aurum.includes("bank"), true);
-  const barracks = buildInCity(bank, "aurum", "barracks-ii");
+  const barracks = buildInCity(advanceMonth(bank), "aurum", "barracks-ii");
   assert.equal(barracks.buildings.aurum.includes("barracks-ii"), true);
   assert.equal(barracks.settlements.aurum.recruits.swordsmen, 2);
-  const scoutCamp = buildInCity(barracks, "aurum", "scout-camp");
-  assert.equal(buildInCity(scoutCamp, "aurum", "stable").buildings.aurum.includes("stable"), true);
-  const palisade = buildInCity(scoutCamp, "aurum", "palisade");
-  assert.equal(buildInCity(palisade, "aurum", "garrison").buildings.aurum.includes("garrison"), true);
+  const palisade = buildInCity(advanceMonth(barracks), "aurum", "palisade");
+  const garrison = buildInCity(advanceMonth(palisade), "aurum", "garrison");
+  assert.equal(garrison.buildings.aurum.includes("garrison"), true);
+  const stable = buildInCity(advanceMonth(garrison), "aurum", "stable");
+  assert.equal(stable.buildings.aurum.includes("stable"), true);
 });
 
 test("the construction catalog is a full five-tier tree", () => {
@@ -209,8 +235,11 @@ test("the construction catalog is a full five-tier tree", () => {
 test("the Garrison creates a small permanent city guard rather than a recruitable unit", () => {
   let game = { ...createGame(), gold: 5000, wood: 500, stone: 500 };
   game = buildInCity(game, "aurum", "city-hall");
+  game = advanceMonth(game);
   game = buildInCity(game, "aurum", "barracks-ii");
+  game = advanceMonth(game);
   game = buildInCity(game, "aurum", "palisade");
+  game = advanceMonth(game);
   game = buildInCity(game, "aurum", "garrison");
   assert.equal(game.settlements.aurum.defenders, 8);
   assert.equal("guards" in game.army, false);
@@ -226,8 +255,8 @@ test("tier-two troops stay locked until their required building exists", () => {
   game.settlements.aurum.recruits.swordsmen = 3;
   assert.equal(recruitFromCity(game, "aurum", "swordsmen"), game);
   const masonry = buildInCity(game, "aurum", "mason-yard");
-  const city = buildInCity(masonry, "aurum", "city-hall");
-  const barracks = buildInCity(city, "aurum", "barracks-ii");
+  const city = buildInCity(advanceMonth(masonry), "aurum", "city-hall");
+  const barracks = buildInCity(advanceMonth(city), "aurum", "barracks-ii");
   const recruited = recruitFromCity(barracks, "aurum", "swordsmen");
   assert.equal(recruited.army.swordsmen, 1);
 });
