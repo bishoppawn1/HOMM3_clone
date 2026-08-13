@@ -139,5 +139,8 @@ test("the tactical battlefield renders an interlocking point-top honeycomb", asy
   assert.match(page, /top: `\$\{row \* \.75 \/ verticalSpan \* 100\}%`/);
   assert.match(page, /left: `\$\{\(col \+ \(row % 2\) \* \.5\)/);
   assert.match(page, /className="hex-battlefield">/);
+  assert.match(page, /within \$\{activeUnit\.range\} hexes/);
+  assert.match(page, /Range \$\{unit\.range\}/);
   assert.match(styles, /clip-path:polygon\(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%\)/);
+  assert.match(styles, /aspect-ratio:1\.86\/1/);
 });

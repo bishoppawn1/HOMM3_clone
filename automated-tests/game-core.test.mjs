@@ -541,12 +541,13 @@ test("guarded producers require victory before generating timber, stone, and mag
   assert.equal(produced.magicDust, allCaptured.magicDust + 2);
 });
 
-test("tactical combat uses a fifteen-by-nine odd-row hex battlefield", () => {
-  assert.equal(COMBAT_WIDTH, 15);
-  assert.equal(COMBAT_HEIGHT, 9);
-  assert.deepEqual(new Set(combatNeighbors(16)), new Set([15, 17, 1, 2, 31, 32]));
-  assert.equal(combatDistance(16, 32), 1);
-  assert.equal(combatDistance(15, 29), 14);
+test("tactical combat uses a twenty-one-by-thirteen odd-row hex battlefield", () => {
+  assert.equal(COMBAT_WIDTH, 21);
+  assert.equal(COMBAT_HEIGHT, 13);
+  assert.equal(COMBAT_WIDTH * COMBAT_HEIGHT, 273);
+  assert.deepEqual(new Set(combatNeighbors(22)), new Set([21, 23, 1, 2, 43, 44]));
+  assert.equal(combatDistance(22, 44), 1);
+  assert.equal(combatDistance(21, 41), 20);
 });
 
 test("battlefield movement respects stack speed, occupied hexes, and impassable obstacles", () => {
@@ -555,38 +556,48 @@ test("battlefield movement respects stack speed, occupied hexes, and impassable 
   const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
   assert.equal(active.unitId, "scouts");
   const reachable = combatReachable(deployed.combat);
-  assert.equal(reachable.includes(36), false);
-  assert.equal(reachable.includes(37), false);
-  assert.equal(reachable.includes(45), false);
+  assert.equal(reachable.includes(93), false);
+  assert.equal(reachable.includes(94), false);
+  assert.equal(reachable.includes(85), false);
   assert.equal(reachable.every((tile) => combatDistance(active.position, tile) <= 6), true);
-  assert.equal(combatPath(deployed.combat, active.id, 36), null);
+  assert.equal(combatPath(deployed.combat, active.id, 93), null);
 });
 
 test("obstacles and intervening stacks block ranged line of sight", () => {
   const initial = createGame();
   const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
-  assert.equal(combatHasLineOfSight(deployed.combat, 45, 59), true);
-  const obstructed = { ...deployed.combat, obstacles: [...deployed.combat.obstacles, { tile: 51, kind: "boulder" }] };
-  assert.equal(combatHasLineOfSight(obstructed, 45, 59), false);
+  assert.equal(combatHasLineOfSight(deployed.combat, 43, 61), true);
+  const obstructed = { ...deployed.combat, obstacles: [...deployed.combat.obstacles, { tile: 52, kind: "boulder" }] };
+  assert.equal(combatHasLineOfSight(obstructed, 43, 61), false);
 });
 
-test("ranged stacks can target enemies anywhere on the battlefield despite intervening obstacles", () => {
+test("Slingers can fire in any direction but only within their six-hex range", () => {
   const initial = createGame();
   const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
+  const stacks = deployed.combat.stacks.map((stack) => {
+    if (stack.id === "player-slingers") return { ...stack, position: 127 };
+    if (stack.id === "enemy-slingers") return { ...stack, position: 133 };
+    if (stack.id === "enemy-scouts") return { ...stack, position: 136 };
+    return stack;
+  });
   const combat = {
     ...deployed.combat,
     activeStackId: "player-slingers",
-    obstacles: [...deployed.combat.obstacles, { tile: 51, kind: "boulder" }],
+    stacks,
+    obstacles: [...deployed.combat.obstacles, { tile: 130, kind: "boulder" }],
   };
-  assert.equal(combatHasLineOfSight(combat, 45, 59), false);
+  assert.equal(unitForEra("slingers", "Ancient").range, 6);
+  assert.equal(unitForEra("slingers", "Modern").range, 9);
+  assert.equal(combatHasLineOfSight(combat, 127, 133), false);
   assert.equal(combatCanAttack(combat, "player-slingers", "enemy-slingers"), true);
-  assert.equal(combatCanAttack(combat, "player-slingers", "enemy-scouts"), true);
+  assert.equal(combatCanAttack(combat, "player-slingers", "enemy-scouts"), false);
 });
 
 test("ranged stacks spend shots and inflict deterministic casualties", () => {
   const initial = createGame();
   const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
-  const combat = { ...deployed.combat, activeStackId: "player-slingers" };
+  const stacks = deployed.combat.stacks.map((stack) => stack.id === "enemy-slingers" ? { ...stack, position: 133 } : stack.id === "player-slingers" ? { ...stack, position: 127 } : stack);
+  const combat = { ...deployed.combat, activeStackId: "player-slingers", stacks };
   assert.equal(combatCanAttack(combat, "player-slingers", "enemy-slingers"), true);
   const before = combat.stacks.find((stack) => stack.id === "enemy-slingers").totalHealth;
   const attacked = attackCombatStack({ ...deployed, combat }, "enemy-slingers");

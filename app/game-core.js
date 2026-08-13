@@ -2,8 +2,8 @@ export const MONTHS = ["January", "February", "March", "April", "May", "June", "
 export const MAP_WIDTH = 72;
 export const MAP_HEIGHT = 45;
 export const MAX_MOVEMENT = 16;
-export const COMBAT_WIDTH = 15;
-export const COMBAT_HEIGHT = 9;
+export const COMBAT_WIDTH = 21;
+export const COMBAT_HEIGHT = 13;
 
 export const ERAS = ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"];
 
@@ -144,7 +144,7 @@ export const BUILDINGS = [
 
 export const UNITS = [
   { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard", attack: 4, defense: 5, damage: [2, 3], health: 10, speed: 4, initiative: 4, ranged: false, role: "Defensive infantry that holds ground and protects more fragile formations." },
-  { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range", attack: 4, defense: 3, damage: [2, 3], health: 8, speed: 4, initiative: 5, ranged: true, shots: 8, role: "Ranged troops that can attack across the battlefield while ammunition remains." },
+  { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range", attack: 4, defense: 3, damage: [2, 3], health: 8, speed: 4, initiative: 5, ranged: true, range: 6, shots: 8, role: "Short-range troops that must advance before hurling stones at distant formations." },
   { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 12, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false, role: "Very cheap light troops that move early and reach exposed enemies quickly." },
   { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false, role: "Heavy line infantry with balanced attack, defense, and staying power." },
   { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false, role: "Mobile shock troops with high speed and strong charge damage." },
@@ -171,6 +171,7 @@ export function unitForEra(unitId, era = "Ancient") {
     defense: base.defense + eraIndex * 2,
     damage: [base.damage[0] + damageBonus, base.damage[1] + damageBonus],
     health: base.health + eraIndex * 4,
+    range: base.ranged ? (base.range ?? 6) + Math.min(eraIndex, 3) : undefined,
     shots: base.ranged ? (base.shots ?? 0) + eraIndex * 2 : undefined,
   };
 }
@@ -181,17 +182,17 @@ export function unitsForEra(era) {
 
 const BATTLEFIELD_PATTERNS = {
   field: [
-    { tile: 36, kind: "tree" }, { tile: 37, kind: "tree" },
-    { tile: 82, kind: "boulder" }, { tile: 98, kind: "boulder" },
+    { tile: 93, kind: "tree" }, { tile: 94, kind: "tree" },
+    { tile: 179, kind: "boulder" }, { tile: 201, kind: "boulder" },
   ],
   producer: [
-    { tile: 37, kind: "timber" }, { tile: 38, kind: "timber" },
-    { tile: 52, kind: "cart" }, { tile: 97, kind: "boulder" },
+    { tile: 93, kind: "timber" }, { tile: 94, kind: "timber" },
+    { tile: 134, kind: "cart" }, { tile: 180, kind: "boulder" },
   ],
   siege: [
-    { tile: 25, kind: "barricade" }, { tile: 55, kind: "barricade" },
-    { tile: 85, kind: "barricade" }, { tile: 115, kind: "barricade" },
-    { tile: 69, kind: "rubble" },
+    { tile: 50, kind: "barricade" }, { tile: 113, kind: "barricade" },
+    { tile: 176, kind: "barricade" }, { tile: 239, kind: "barricade" },
+    { tile: 136, kind: "rubble" },
   ],
 };
 
@@ -350,7 +351,7 @@ function enemyAdjacent(combat, stack) {
 function attackPlan(combat, attacker, defender) {
   if (!attacker || !defender || attacker.side === defender.side || combatStackCount(attacker) <= 0 || combatStackCount(defender) <= 0) return null;
   const unit = unitById(attacker.unitId, attacker.era);
-  if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker)) {
+  if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker) && combatDistance(attacker.position, defender.position) <= unit.range) {
     return { ranged: true, route: [] };
   }
   const destinations = combatNeighbors(defender.position).filter((tile) => tile === attacker.position || (!occupiedCombatTiles(combat, attacker.id).has(tile) && !blockedCombatTiles(combat).has(tile)));
@@ -434,10 +435,9 @@ function strikeCombatStack(combat, attackerId, defenderId, ranged, retaliation =
   const defense = defenderUnit.defense + (defender.defending ? 3 : 0);
   const difference = attackerUnit.attack - defense;
   const attackModifier = difference >= 0 ? 1 + Math.min(3, difference * .05) : 1 / (1 + Math.abs(difference) * .025);
-  const rangeModifier = ranged && combatDistance(attacker.position, defender.position) > 10 ? .5 : 1;
   const meleeShootingModifier = !ranged && attackerUnit.ranged ? .5 : 1;
   const baseDamage = attackerCount * (attackerUnit.damage[0] + attackerUnit.damage[1]) / 2;
-  const damage = Math.max(1, Math.round(baseDamage * attackModifier * rangeModifier * meleeShootingModifier));
+  const damage = Math.max(1, Math.round(baseDamage * attackModifier * meleeShootingModifier));
   const updatedDefender = { ...defender, totalHealth: Math.max(0, defender.totalHealth - damage) };
   const after = combatStackCount(updatedDefender);
   const label = retaliation ? " retaliated against " : " struck ";
@@ -511,8 +511,9 @@ function continueCombat(combat) {
 
 export function startCombat(game) {
   if (!game.pendingBattle || game.combat) return game;
-  const playerPositions = [15, 45, 60, 90, 120];
-  const enemyPositions = [29, 59, 74, 104, 134];
+  const formationRows = [2, 4, 6, 8, 10];
+  const playerPositions = formationRows.map((row) => combatTile(row, 1));
+  const enemyPositions = formationRows.map((row) => combatTile(row, COMBAT_WIDTH - 2));
   const playerArmy = UNITS.map((unit) => [unit.id, game.army[unit.id] ?? 0]).filter(([, count]) => count > 0);
   if (!playerArmy.length) return { ...game, pendingBattle: null, notice: "Marcellus has no troops available to fight. Recruit an army before returning." };
   const playerStacks = playerArmy.map(([unitId, count], index) => makeCombatStack("player", unitId, count, playerPositions[index], game.era));

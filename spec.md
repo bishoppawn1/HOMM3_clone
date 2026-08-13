@@ -147,7 +147,7 @@ The defense branch includes Palisade, Garrison, Stone Walls, and Citadel. A Garr
 
 ## 9. Armies and tactical combat — Prototype
 
-Adventure-map encounters deploy both armies onto a 15-by-9 odd-row-offset hex battlefield. Each troop type forms one stack, and each stack tracks its troop count through total health. A stack records the age profile with which it entered combat, ensuring the names and statistics shown in the city inspector match the values used in battle. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
+Adventure-map encounters deploy both armies onto a 21-by-13 odd-row-offset hex battlefield. Its 273 hexes are approximately twice the former battlefield area while keeping individual units legible. Each troop type forms one stack, and each stack tracks its troop count through total health. A stack records the age profile with which it entered combat, ensuring the names and statistics shown in the city inspector match the values used in battle. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, firing range, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
 
 ### 9.1 Turn order and orders — Prototype
 
@@ -165,7 +165,7 @@ Field, producer, and settlement encounters use distinct fixed obstacle arrangeme
 
 Melee stacks may move up to their full speed into a free hex adjacent to a target and attack in the same action. A surviving melee defender retaliates immediately, but only once per round. A stack killed by the initial strike cannot retaliate.
 
-Ranged stacks begin with a limited number of shots. While they have ammunition and are not engaged by an adjacent enemy, they may target any living enemy stack anywhere on the battlefield; they are not restricted to straight-line targets. Ranged damage is halved beyond ten hexes. An engaged ranged stack may make a melee attack at half damage.
+Ranged stacks begin with a limited number of shots and may fire in any direction without straight-line targeting. A target must be within the unit's explicit hex range: Ancient Slingers reach 6 hexes, and later ranged identities improve gradually to a maximum of 9. An engaged ranged stack may make a melee attack at half damage.
 
 The currently acting stack is identified in the initiative strip, its army card, its battlefield hex, and the instruction banner for both player and enemy turns. Movement is animated from the origin hex to the destination hex, including movement performed automatically by enemy stacks and movement that precedes a melee strike. Reduced-motion preferences shorten these animations.
 
@@ -217,4 +217,4 @@ The interface must remain usable on desktop and mobile layouts and expose meanin
 
 ## 13. Testing requirements
 
-Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, era readiness, hex adjacency and distance, battlefield pathfinding and obstacles, unrestricted ranged targeting and ammunition, animatable combat actions, enemy turn pacing, retaliation, wait and defend state, retreat, and tactical battle outcomes. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.
+Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, era readiness, hex adjacency and distance, battlefield pathfinding and obstacles, bounded omnidirectional ranged targeting and ammunition, animatable combat actions, enemy turn pacing, retaliation, wait and defend state, retreat, and tactical battle outcomes. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.
