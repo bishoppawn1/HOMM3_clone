@@ -356,6 +356,19 @@ test("a player can recruit an exact selected quantity", () => {
   assert.equal(recruitFromCity(game, "aurum", "spearmen", 99), game);
 });
 
+test("the fast scout line costs half as much as spearmen in every age", () => {
+  for (const era of ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"]) {
+    const scout = unitForEra("scouts", era);
+    const spearman = unitForEra("spearmen", era);
+    assert.equal(scout.cost * 2, spearman.cost);
+  }
+  const initial = createGame();
+  const present = { ...initial, hero: initial.settlements.aurum.tile };
+  const recruited = recruitFromCity(present, "aurum", "scouts");
+  assert.equal(recruited.army.scouts, present.army.scouts + 1);
+  assert.equal(recruited.gold, present.gold - 12);
+});
+
 test("every age upgrades each persistent recruitment line with a distinct historical identity", () => {
   const rosters = ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"].map(unitsForEra);
   for (let line = 0; line < rosters[0].length; line += 1) {

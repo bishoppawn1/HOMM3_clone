@@ -140,7 +140,7 @@ export const BUILDINGS = [
 export const UNITS = [
   { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard", attack: 4, defense: 5, damage: [2, 3], health: 10, speed: 4, initiative: 4, ranged: false, role: "Defensive infantry that holds ground and protects more fragile formations." },
   { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range", attack: 4, defense: 3, damage: [2, 3], health: 8, speed: 4, initiative: 5, ranged: true, shots: 8, role: "Ranged troops that can attack across the battlefield while ammunition remains." },
-  { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 55, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false, role: "Fast light troops that move early and reach exposed enemies quickly." },
+  { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 12, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false, role: "Very cheap light troops that move early and reach exposed enemies quickly." },
   { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false, role: "Heavy line infantry with balanced attack, defense, and staying power." },
   { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false, role: "Mobile shock troops with high speed and strong charge damage." },
 ];
