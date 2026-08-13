@@ -176,12 +176,13 @@ export default function Home() {
             </svg>
             <div className="terrain-patches" aria-hidden="true">
               <img className="terrain-patch forest north-west" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest west-wall" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest west-wall west-side" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest west-wall east-side" src="assets/map-v2/terrain-forest.webp" alt="" />
               <img className="terrain-patch forest south-west" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest east-wall" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest east-wall west-side" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest east-wall east-side" src="assets/map-v2/terrain-forest.webp" alt="" />
               <img className="terrain-patch forest south-east" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch mountain west-range" src="assets/map-v2/terrain-mountain.webp" alt="" />
-              <img className="terrain-patch mountain east-range" src="assets/map-v2/terrain-mountain.webp" alt="" />
+              {(["north", "middle", "south"] as const).flatMap(segment => ["west", "east"].map(side => <img key={`${side}-${segment}`} className={`terrain-patch mountain ${side}-range ${segment}-segment`} src="assets/map-v2/terrain-mountain.webp" alt="" />))}
             </div>
             {BOARD.map((tile, index) => {
               const row = Math.floor(index / MAP_WIDTH);

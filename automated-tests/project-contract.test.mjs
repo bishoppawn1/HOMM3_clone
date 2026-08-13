@@ -54,7 +54,11 @@ test("the map uses illustrated terrain, enemies, pickups, and territory borders"
   assert.match(page, /className="territory-layer"/);
   assert.match(page, /pickup-\$\{pickup\}/);
   assert.match(page, /enemy-bandits\.webp/);
+  assert.match(page, /\["north", "middle", "south"\]/);
+  assert.match(page, /west-wall west-side/);
+  assert.match(page, /east-wall east-side/);
   assert.match(styles, /\.territory-layer/);
+  assert.match(styles, /\.terrain-patch\.middle-segment/);
 });
 
 test("entering a city uses a dedicated full-screen management surface", async () => {
