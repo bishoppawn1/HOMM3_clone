@@ -4,40 +4,39 @@ import { useMemo, useState } from "react";
 import {
   BOARD,
   BUILDINGS,
+  MAP_HEIGHT,
   MAP_WIDTH,
   MAX_MOVEMENT,
   RESEARCH,
   UNITS,
   createGame,
-  canMoveTo,
   advanceMonth,
-  collectAt,
   chooseResearch,
   startResearch,
   buildInCity,
   recruitFromCity,
   resolveBattle,
+  routeCommand,
+  moveAlongPath,
+  producerAt,
   settlementAt,
+  cityDefense,
   eraReadiness,
 } from "./game-core.js";
 
-const tileGlyph: Record<string, string> = {
-  plains: "·",
-  forest: "♣",
-  hill: "▲",
-  water: "≈",
-  road: "═",
-};
+const tileGlyph: Record<string, string> = { forest: "♣", hill: "▲" };
 
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
-type Settlement = { id: string; name: string; tile: number; owner: string; population: number; recruits: Record<string, number>; garrison?: number };
+type Settlement = { id: string; name: string; tile: number; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
+type Producer = { id: string; name: string; kind: string; resource: string; amount: number; footprint: number[]; entrance: number; owner: string; garrison: number };
 type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
   gold: number; wood: number; stone: number; magicDust: number; research: number; cities: number; victories: number;
   army: Record<string, number>; techs: string[]; buildings: Record<string, string[]>; activeResearch: string | null;
   techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
-  pendingBattle: {type: string; settlementId?: string; name: string; strength: number} | null;
+  pendingBattle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number} | null;
   settlements: Record<string, Settlement>; sites: Record<number, string>;
+  producers: Record<string, Producer>;
   pickups: Record<number, string>; notice: string; log: string[];
 };
 
@@ -46,12 +45,27 @@ export default function Home() {
   const [panel, setPanel] = useState<"research" | "cities">("research");
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [plannedPath, setPlannedPath] = useState<number[]>([]);
+  const [plannedTarget, setPlannedTarget] = useState<number | null>(null);
   const readiness = useMemo(() => eraReadiness(game), [game]);
+  const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
-  function move(index: number) {
-    if (!canMoveTo(game, index)) return;
-    const city = settlementAt(game, index) as Settlement | null;
-    setGame((current) => collectAt({ ...current, hero: index, moves: current.moves - 1 }));
+  function handleRoute(index: number) {
+    const command = routeCommand(game, plannedTarget, index);
+    if (command.type === "invalid") {
+      setPlannedPath([]);
+      setPlannedTarget(null);
+      return;
+    }
+    if (command.type === "preview") {
+      setPlannedPath(command.path);
+      setPlannedTarget(command.target);
+      return;
+    }
+    const city = settlementAt(game, command.target) as Settlement | null;
+    setGame((current) => moveAlongPath(current, command.path));
+    setPlannedPath([]);
+    setPlannedTarget(null);
     if (city?.owner === "player") { setPanel("cities"); setSelectedCity(city.id); }
   }
 
@@ -76,6 +90,9 @@ export default function Home() {
         </div>
       </header>
 
+      {activeCity?.owner === "player" ? (
+        <CityScreen game={game} city={activeCity} updateGame={setGame} exitCity={() => setSelectedCity(null)} />
+      ) : (
       <section className="world">
         <aside className="left-rail parchment-panel">
           <p className="section-kicker">Commander</p>
@@ -91,7 +108,6 @@ export default function Home() {
             <Army name="Slingers" count={game.army.slingers} icon="◉" />
             <Army name="Scouts" count={game.army.scouts} icon="♞" />
             {game.army.swordsmen > 0 && <Army name="Swordsmen" count={game.army.swordsmen} icon="⚔" />}
-            {game.army.guards > 0 && <Army name="Guards" count={game.army.guards} icon="⛨" />}
             {game.army.horsemen > 0 && <Army name="Horsemen" count={game.army.horsemen} icon="♞" />}
           </div>
           <div className="movement">
@@ -104,34 +120,54 @@ export default function Home() {
 
         <section className="map-wrap" aria-label="Campaign map">
           <div className="map-caption"><span>THE WESTERN MARCHES</span><b>Early Spring · Clear skies</b></div>
-          <div className="map-grid" style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`}}>
+          <div className="map-grid" style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
+            <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+              <path className="river-bank" d="M 16.6 0 C 17.5 2.2 16.35 4.1 17.2 6.1 C 18 8 16.45 9.7 17.1 12 L 20 12 L 20 0 Z" />
+              <path className="river-shine" d="M 17.25 0 C 18 2.3 16.9 4.2 17.75 6.2 C 18.4 8 17.15 10.2 17.8 12" />
+              <path className="road-shadow" d="M 5.2 0 C 9 2.1 5.3 4.5 4.3 6.3 C 3.2 8.3 6.3 10.2 5.1 12" />
+              <path className="road-ribbon" d="M 5.2 0 C 9 2.1 5.3 4.5 4.3 6.3 C 3.2 8.3 6.3 10.2 5.1 12" />
+            </svg>
             {BOARD.map((tile, index) => {
               const pickup = game.pickups[index];
               const site = game.sites[index];
               const city = settlementAt(game, index) as Settlement | null;
-              const reachable = canMoveTo(game, index);
+              const producer = producerAt(game, index) as Producer | null;
+              const onPath = plannedPath.includes(index);
+              const description = `${tile}${pickup ? `, ${pickup}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}
-                  className={`map-tile ${tile} ${reachable ? "reachable" : ""} ${game.hero === index ? "hero-tile" : ""}`}
-                  onClick={() => move(index)}
-                  aria-label={`Map position ${index + 1}, ${tile}${pickup ? `, ${pickup}` : ""}${city ? `, ${city.name}` : ""}`}
+                  data-tile={index}
+                  className={`map-tile ${tile} ${onPath ? "path-step" : ""} ${plannedTarget === index ? "path-target" : ""} ${game.hero === index ? "hero-tile" : ""}`}
+                  onClick={(event) => event.preventDefault()}
+                  onContextMenu={(event) => { event.preventDefault(); handleRoute(index); }}
+                  onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handleRoute(index); } }}
+                  title={description}
+                  aria-label={`Map position ${index + 1}, ${description}. Press Enter twice or right-click twice to travel here.`}
                 >
-                  <span className="terrain-glyph">{tileGlyph[tile]}</span>
-                  {pickup === "knowledge" && <span className="site knowledge"><b>⌂</b><em>KNOWLEDGE HUT</em></span>}
-                  {pickup === "timber" && <span className="site pickup"><b>▰</b><em>TIMBER</em></span>}
-                  {pickup === "stone" && <span className="site pickup stone"><b>⬟</b><em>STONE</em></span>}
-                  {pickup === "dust" && <span className="site pickup dust"><b>✧</b><em>MAGICAL DUST</em></span>}
-                  {pickup === "gold" && <span className="site pickup gold"><b>◆</b><em>GOLD</em></span>}
-                  {city?.id === "aurum" && <span className="site capital"><b>♜</b><em>AURUM</em></span>}
-                  {city?.id === "freehaven" && <span className={`site city ${city.owner}`}><b>♜</b><em>{city.owner === "player" ? "FREEHAVEN" : "FREEHAVEN · GUARDED"}</em></span>}
-                  {site === "raiders" && <span className="site enemy"><b>⚑</b><em>RAIDERS</em></span>}
-                  {game.hero === index && <span className="hero"><b>♞</b><em>VALE</em></span>}
+                  {tileGlyph[tile] && index % 3 === 0 && <span className="terrain-glyph" aria-hidden="true">{tileGlyph[tile]}</span>}
+                  {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
+                  {pickup === "timber" && <span className="site pickup" aria-hidden="true"><b>▰</b></span>}
+                  {pickup === "stone" && <span className="site pickup stone" aria-hidden="true"><b>⬟</b></span>}
+                  {pickup === "dust" && <span className="site pickup dust" aria-hidden="true"><b>✧</b></span>}
+                  {pickup === "gold" && <span className="site pickup gold" aria-hidden="true"><b>◆</b></span>}
+                  {city?.id === "aurum" && <span className="site capital" aria-hidden="true"><b>♜</b></span>}
+                  {city?.id === "freehaven" && <span className={`site city ${city.owner}`} aria-hidden="true"><b>♜</b>{city.owner === "neutral" && <i>⚑</i>}</span>}
+                  {site === "raiders" && <span className="site enemy" aria-hidden="true"><b>⚑</b></span>}
+                  {game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
                 </button>
               );
             })}
+            {plannedPath.length > 0 && <svg className="route-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+              <polyline points={[game.hero, ...plannedPath].map((tile) => `${tile % MAP_WIDTH + .5},${Math.floor(tile / MAP_WIDTH) + .5}`).join(" ")} />
+              {plannedPath.map((tile) => <circle key={tile} cx={tile % MAP_WIDTH + .5} cy={Math.floor(tile / MAP_WIDTH) + .5} r=".09" />)}
+            </svg>}
+            {Object.values(game.producers).map((producer) => <div key={producer.id} className={`map-producer ${producer.kind} ${producer.owner}`} style={producerBounds(producer.footprint)} aria-hidden="true">
+              <span>{producer.kind === "sawmill" ? "▥" : "⬟"}</span>
+              {producer.owner === "neutral" && <i>⚑</i>}
+            </div>)}
           </div>
-          <div className="legend"><span><i className="dot reachable-dot" />Within movement range</span><span><i className="dot explored-dot" />Explored territory</span><span>Click an adjacent tile to travel</span></div>
+          <div className="legend" aria-live="polite"><span><i className="route-swatch" />{plannedPath.length ? `${plannedPath.length} movement plotted` : "Right-click once to plot a route"}</span><span>Right-click the same destination again to travel</span><span>Keyboard: press Enter twice</span></div>
         </section>
 
         <aside className="right-rail parchment-panel">
@@ -161,14 +197,15 @@ export default function Home() {
               <button className="advance-button" disabled={!readiness.ready}>Advance to the Classical Age</button>
             </>
           ) : (
-            <CitiesPanel game={game} selectedCity={selectedCity} selectCity={setSelectedCity} updateGame={setGame} />
+            <CitiesPanel game={game} selectCity={setSelectedCity} />
           )}
         </aside>
       </section>
+      )}
 
       <footer className="turnbar">
         <div><span className="section-kicker">Month&apos;s report</span><p>{game.notice}</p></div>
-        <button onClick={() => setGame(advanceMonth)}><span>End {game.monthName}</span><small>Begin the next month →</small></button>
+        <button onClick={() => { setGame(advanceMonth); setPlannedPath([]); setPlannedTarget(null); }}><span>End {game.monthName}</span><small>Begin the next month →</small></button>
       </footer>
 
       {game.researchChoice && (
@@ -188,7 +225,7 @@ export default function Home() {
           <section className="choice-modal battle-modal" role="dialog" aria-modal="true" aria-labelledby="battle-title">
             <span className="discovery-mark">⚔</span><p className="section-kicker">Battle required</p>
             <h2 id="battle-title">{game.pendingBattle.name} blocks your advance</h2>
-            <p>Enemy strength: {game.pendingBattle.strength}. Settlements are never pickups—their garrison must be defeated before the city becomes yours.</p>
+            <p>Enemy strength: {game.pendingBattle.strength}. Defeat the guarding force to take lasting control of this location.</p>
             <button className="battle-button" onClick={() => setGame(g => resolveBattle(g))}>Fight for control</button>
           </section>
         </div>
@@ -203,39 +240,69 @@ function Resource({icon, value, label}: {icon: string; value: number; label: str
 function Stat({value, label}: {value: string; label: string}) { return <div><b>{value}</b><span>{label}</span></div>; }
 function Army({name, count, icon}: {name: string; count: number; icon: string}) { return <div className="army-row"><span>{icon}</span><div><b>{name}</b><small>{count} troops</small></div></div>; }
 
-function CitiesPanel({game, selectedCity, selectCity, updateGame}: {game: GameState; selectedCity: string | null; selectCity: (id: string | null) => void; updateGame: React.Dispatch<React.SetStateAction<GameState>>}) {
+function producerBounds(footprint: number[]) {
+  const columns = footprint.map((tile) => tile % MAP_WIDTH);
+  const rows = footprint.map((tile) => Math.floor(tile / MAP_WIDTH));
+  const left = Math.min(...columns), top = Math.min(...rows);
+  return {
+    left: `${left / MAP_WIDTH * 100}%`,
+    top: `${top / MAP_HEIGHT * 100}%`,
+    width: `${(Math.max(...columns) - left + 1) / MAP_WIDTH * 100}%`,
+    height: `${(Math.max(...rows) - top + 1) / MAP_HEIGHT * 100}%`,
+  };
+}
+
+function CitiesPanel({game, selectCity}: {game: GameState; selectCity: (id: string | null) => void}) {
   const owned = Object.values(game.settlements).filter(city => city.owner === "player");
-  const city = selectedCity ? game.settlements[selectedCity] : null;
-  if (!city || city.owner !== "player") return <>
-    <p className="section-kicker">Your settlements</p><h2>Cities</h2>
-    <p className="muted">Select a city to manage its buildings and available recruits.</p>
-    <div className="city-list">{owned.map(item => <button key={item.id} onClick={() => selectCity(item.id)}><span>♜</span><div><b>{item.name}</b><small>Population {item.population.toLocaleString()} · {game.hero === item.tile ? "Commander present" : "Commander away"}</small></div><em>Enter →</em></button>)}</div>
-  </>;
-  const present = game.hero === city.tile;
-  const cityBuildings = game.buildings[city.id] ?? [];
   return <>
-    <button className="back-button" onClick={() => selectCity(null)}>← All cities</button>
-    <p className="section-kicker">City administration</p><h2>{city.name}</h2>
-    <p className="muted">Population {city.population.toLocaleString()} · Produces 75 gold each month</p>
-    <div className={`commander-presence ${present ? "present" : "away"}`}>{present ? "Marcellus is inside the city and may recruit." : "Move Marcellus onto this city to recruit troops."}</div>
-    <p className="section-kicker city-subhead">Available troops</p>
-    <div className="recruit-list">{UNITS.map(unit => {
-      const unlocked = cityBuildings.includes(unit.requires);
-      return <div key={unit.id} className={!unlocked ? "unit-locked" : ""}><span>{unit.icon}</span><div><b>{unit.name} <em>Tier {unit.tier}</em></b><small>{unlocked ? `${city.recruits[unit.id]} available · ${unit.cost} gold each` : `Requires ${BUILDINGS.find(building => building.id === unit.requires)?.name}`}</small></div><button disabled={!unlocked || !present || city.recruits[unit.id] < 1 || game.gold < unit.cost} onClick={() => updateGame(g => recruitFromCity(g, city.id, unit.id))}>{unlocked ? "Recruit 1" : "Locked"}</button></div>;
-    })}</div>
-    <p className="section-kicker city-subhead">Construction</p>
-    <div className="tree-legend"><span>Civic development</span><span>Military development</span></div>
-    <div className="construction-tree">{BUILDINGS.map(building => {
-      const built = cityBuildings.includes(building.id);
-      const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
-      const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone;
-      const requirementNames = building.requires.map(required => BUILDINGS.find(item => item.id === required)?.name).join(" + ");
-      return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
-        <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
-        <small>{building.description}</small>
-        {!built && !prerequisitesMet && <p>Requires {requirementNames}</p>}
-        {built ? <strong>✓ Built</strong> : <button disabled={!prerequisitesMet || !affordable} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</button>}
-      </article>;
-    })}</div>
+    <p className="section-kicker">Your settlements</p><h2>Cities</h2>
+    <p className="muted">Select a city to leave the adventure map and enter its full management screen.</p>
+    <div className="city-list">{owned.map(item => <button key={item.id} onClick={() => selectCity(item.id)}><span>♜</span><div><b>{item.name}</b><small>Population {item.population.toLocaleString()} · Defense {cityDefense(game, item.id)} · {game.hero === item.tile ? "Commander present" : "Commander away"}</small></div><em>Enter city →</em></button>)}</div>
   </>;
+}
+
+function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: Settlement; updateGame: React.Dispatch<React.SetStateAction<GameState>>; exitCity: () => void}) {
+  const cityBuildings = game.buildings[city.id] ?? [];
+  const present = game.hero === city.tile;
+  const defense = cityDefense(game, city.id);
+  const cityTier = cityBuildings.includes("civic-forum") ? 3 : cityBuildings.includes("city-hall") ? 2 : 1;
+  return <section className="city-screen" aria-label={`${city.name} city management`}>
+    <header className="city-screen-header">
+      <button onClick={exitCity}>← Return to adventure map</button>
+      <div><span className="section-kicker">City administration · Tier {cityTier}</span><h2>{city.name}</h2><p>Population {city.population.toLocaleString()} · {cityBuildings.length}/{BUILDINGS.length} structures completed</p></div>
+      <div className="city-defense"><span>⛨</span><div><b>{defense}</b><small>City defense</small></div></div>
+    </header>
+    <div className="city-screen-body">
+      <aside className="city-recruitment">
+        <p className="section-kicker">Hero & recruitment</p>
+        <div className={`city-hero-card ${present ? "present" : "away"}`}><span>♞</span><div><b>Marcellus Vale</b><small>{present ? "Inside the city" : "Away on the map"}</small></div></div>
+        <p className="city-rule">{present ? "Recruitment buildings can transfer their available troops directly into this hero's army." : "A hero must stand on the city tile before any recruitment building can transfer troops."}</p>
+        <div className="recruit-buildings">{UNITS.map(unit => {
+          const source = BUILDINGS.find(building => building.id === unit.requires);
+          const unlocked = cityBuildings.includes(unit.requires);
+          return <article key={unit.id} className={!unlocked ? "locked" : ""}>
+            <header><span>{source?.icon}</span><div><b>{source?.name}</b><small>{unlocked ? "Operational" : "Not constructed"}</small></div></header>
+            <div className="recruit-unit"><span>{unit.icon}</span><div><b>{unit.name}</b><small>Tier {unit.tier} · {city.recruits[unit.id]} available</small></div></div>
+            <button disabled={!unlocked || !present || city.recruits[unit.id] < 1 || game.gold < unit.cost} onClick={() => updateGame(g => recruitFromCity(g, city.id, unit.id))}>{unlocked ? `Recruit 1 · ${unit.cost} ◆` : "Building required"}</button>
+          </article>;
+        })}</div>
+        <div className="guard-card"><span>⛨</span><div><b>Permanent city guard</b><small>{city.defenders} troops · Cannot join a hero</small></div></div>
+      </aside>
+      <section className="city-construction">
+        <div className="construction-heading"><div><p className="section-kicker">Construction tree</p><h3>Develop {city.name}</h3></div><div className="tree-legend"><span>Economy</span><span>Civic</span><span>Military</span><span>Defense</span></div></div>
+        <div className="construction-tree full-tree">{BUILDINGS.map(building => {
+          const built = cityBuildings.includes(building.id);
+          const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
+          const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone;
+          const requirementNames = building.requires.map(required => BUILDINGS.find(item => item.id === required)?.name).join(" + ");
+          return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
+            <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
+            <small>{building.description}</small>
+            {!built && !prerequisitesMet && <p>Requires {requirementNames}</p>}
+            {built ? <strong>✓ Built</strong> : <button disabled={!prerequisitesMet || !affordable} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</button>}
+          </article>;
+        })}</div>
+      </section>
+    </div>
+  </section>;
 }

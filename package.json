@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:snapshot": "GITHUB_ACTIONS=true npm run build && node scripts/sync-pages-root.mjs",
+    "pages:snapshot": "NEXT_DIST_DIR=.next-production GITHUB_ACTIONS=true npm run build && node scripts/sync-pages-root.mjs",
     "start": "next start",
     "test": "node --test automated-tests/*.test.mjs",
     "test:all": "npm run test && npm run build",

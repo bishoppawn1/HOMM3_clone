@@ -36,9 +36,12 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 ### 4.1 Movement — Prototype
 
-- The map is a dense tile grid of small adventure-map squares; the final map may use a hex or isometric topology.
+- The Western Marches are presented as one continuous field texture over a hidden 20-by-12 logical grid. Grid lines and per-cell texture seams are not shown.
 - A commander spends one movement point to enter an orthogonally adjacent passable tile.
 - Water is impassable without an appropriate transport capability.
+- Forest and hill artwork is currently decorative and does not impose a movement penalty.
+- The first right-click on a reachable destination previews the shortest available route. A second right-click on that same destination executes travel; right-clicking elsewhere replaces the preview.
+- A route cannot exceed the commander's remaining movement. Travel stops early if it encounters a battle or a Knowledge Hut choice.
 - A commander currently has 16 movement points, within the intended 10–20 range, and movement refreshes each month.
 
 ### 4.2 Map sites — Prototype
@@ -50,9 +53,11 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 Consumed sites do not reappear merely because a month or year passes.
 
-### 4.3 Persistent producers — Planned
+### 4.3 Persistent producers — Prototype
 
-Mines, farms, timber camps, ports, trade posts, and similar controlled sites will generate recurring monthly resources. Ownership may change through conquest.
+The Western Marches contain a sawmill that produces 10 timber per month and a quarry that produces 8 stone per month. Each producer occupies a multi-cell footprint with one passable entrance; route selection anywhere on its artwork resolves to that entrance. A neutral guarding force must be defeated before the site transfers to the player and begins monthly production. Producers persist after capture and are not consumed like pickups.
+
+Future maps may add farms, ports, trade posts, and similar controlled locations whose ownership can change through conquest.
 
 ## 5. Resources — Prototype
 
@@ -124,21 +129,21 @@ Cities belong to the civilization but must construct local infrastructure before
 
 ### 8.1 Cities screen — Prototype
 
-The Cities tab first lists every settlement currently controlled by the player. Selecting a city opens that city's own management view. Each city owns buildings, recruits, population, and monthly production. Buildings cost resources, may require prior buildings or technologies, and may unlock new units or production bonuses.
+The Cities tab first lists every settlement currently controlled by the player. Selecting a city leaves the adventure map and opens a dedicated full-screen city management view. Returning from that screen restores the map. Each city owns buildings, recruits, population, permanent defenders, and monthly production. Buildings cost resources, may require prior buildings or technologies, and may unlock new units or production bonuses.
 
-The prototype cities can build a Mason's Yard, Civic Workshop, and Scribes' Archive.
+The prototype contains a five-tier construction tree with more than twenty-five structures across economy, civic, military, and defense branches. The visible tree includes foundational buildings, city-tier upgrades, production buildings, research institutions, recruitment buildings, walls, and late-city capstones.
 
-Each owned city generates a stock of available troops over time. A commander must physically occupy that city's adventure-map tile to transfer available troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment into that commander.
+Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit. A commander must physically occupy that city's adventure-map tile to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment.
 
 ### 8.2 Building tree — Prototype
 
 Construction is presented as a branching, spatial prerequisite tree in the style of a classic adventure-strategy city screen. A building can be purchased only when all parent nodes are complete and the city has every listed resource. Built, available, unaffordable, and prerequisite-locked nodes must be visually distinct.
 
-The current civic branch begins at the Town Hall and divides into the Mason's Yard, Scribes' Archive, and City Hall. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce. A Bank requires both the Archive and City Hall and adds monthly gold income; the Civic Workshop requires the Mason's Yard and City Hall.
+The economy branch runs from Market, Mason's Yard, Warehouse, and Bank toward Trade Guild, Foundry, and Treasury. The civic branch runs from Town Hall through Archive and City Hall toward Workshop, Academy, Monument, Great Library, and Civic Forum. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce.
 
-The current military branch is Militia Yard + City Hall → Tier II Barracks → Garrison / Stable. The Tier II Barracks unlocks Swordsmen, the Garrison unlocks Guards and improves defenses, and the Stable unlocks Horsemen. Constructing an unlock building seeds its first small recruit pool; later months add more troops. Units remain visible but locked in recruitment until their building exists.
+The military branch contains separate recruitment sources: Militia Yard for Spearmen, Archery Range for Slingers, Scout Camp for Scouts, Tier II Barracks for Swordsmen, and Stable for Horsemen. It continues through Training Grounds, Siege Workshop, War College, and Cavalry School. Constructing a recruitment building seeds its first recruit pool; later months add more troops. Units remain visible but locked until their source building exists.
 
-Later branches will include additional civic administration, scholarship, trade, stone production, industry, defenses, and military specializations. Cities should develop distinct roles rather than all converging on one optimal build order.
+The defense branch includes Palisade, Garrison, Stone Walls, and Citadel. A Garrison creates a small permanent city guard. Those defenders contribute only when an enemy attacks the city: they never appear as a recruitable field unit and cannot be transferred into a hero's army. The guard grows slowly and remains intentionally small; fortifications add separate defense strength.
 
 ## 9. Armies and tactical combat — Planned
 
@@ -157,7 +162,9 @@ Every settlement must occupy passable terrain and be reachable using an appropri
 
 ## 10. Interface and controls — Prototype
 
-- Click an adjacent highlighted map tile to move.
+- Right-click a reachable location once to preview its route and right-click the same destination again to travel. Right-clicking another location replots the route.
+- Left-clicking the map does not move the commander. Keyboard users can focus a map position and press Enter or Space twice for the same preview-and-confirm behavior.
+- Adventure-map objects use recognizable artwork without permanent nameplates. Their names and state remain available through hover text and accessible labels.
 - Use Research and Cities tabs to switch the side panel.
 - Select an owned city from the Cities list to enter its management view.
 - Move a commander onto an owned city before recruiting its available troops.
@@ -186,4 +193,4 @@ The interface must remain usable on desktop and mobile layouts and expose meanin
 
 ## 13. Testing requirements
 
-Automated tests must cover calendar rollover, monthly production, movement legality, pickup persistence, Knowledge Hut choice constraints, building costs, and era readiness. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.
+Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, and era readiness. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.

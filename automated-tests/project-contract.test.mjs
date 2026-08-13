@@ -31,3 +31,11 @@ test("branch-based GitHub Pages serves the game instead of the README", async ()
   assert.match(html, /Through the Ages/);
   assert.match(html, /HOMM3_clone\/_next/);
 });
+
+test("entering a city uses a dedicated full-screen management surface", async () => {
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  assert.match(page, /className="city-screen"/);
+  assert.match(page, /Return to adventure map/);
+  assert.match(page, /construction-tree full-tree/);
+  assert.match(page, /Permanent city guard/);
+});
