@@ -38,6 +38,13 @@ test("monthly production includes every owned city and its buildings", () => {
   assert.equal(next.settlements.aurum.recruits.spearmen, game.settlements.aurum.recruits.spearmen + 4);
 });
 
+test("a Bank adds monthly gold income", () => {
+  const game = createGame();
+  game.buildings.aurum.push("bank");
+  const next = advanceMonth(game);
+  assert.equal(next.gold, game.gold + 175);
+});
+
 test("movement permits adjacent land and blocks water, distance, and exhausted armies", () => {
   const game = createGame();
   assert.equal(canMoveTo(game, 65), true);
@@ -128,14 +135,43 @@ test("troops can only be recruited while the commander is inside an owned city",
   assert.equal(recruited.gold, present.gold - 24);
 });
 
-test("city construction charges gold and stone only once", () => {
+test("the Mason's Yard requires timber rather than stone", () => {
   const game = createGame();
-  const built = buildInCity(game, "aurum", "workshop");
-  assert.equal(built.gold, game.gold - 320);
-  assert.equal(built.stone, game.stone - 12);
-  assert.deepEqual(built.buildings.aurum, ["workshop"]);
-  assert.equal(buildInCity(built, "aurum", "workshop"), built);
-  assert.equal(eraReadiness(built).ready, false);
+  const built = buildInCity(game, "aurum", "mason-yard");
+  assert.equal(built.gold, game.gold - 240);
+  assert.equal(built.wood, game.wood - 14);
+  assert.equal(built.stone, game.stone);
+  assert.equal(built.buildings.aurum.includes("mason-yard"), true);
+  assert.equal(buildInCity(built, "aurum", "mason-yard"), built);
+});
+
+test("construction enforces the civic and military prerequisite tree", () => {
+  const game = { ...createGame(), gold: 5000, wood: 300, stone: 300 };
+  assert.equal(buildInCity(game, "aurum", "bank"), game);
+  assert.equal(buildInCity(game, "aurum", "barracks-ii"), game);
+  const masonry = buildInCity(game, "aurum", "mason-yard");
+  const city = buildInCity(masonry, "aurum", "city-hall");
+  assert.equal(city.buildings.aurum.includes("city-hall"), true);
+  const workshop = buildInCity(city, "aurum", "workshop");
+  const archive = buildInCity(workshop, "aurum", "archive");
+  const bank = buildInCity(archive, "aurum", "bank");
+  assert.equal(bank.buildings.aurum.includes("bank"), true);
+  const barracks = buildInCity(bank, "aurum", "barracks-ii");
+  assert.equal(barracks.buildings.aurum.includes("barracks-ii"), true);
+  assert.equal(barracks.settlements.aurum.recruits.swordsmen, 2);
+  assert.equal(buildInCity(barracks, "aurum", "stable").buildings.aurum.includes("stable"), true);
+  assert.equal(buildInCity(barracks, "aurum", "garrison").buildings.aurum.includes("garrison"), true);
+});
+
+test("tier-two troops stay locked until their required building exists", () => {
+  const game = { ...createGame(), hero: 54, gold: 3000, wood: 200, stone: 200 };
+  game.settlements.aurum.recruits.swordsmen = 3;
+  assert.equal(recruitFromCity(game, "aurum", "swordsmen"), game);
+  const masonry = buildInCity(game, "aurum", "mason-yard");
+  const city = buildInCity(masonry, "aurum", "city-hall");
+  const barracks = buildInCity(city, "aurum", "barracks-ii");
+  const recruited = recruitFromCity(barracks, "aurum", "swordsmen");
+  assert.equal(recruited.army.swordsmen, 1);
 });
 
 test("era advancement requires every concrete readiness condition", () => {

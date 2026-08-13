@@ -130,9 +130,15 @@ The prototype cities can build a Mason's Yard, Civic Workshop, and Scribes' Arch
 
 Each owned city generates a stock of available troops over time. A commander must physically occupy that city's adventure-map tile to transfer available troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment into that commander.
 
-### 8.2 Building tree — Planned
+### 8.2 Building tree — Prototype
 
-The full tree will include civic administration, scholarship, trade, stone production, industry, defenses, and multiple military branches. Cities should develop distinct roles rather than all converging on one optimal build order.
+Construction is presented as a branching, spatial prerequisite tree in the style of a classic adventure-strategy city screen. A building can be purchased only when all parent nodes are complete and the city has every listed resource. Built, available, unaffordable, and prerequisite-locked nodes must be visually distinct.
+
+The current civic branch begins at the Town Hall and divides into the Mason's Yard, Scribes' Archive, and City Hall. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce. A Bank requires both the Archive and City Hall and adds monthly gold income; the Civic Workshop requires the Mason's Yard and City Hall.
+
+The current military branch is Militia Yard + City Hall → Tier II Barracks → Garrison / Stable. The Tier II Barracks unlocks Swordsmen, the Garrison unlocks Guards and improves defenses, and the Stable unlocks Horsemen. Constructing an unlock building seeds its first small recruit pool; later months add more troops. Units remain visible but locked in recruitment until their building exists.
+
+Later branches will include additional civic administration, scholarship, trade, stone production, industry, defenses, and military specializations. Cities should develop distinct roles rather than all converging on one optimal build order.
 
 ## 9. Armies and tactical combat — Planned
 

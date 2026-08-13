@@ -90,6 +90,9 @@ export default function Home() {
             <Army name="Spearmen" count={game.army.spearmen} icon="♙" />
             <Army name="Slingers" count={game.army.slingers} icon="◉" />
             <Army name="Scouts" count={game.army.scouts} icon="♞" />
+            {game.army.swordsmen > 0 && <Army name="Swordsmen" count={game.army.swordsmen} icon="⚔" />}
+            {game.army.guards > 0 && <Army name="Guards" count={game.army.guards} icon="⛨" />}
+            {game.army.horsemen > 0 && <Army name="Horsemen" count={game.army.horsemen} icon="♞" />}
           </div>
           <div className="movement">
             <span>Movement</span><strong>{game.moves}/{MAX_MOVEMENT}</strong>
@@ -216,8 +219,23 @@ function CitiesPanel({game, selectedCity, selectCity, updateGame}: {game: GameSt
     <p className="muted">Population {city.population.toLocaleString()} · Produces 75 gold each month</p>
     <div className={`commander-presence ${present ? "present" : "away"}`}>{present ? "Marcellus is inside the city and may recruit." : "Move Marcellus onto this city to recruit troops."}</div>
     <p className="section-kicker city-subhead">Available troops</p>
-    <div className="recruit-list">{UNITS.map(unit => <div key={unit.id}><span>{unit.icon}</span><div><b>{unit.name}</b><small>{city.recruits[unit.id]} available · {unit.cost} gold each</small></div><button disabled={!present || city.recruits[unit.id] < 1 || game.gold < unit.cost} onClick={() => updateGame(g => recruitFromCity(g, city.id, unit.id))}>Recruit 1</button></div>)}</div>
+    <div className="recruit-list">{UNITS.map(unit => {
+      const unlocked = cityBuildings.includes(unit.requires);
+      return <div key={unit.id} className={!unlocked ? "unit-locked" : ""}><span>{unit.icon}</span><div><b>{unit.name} <em>Tier {unit.tier}</em></b><small>{unlocked ? `${city.recruits[unit.id]} available · ${unit.cost} gold each` : `Requires ${BUILDINGS.find(building => building.id === unit.requires)?.name}`}</small></div><button disabled={!unlocked || !present || city.recruits[unit.id] < 1 || game.gold < unit.cost} onClick={() => updateGame(g => recruitFromCity(g, city.id, unit.id))}>{unlocked ? "Recruit 1" : "Locked"}</button></div>;
+    })}</div>
     <p className="section-kicker city-subhead">Construction</p>
-    <div className="building-list">{BUILDINGS.map(building => <div className={cityBuildings.includes(building.id) ? "building built" : "building"} key={building.id}><div><b>{building.name}</b><small>{building.description}</small></div>{cityBuildings.includes(building.id) ? <span>Built</span> : <button disabled={game.gold < building.cost || game.stone < building.stone} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{building.cost} ◆ · {building.stone} ⬟</button>}</div>)}</div>
+    <div className="tree-legend"><span>Civic development</span><span>Military development</span></div>
+    <div className="construction-tree">{BUILDINGS.map(building => {
+      const built = cityBuildings.includes(building.id);
+      const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
+      const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone;
+      const requirementNames = building.requires.map(required => BUILDINGS.find(item => item.id === required)?.name).join(" + ");
+      return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
+        <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
+        <small>{building.description}</small>
+        {!built && !prerequisitesMet && <p>Requires {requirementNames}</p>}
+        {built ? <strong>✓ Built</strong> : <button disabled={!prerequisitesMet || !affordable} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</button>}
+      </article>;
+    })}</div>
   </>;
 }
