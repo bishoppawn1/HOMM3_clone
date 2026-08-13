@@ -54,12 +54,15 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.match(page, /className={`territory-fill/);
   assert.match(page, /pickup-\$\{pickup\}/);
   assert.match(page, /enemy-bandits\.webp/);
+  assert.match(page, /map-bandit-camp/);
+  assert.match(page, /Bandit camp spoils/);
   assert.match(page, /const adventureRoads/);
   assert.match(page, /const terrainArtwork/);
   assert.match(page, /C 14 11 22 14\.5/);
   assert.match(page, /terrainPatchBounds/);
   assert.doesNotMatch(page, /className="territory-layer"/);
   assert.match(styles, /\.terrain-patch\{[^}]*height:auto/);
+  assert.match(styles, /\.map-bandit-camp/);
   assert.doesNotMatch(styles, /object-fit:fill/);
 });
 

@@ -52,7 +52,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
-- **Guarded resource cache:** most resource pickups appear in four-item clusters close to a raider camp. They remain visible but cannot be collected while their linked camp survives. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
+- **Bandit-camp spoils:** most resource pickups appear inside the visibly enclosed footprint of a bandit camp. Selecting any supplies in an occupied camp routes the commander to its bandits first; the contained resources can only be collected after victory. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
 - **Neutral city:** is a persistent settlement, never a pickup. Freehaven is protected by a separate nearby bandit force: entering the city before defeating that force is refused, and victory over the defenders transfers the city to the player.
 - **Hostile army:** opens the tactical hex battlefield. Victory removes the hostile site and awards its listed spoils; retreat or defeat leaves it in place.
 

@@ -204,7 +204,7 @@ test("magical dust is a distinct collectible special resource", () => {
   assert.equal(collected.pickups[tile], undefined);
 });
 
-test("most resource pickups form guarded clusters around raider camps", () => {
+test("most resource pickups are contained inside visible raider camps", () => {
   const game = createGame();
   const resourceTiles = Object.entries(game.pickups).filter(([, pickup]) => pickup !== "knowledge");
   const guardedTiles = Object.entries(game.pickupGuards);
@@ -223,13 +223,22 @@ test("most resource pickups form guarded clusters around raider camps", () => {
   assert.deepEqual([...perCamp.values()].sort(), [4, 4, 4, 4]);
 });
 
-test("guarded caches cannot be collected until their raider camp is defeated", () => {
+test("targeting supplies inside a living camp routes to the bandits first", () => {
+  const game = createGame();
+  const camp = siteTile(game, "raiders");
+  const cache = Number(Object.keys(game.pickupGuards).find((tile) => game.pickupGuards[tile] === camp));
+  const route = findPath(game, cache);
+  assert.equal(route.at(-1), camp);
+  assert.equal(route.includes(cache), false);
+});
+
+test("supplies inside camps cannot be collected until their bandits are defeated", () => {
   const initial = createGame();
   const camp = siteTile(initial, "raiders");
   const cache = Number(Object.keys(initial.pickupGuards).find((tile) => initial.pickupGuards[tile] === camp));
   const refused = collectAt({ ...initial, hero: cache });
   assert.equal(refused.pickups[cache], initial.pickups[cache]);
-  assert.match(refused.notice, /defeat their camp/i);
+  assert.match(refused.notice, /inside an occupied bandit camp/i);
 
   const confronted = collectAt({ ...initial, hero: camp });
   const cleared = resolveBattle(markCombatVictory(confronted));

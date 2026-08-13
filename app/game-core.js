@@ -652,6 +652,8 @@ function resourceName(resource) {
 }
 
 function destinationFor(game, tile) {
+  const guardingCamp = game.pickupGuards?.[tile];
+  if (guardingCamp !== undefined && game.sites[guardingCamp]) return guardingCamp;
   const producer = producerAt(game, tile);
   const settlement = settlementAt(game, tile);
   return producer?.entrance ?? settlement?.tile ?? tile;
@@ -756,7 +758,7 @@ export function collectAt(game) {
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
   const guardingCamp = game.pickupGuards?.[game.hero];
-  if (guardingCamp && game.sites[guardingCamp]) return { ...game, notice: "Nearby raiders guard this cache. Defeat their camp before claiming these resources." };
+  if (guardingCamp !== undefined && game.sites[guardingCamp]) return { ...game, notice: "These supplies are inside an occupied bandit camp. Defeat the camp before claiming them." };
   const pickups = { ...game.pickups };
   delete pickups[game.hero];
   if (pickup === "knowledge") {

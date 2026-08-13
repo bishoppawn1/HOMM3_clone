@@ -112,6 +112,10 @@ export default function Home() {
   const readiness = useMemo(() => eraReadiness(game), [game]);
   const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
   const currentUnits = useMemo(() => unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null), [game.era]);
+  const banditCamps = useMemo(() => [...new Set(Object.values(game.pickupGuards))].map((guard) => ({
+    guard,
+    footprint: [guard, ...Object.entries(game.pickupGuards).filter(([, camp]) => camp === guard).map(([tile]) => Number(tile))],
+  })), [game.pickupGuards]);
   const visualEra = eraVisualFamily(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
@@ -205,6 +209,7 @@ export default function Home() {
             <div className="terrain-patches" aria-hidden="true">
               {terrainArtwork.map((patch, index) => <img key={`${patch.kind}-${index}`} className={`terrain-patch ${patch.kind}`} style={terrainPatchBounds(patch)} src={`assets/map-v2/terrain-${patch.kind}.webp`} alt="" />)}
             </div>
+            {banditCamps.map((camp) => <div key={`camp-${camp.guard}`} className={`map-bandit-camp ${game.sites[camp.guard] ? "occupied" : "cleared"}`} style={producerBounds(camp.footprint)} aria-hidden="true"><span>Bandit camp spoils</span></div>)}
             {BOARD.map((tile, index) => {
               const pickup = game.pickups[index];
               const guardedPickup = pickup && game.pickupGuards[index] !== undefined && game.sites[game.pickupGuards[index]] !== undefined;
@@ -214,7 +219,7 @@ export default function Home() {
               const onPath = plannedPath.includes(index);
               const passable = isTerrainPassable(index);
               const terrainName = tile.replace("dense-forest", "dense forest");
-              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", guarded by nearby raiders" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
+              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", inside an occupied bandit camp" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}
