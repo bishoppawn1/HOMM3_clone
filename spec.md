@@ -36,12 +36,13 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 ### 4.1 Movement — Prototype
 
-- The Western Marches are presented as one continuous field texture over a hidden 20-by-12 logical grid. Grid lines and per-cell texture seams are not shown.
+- The Western Marches use a larger, scrollable 32-by-20 logical map. Its central field is one region within a broader landscape of woodland, hills, roads, and water, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
 - A commander spends one movement point to enter an orthogonally adjacent passable tile.
 - Water is impassable without an appropriate transport capability.
 - Forest and hill artwork is currently decorative and does not impose a movement penalty.
-- The first right-click on a reachable destination previews the shortest available route. A second right-click on that same destination executes travel; right-clicking elsewhere replaces the preview.
-- A route cannot exceed the commander's remaining movement. Travel stops early if it encounters a battle or a Knowledge Hut choice.
+- The first right-click on any passable destination previews the shortest available route. A second right-click on that same destination executes travel; right-clicking elsewhere replaces the preview.
+- A route may extend beyond the commander's remaining movement. The portion traversable this month is yellow and the future portion is gray. Confirming a long route moves only across the yellow portion and spends the available movement; the destination can be plotted again after movement refreshes.
+- Travel stops early if it encounters a battle or a Knowledge Hut choice.
 - A commander currently has 16 movement points, within the intended 10–20 range, and movement refreshes each month.
 
 ### 4.2 Map sites — Prototype
@@ -55,7 +56,9 @@ Consumed sites do not reappear merely because a month or year passes.
 
 ### 4.3 Persistent producers — Prototype
 
-The Western Marches contain a sawmill that produces 10 timber per month and a quarry that produces 8 stone per month. Each producer occupies a multi-cell footprint with one passable entrance; route selection anywhere on its artwork resolves to that entrance. A neutral guarding force must be defeated before the site transfers to the player and begins monthly production. Producers persist after capture and are not consumed like pickups.
+The Western Marches contain a sawmill that produces 10 timber per month, a quarry that produces 8 stone per month, and a mineral-dust works that produces 2 magical dust per month. Each producer occupies a multi-cell footprint with one passable entrance; route selection anywhere on its artwork resolves to that entrance. A neutral guarding force must be defeated before the site transfers to the player and begins monthly production. Producers persist after capture and are not consumed like pickups.
+
+Producer and settlement landmarks use grounded, detailed artwork rather than symbolic map glyphs. Their presentation is era-aware: ancient and medieval development retains timber, stone, and fortified forms, while industrial and modern ages add visibly later architectural and industrial treatments. Ownership and production remain unchanged when the visual family changes.
 
 Future maps may add farms, ports, trade posts, and similar controlled locations whose ownership can change through conquest.
 
@@ -133,7 +136,7 @@ The Cities tab first lists every settlement currently controlled by the player. 
 
 The prototype contains a five-tier construction tree with more than twenty-five structures across economy, civic, military, and defense branches. The visible tree includes foundational buildings, city-tier upgrades, production buildings, research institutions, recruitment buildings, walls, and late-city capstones.
 
-Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit. A commander must physically occupy that city's adventure-map tile to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment.
+Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit and provides minus, plus, direct numeric entry, and maximum controls so the player can choose an exact quantity before paying the combined cost. A commander must physically occupy that city's adventure-map entrance to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment.
 
 ### 8.2 Building tree — Prototype
 
@@ -177,11 +180,11 @@ Morale, formations, elevation, destructible siege defenses, commander abilities,
 
 ### 9.4 Settlement placement
 
-Every settlement must occupy passable terrain and be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a guarded neutral city on traversable land and remains visible after conquest.
+Every settlement occupies a multi-cell visual footprint with one passable entrance and must be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map as an actual city rather than a castle symbol. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a guarded neutral city on traversable land and remains visible after conquest.
 
 ## 10. Interface and controls — Prototype
 
-- Right-click a reachable location once to preview its route and right-click the same destination again to travel. Right-clicking another location replots the route.
+- Right-click a passable location once to preview its route and right-click the same destination again to travel. Right-clicking another location replots the route. Yellow route segments are available now; gray segments exceed current movement.
 - Left-clicking the map does not move the commander. Keyboard users can focus a map position and press Enter or Space twice for the same preview-and-confirm behavior.
 - Adventure-map objects use recognizable artwork without permanent nameplates. Their names and state remain available through hover text and accessible labels.
 - Use Research and Cities tabs to switch the side panel.

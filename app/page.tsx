@@ -32,12 +32,13 @@ import {
   settlementAt,
   cityDefense,
   eraReadiness,
+  eraVisualFamily,
 } from "./game-core.js";
 
 const tileGlyph: Record<string, string> = { forest: "♣", hill: "▲" };
 
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
-type Settlement = { id: string; name: string; tile: number; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
+type Settlement = { id: string; name: string; tile: number; footprint?: number[]; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
 type Producer = { id: string; name: string; kind: string; resource: string; amount: number; footprint: number[]; entrance: number; owner: string; garrison: number };
 type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; position: number; totalHealth: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean };
 type CombatState = {
@@ -66,6 +67,7 @@ export default function Home() {
   const [plannedPath, setPlannedPath] = useState<number[]>([]);
   const [plannedTarget, setPlannedTarget] = useState<number | null>(null);
   const readiness = useMemo(() => eraReadiness(game), [game]);
+  const visualEra = eraVisualFamily(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
   function handleRoute(index: number) {
@@ -81,10 +83,11 @@ export default function Home() {
       return;
     }
     const city = settlementAt(game, command.target) as Settlement | null;
-    setGame((current) => moveAlongPath(current, command.path));
+    const moved = moveAlongPath(game, command.path);
+    setGame(moved);
     setPlannedPath([]);
     setPlannedTarget(null);
-    if (city?.owner === "player") { setPanel("cities"); setSelectedCity(city.id); }
+    if (city?.owner === "player" && moved.hero === city.tile) { setPanel("cities"); setSelectedCity(city.id); }
   }
 
   return (
@@ -140,12 +143,13 @@ export default function Home() {
 
         <section className="map-wrap" aria-label="Campaign map">
           <div className="map-caption"><span>THE WESTERN MARCHES</span><b>Early Spring · Clear skies</b></div>
-          <div className="map-grid" style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
+          <div className="map-viewport">
+          <div className={`map-grid era-${visualEra}`} style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
             <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
-              <path className="river-bank" d="M 16.6 0 C 17.5 2.2 16.35 4.1 17.2 6.1 C 18 8 16.45 9.7 17.1 12 L 20 12 L 20 0 Z" />
-              <path className="river-shine" d="M 17.25 0 C 18 2.3 16.9 4.2 17.75 6.2 C 18.4 8 17.15 10.2 17.8 12" />
-              <path className="road-shadow" d="M 5.2 0 C 9 2.1 5.3 4.5 4.3 6.3 C 3.2 8.3 6.3 10.2 5.1 12" />
-              <path className="road-ribbon" d="M 5.2 0 C 9 2.1 5.3 4.5 4.3 6.3 C 3.2 8.3 6.3 10.2 5.1 12" />
+              <path className="river-bank" d="M 29.9 0 C 30.7 4 29.6 7 30.4 10 C 31 13 29.7 16 30.1 20 L 32 20 L 32 0 Z" />
+              <path className="river-shine" d="M 30.6 0 C 31 4 30.1 7 30.8 10 C 31.2 13 30.4 17 30.8 20" />
+              <path className="road-shadow" d="M 12.5 0 C 12.1 5 13.4 8 14.5 10 C 16 13 15.4 17 16.4 20" />
+              <path className="road-ribbon" d="M 12.5 0 C 12.1 5 13.4 8 14.5 10 C 16 13 15.4 17 16.4 20" />
             </svg>
             {BOARD.map((tile, index) => {
               const pickup = game.pickups[index];
@@ -171,23 +175,26 @@ export default function Home() {
                   {pickup === "stone" && <span className="site pickup stone" aria-hidden="true"><b>⬟</b></span>}
                   {pickup === "dust" && <span className="site pickup dust" aria-hidden="true"><b>✧</b></span>}
                   {pickup === "gold" && <span className="site pickup gold" aria-hidden="true"><b>◆</b></span>}
-                  {city?.id === "aurum" && <span className="site capital" aria-hidden="true"><b>♜</b></span>}
-                  {city?.id === "freehaven" && <span className={`site city ${city.owner}`} aria-hidden="true"><b>♜</b>{city.owner === "neutral" && <i>⚑</i>}</span>}
                   {site === "raiders" && <span className="site enemy" aria-hidden="true"><b>⚑</b></span>}
                   {game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
                 </button>
               );
             })}
             {plannedPath.length > 0 && <svg className="route-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
-              <polyline points={[game.hero, ...plannedPath].map((tile) => `${tile % MAP_WIDTH + .5},${Math.floor(tile / MAP_WIDTH) + .5}`).join(" ")} />
-              {plannedPath.map((tile) => <circle key={tile} cx={tile % MAP_WIDTH + .5} cy={Math.floor(tile / MAP_WIDTH) + .5} r=".09" />)}
+              {routeSegment(game.hero, plannedPath.slice(0, game.moves), "route-now")}
+              {routeSegment(plannedPath[Math.min(game.moves, plannedPath.length) - 1] ?? game.hero, plannedPath.slice(game.moves), "route-later")}
             </svg>}
-            {Object.values(game.producers).map((producer) => <div key={producer.id} className={`map-producer ${producer.kind} ${producer.owner}`} style={producerBounds(producer.footprint)} aria-hidden="true">
-              <span>{producer.kind === "sawmill" ? "▥" : "⬟"}</span>
+            {Object.values(game.settlements).map((city) => <div key={city.id} className={`map-city ${city.owner} ${city.id}`} style={producerBounds(city.footprint ?? [city.tile])} aria-hidden="true">
+              <img src={`assets/map/city-${visualEra === "modern" ? "modern" : "preindustrial"}.webp`} alt="" />
+              {city.owner === "neutral" && <i>⚑</i>}
+            </div>)}
+            {Object.values(game.producers).map((producer) => <div key={producer.id} className={`map-producer ${producer.kind} ${producer.owner} visual-${visualEra}`} style={producerBounds(producer.footprint)} aria-hidden="true">
+              <img src={`assets/map/${producer.kind}.webp`} alt="" />
               {producer.owner === "neutral" && <i>⚑</i>}
             </div>)}
           </div>
-          <div className="legend" aria-live="polite"><span><i className="route-swatch" />{plannedPath.length ? `${plannedPath.length} movement plotted` : "Right-click once to plot a route"}</span><span>Right-click the same destination again to travel</span><span>Keyboard: press Enter twice</span></div>
+          </div>
+          <div className="legend" aria-live="polite"><span><i className="route-swatch" />{plannedPath.length ? `${Math.min(plannedPath.length, game.moves)} now · ${Math.max(0, plannedPath.length - game.moves)} later` : "Right-click once to plot a route"}</span><span><i className="future-swatch" />Gray continues next month</span><span>Right-click again to travel</span></div>
         </section>
 
         <aside className="right-rail parchment-panel">
@@ -376,6 +383,12 @@ function Resource({icon, value, label}: {icon: string; value: number; label: str
 function Stat({value, label}: {value: string; label: string}) { return <div><b>{value}</b><span>{label}</span></div>; }
 function Army({name, count, icon}: {name: string; count: number; icon: string}) { return <div className="army-row"><span>{icon}</span><div><b>{name}</b><small>{count} troops</small></div></div>; }
 
+function routeSegment(start: number, path: number[], className: string) {
+  if (!path.length) return null;
+  const points = [start, ...path].map((tile) => `${tile % MAP_WIDTH + .5},${Math.floor(tile / MAP_WIDTH) + .5}`).join(" ");
+  return <g className={className}><polyline points={points} />{path.map((tile) => <circle key={`${className}-${tile}`} cx={tile % MAP_WIDTH + .5} cy={Math.floor(tile / MAP_WIDTH) + .5} r=".09" />)}</g>;
+}
+
 function producerBounds(footprint: number[]) {
   const columns = footprint.map((tile) => tile % MAP_WIDTH);
   const rows = footprint.map((tile) => Math.floor(tile / MAP_WIDTH));
@@ -398,6 +411,7 @@ function CitiesPanel({game, selectCity}: {game: GameState; selectCity: (id: stri
 }
 
 function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: Settlement; updateGame: React.Dispatch<React.SetStateAction<GameState>>; exitCity: () => void}) {
+  const [recruitAmounts, setRecruitAmounts] = useState<Record<string, number>>(() => Object.fromEntries(UNITS.map((unit) => [unit.id, 1])));
   const cityBuildings = game.buildings[city.id] ?? [];
   const present = game.hero === city.tile;
   const defense = cityDefense(game, city.id);
@@ -417,10 +431,14 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
         <div className="recruit-buildings">{UNITS.map(unit => {
           const source = BUILDINGS.find(building => building.id === unit.requires);
           const unlocked = cityBuildings.includes(unit.requires);
+          const maximum = Math.min(city.recruits[unit.id], Math.floor(game.gold / unit.cost));
+          const amount = Math.min(Math.max(1, recruitAmounts[unit.id] ?? 1), Math.max(1, maximum));
+          const chooseAmount = (value: number) => setRecruitAmounts((current) => ({...current, [unit.id]: Math.min(Math.max(1, value), Math.max(1, maximum))}));
           return <article key={unit.id} className={!unlocked ? "locked" : ""}>
             <header><span>{source?.icon}</span><div><b>{source?.name}</b><small>{unlocked ? "Operational" : "Not constructed"}</small></div></header>
             <div className="recruit-unit"><span>{unit.icon}</span><div><b>{unit.name}</b><small>Tier {unit.tier} · {city.recruits[unit.id]} available</small></div></div>
-            <button disabled={!unlocked || !present || city.recruits[unit.id] < 1 || game.gold < unit.cost} onClick={() => updateGame(g => recruitFromCity(g, city.id, unit.id))}>{unlocked ? `Recruit 1 · ${unit.cost} ◆` : "Building required"}</button>
+            {unlocked && <div className="recruit-quantity"><button type="button" aria-label={`Recruit one fewer ${unit.name}`} disabled={maximum < 1 || amount <= 1} onClick={() => chooseAmount(amount - 1)}>−</button><input aria-label={`${unit.name} recruitment quantity`} type="number" min="1" max={Math.max(1, maximum)} value={amount} disabled={maximum < 1} onChange={(event) => chooseAmount(Number(event.target.value) || 1)} /><button type="button" aria-label={`Recruit one more ${unit.name}`} disabled={maximum < 1 || amount >= maximum} onClick={() => chooseAmount(amount + 1)}>+</button><button type="button" disabled={maximum < 1} onClick={() => chooseAmount(maximum)}>Max</button></div>}
+            <button disabled={!unlocked || !present || maximum < 1} onClick={() => { updateGame(g => recruitFromCity(g, city.id, unit.id, amount)); chooseAmount(1); }}>{unlocked ? `Recruit ${amount} · ${amount * unit.cost} ◆` : "Building required"}</button>
           </article>;
         })}</div>
         <div className="guard-card"><span>⛨</span><div><b>Permanent city guard</b><small>{city.defenders} troops · Cannot join a hero</small></div></div>

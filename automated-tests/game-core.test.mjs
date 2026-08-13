@@ -25,6 +25,7 @@ import {
   createGame,
   defendCombatTurn,
   eraReadiness,
+  eraVisualFamily,
   findPath,
   moveAlongPath,
   producerAt,
@@ -79,59 +80,65 @@ test("a Bank adds monthly gold income", () => {
   assert.equal(next.gold, game.gold + 175);
 });
 
-test("the adventure map uses a finer twenty-by-twelve hidden movement grid", () => {
-  assert.equal(MAP_WIDTH, 20);
-  assert.equal(MAP_HEIGHT, 12);
-  assert.equal(BOARD.length, 240);
+test("the adventure map uses a larger thirty-two-by-twenty hidden movement grid", () => {
+  assert.equal(MAP_WIDTH, 32);
+  assert.equal(MAP_HEIGHT, 20);
+  assert.equal(BOARD.length, 640);
 });
 
 test("movement permits adjacent land and blocks water, distance, and exhausted armies", () => {
   const game = createGame();
-  assert.equal(canMoveTo(game, 169), true);
-  assert.equal(canMoveTo(game, 150), true);
-  assert.equal(canMoveTo(game, 110), false);
-  assert.equal(canMoveTo({ ...game, hero: 156 }, 157), false);
-  assert.equal(canMoveTo({ ...game, moves: 0 }, 149), false);
+  assert.equal(canMoveTo(game, 398), true);
+  assert.equal(canMoveTo(game, 400), true);
+  assert.equal(canMoveTo(game, 335), false);
+  assert.equal(canMoveTo({ ...game, hero: 221 }, 222), false);
+  assert.equal(canMoveTo({ ...game, moves: 0 }, 398), false);
 });
 
 test("the first route command previews a path and the second command travels it", () => {
   const game = createGame();
-  const preview = routeCommand(game, null, 166);
+  const preview = routeCommand(game, null, 395);
   assert.equal(preview.type, "preview");
-  assert.equal(preview.target, 166);
+  assert.equal(preview.target, 395);
   assert.equal(preview.path.length, 4);
-  assert.equal(routeCommand(game, preview.target, 167).type, "preview");
-  const confirmed = routeCommand(game, preview.target, 166);
+  assert.equal(routeCommand(game, preview.target, 396).type, "preview");
+  const confirmed = routeCommand(game, preview.target, 395);
   assert.equal(confirmed.type, "travel");
   const moved = moveAlongPath(game, confirmed.path);
-  assert.equal(moved.hero, 166);
+  assert.equal(moved.hero, 395);
   assert.equal(moved.moves, game.moves - 4);
 });
 
-test("pathfinding rejects water and destinations beyond remaining movement", () => {
+test("pathfinding rejects water but previews destinations beyond remaining movement", () => {
   const game = createGame();
-  assert.equal(findPath(game, 157), null);
-  assert.equal(findPath({ ...game, moves: 2 }, 166), null);
+  assert.equal(findPath(game, 415), null);
+  const command = routeCommand({ ...game, moves: 2 }, null, 391);
+  assert.equal(command.path.length, 8);
+  assert.equal(command.reachablePath.length, 2);
+  assert.equal(command.futurePath.length, 6);
+  const moved = moveAlongPath({ ...game, moves: 2 }, command.path);
+  assert.equal(moved.hero, command.reachablePath.at(-1));
+  assert.equal(moved.moves, 0);
 });
 
 test("resource pickups are consumed permanently and stone replaces food", () => {
-  const game = { ...createGame(), hero: 216 };
+  const game = { ...createGame(), hero: 556 };
   assert.equal("food" in game, false);
   const collected = collectAt(game);
   assert.equal(collected.stone, game.stone + 18);
-  assert.equal(collected.pickups[216], undefined);
-  assert.equal(advanceMonth(collected).pickups[216], undefined);
+  assert.equal(collected.pickups[556], undefined);
+  assert.equal(advanceMonth(collected).pickups[556], undefined);
 });
 
 test("magical dust is a distinct collectible special resource", () => {
-  const game = { ...createGame(), hero: 34 };
+  const game = { ...createGame(), hero: 76 };
   const collected = collectAt(game);
   assert.equal(collected.magicDust, game.magicDust + 4);
-  assert.equal(collected.pickups[34], undefined);
+  assert.equal(collected.pickups[76], undefined);
 });
 
 test("a Knowledge Hut offers two choices and applies only the selected research bonus", () => {
-  const opened = collectAt({ ...createGame(), hero: 44 });
+  const opened = collectAt({ ...createGame(), hero: 174 });
   assert.equal(opened.researchChoice.length, 2);
   const [selected, rejected] = opened.researchChoice;
   const resolved = chooseResearch(opened, selected.id);
@@ -168,14 +175,14 @@ test("completed research keeps excess points in storage", () => {
 
 test("capital and neutral city occupy separate traversable map tiles", () => {
   const game = createGame();
-  assert.equal(game.settlements.aurum.tile, 130);
+  assert.equal(game.settlements.aurum.tile, 367);
   assert.notEqual(BOARD[game.settlements.aurum.tile], "water");
   assert.notEqual(BOARD[game.settlements.freehaven.tile], "water");
   assert.equal(Object.values(game.pickups).includes("city"), false);
 });
 
 test("Freehaven requires a garrison battle and remains on the map after conquest", () => {
-  const confronted = collectAt({ ...createGame(), hero: 75 });
+  const confronted = collectAt({ ...createGame(), hero: 179 });
   assert.equal(confronted.pendingBattle.type, "siege");
   assert.equal(confronted.cities, 1);
   const deployed = startCombat(confronted);
@@ -184,7 +191,7 @@ test("Freehaven requires a garrison battle and remains on the map after conquest
   const conquered = resolveBattle(markCombatVictory(confronted));
   assert.equal(conquered.pendingBattle, null);
   assert.equal(conquered.settlements.freehaven.owner, "player");
-  assert.equal(conquered.settlements.freehaven.tile, 75);
+  assert.equal(conquered.settlements.freehaven.tile, 179);
   assert.equal(conquered.cities, 2);
 });
 
@@ -196,6 +203,16 @@ test("troops can only be recruited while the commander is inside an owned city",
   assert.equal(recruited.army.spearmen, present.army.spearmen + 1);
   assert.equal(recruited.settlements.aurum.recruits.spearmen, present.settlements.aurum.recruits.spearmen - 1);
   assert.equal(recruited.gold, present.gold - 24);
+});
+
+test("a player can recruit an exact selected quantity", () => {
+  const game = createGame();
+  game.hero = game.settlements.aurum.tile;
+  const recruited = recruitFromCity(game, "aurum", "spearmen", 5);
+  assert.equal(recruited.army.spearmen, game.army.spearmen + 5);
+  assert.equal(recruited.settlements.aurum.recruits.spearmen, game.settlements.aurum.recruits.spearmen - 5);
+  assert.equal(recruited.gold, game.gold - 120);
+  assert.equal(recruitFromCity(game, "aurum", "spearmen", 99), game);
 });
 
 test("the Mason's Yard requires timber rather than stone", () => {
@@ -280,7 +297,7 @@ test("the Garrison creates a small permanent city guard rather than a recruitabl
 });
 
 test("tier-two troops stay locked until their required building exists", () => {
-  const game = { ...createGame(), hero: 130, gold: 3000, wood: 200, stone: 200 };
+  const game = { ...createGame(), hero: 367, gold: 3000, wood: 200, stone: 200 };
   game.settlements.aurum.recruits.swordsmen = 3;
   assert.equal(recruitFromCity(game, "aurum", "swordsmen"), game);
   const masonry = buildInCity(game, "aurum", "mason-yard");
@@ -301,7 +318,7 @@ test("resource producers occupy multiple tiles and route visitors to their entra
   assert.equal(route.at(-1), quarry.entrance);
 });
 
-test("guarded producers require victory before generating monthly timber and stone", () => {
+test("guarded producers require victory before generating timber, stone, and magic dust", () => {
   const initial = createGame();
   const sawmillBattle = collectAt({ ...initial, hero: initial.producers.pinewater.entrance });
   assert.equal(sawmillBattle.pendingBattle.type, "producer");
@@ -309,9 +326,12 @@ test("guarded producers require victory before generating monthly timber and sto
   assert.equal(sawmillCaptured.producers.pinewater.owner, "player");
   const quarryBattle = collectAt({ ...sawmillCaptured, hero: initial.producers.redcliff.entrance });
   const bothCaptured = resolveBattle(markCombatVictory(quarryBattle));
-  const produced = advanceMonth(bothCaptured);
-  assert.equal(produced.wood, bothCaptured.wood + 10);
-  assert.equal(produced.stone, bothCaptured.stone + 8);
+  const dustBattle = collectAt({ ...bothCaptured, hero: initial.producers.violetworks.entrance });
+  const allCaptured = resolveBattle(markCombatVictory(dustBattle));
+  const produced = advanceMonth(allCaptured);
+  assert.equal(produced.wood, allCaptured.wood + 10);
+  assert.equal(produced.stone, allCaptured.stone + 8);
+  assert.equal(produced.magicDust, allCaptured.magicDust + 2);
 });
 
 test("tactical combat uses a fifteen-by-nine odd-row hex battlefield", () => {
@@ -323,7 +343,7 @@ test("tactical combat uses a fifteen-by-nine odd-row hex battlefield", () => {
 });
 
 test("battlefield movement respects stack speed, occupied hexes, and impassable obstacles", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
   const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
   assert.equal(active.unitId, "scouts");
   const reachable = combatReachable(deployed.combat);
@@ -335,14 +355,14 @@ test("battlefield movement respects stack speed, occupied hexes, and impassable 
 });
 
 test("obstacles and intervening stacks block ranged line of sight", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
   assert.equal(combatHasLineOfSight(deployed.combat, 45, 59), true);
   const obstructed = { ...deployed.combat, obstacles: [...deployed.combat.obstacles, { tile: 51, kind: "boulder" }] };
   assert.equal(combatHasLineOfSight(obstructed, 45, 59), false);
 });
 
 test("ranged stacks spend shots and inflict deterministic casualties", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
   const combat = { ...deployed.combat, activeStackId: "player-slingers" };
   assert.equal(combatCanAttack(combat, "player-slingers", "enemy-slingers"), true);
   const before = combat.stacks.find((stack) => stack.id === "enemy-slingers").totalHealth;
@@ -352,7 +372,7 @@ test("ranged stacks spend shots and inflict deterministic casualties", () => {
 });
 
 test("melee defenders retaliate once and wait or defend changes the current round", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 112 }));
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
   const arrangedStacks = deployed.combat.stacks.map((stack) => {
     if (stack.id === "player-scouts") return { ...stack, position: 60 };
     if (stack.id === "enemy-scouts") return { ...stack, position: 61, totalHealth: 120, done: true };
@@ -373,12 +393,12 @@ test("melee defenders retaliate once and wait or defend changes the current roun
 });
 
 test("retreat preserves survivors, returns the commander to Aurum, and leaves the enemy site", () => {
-  const initial = collectAt({ ...createGame(), hero: 112 });
+  const initial = collectAt({ ...createGame(), hero: 307 });
   const retreated = resolveBattle(retreatCombat(startCombat(initial)));
   assert.equal(retreated.hero, retreated.settlements.aurum.tile);
   assert.equal(retreated.combat, null);
   assert.equal(retreated.pendingBattle, null);
-  assert.equal(retreated.sites[112], "raiders");
+  assert.equal(retreated.sites[307], "raiders");
   assert.deepEqual(retreated.army, initial.army);
 });
 
@@ -386,4 +406,12 @@ test("era advancement requires every concrete readiness condition", () => {
   const almostReady = { ...createGame(), techs: RESEARCH.map((technology) => technology.id), cities: 2, buildings: { aurum: ["workshop"], freehaven: [] }, victories: 0 };
   assert.equal(eraReadiness(almostReady).ready, false);
   assert.equal(eraReadiness({ ...almostReady, victories: 1 }).ready, true);
+});
+
+test("landmarks select an era-specific visual family", () => {
+  assert.equal(eraVisualFamily("Ancient"), "ancient");
+  assert.equal(eraVisualFamily("Classical"), "classical");
+  assert.equal(eraVisualFamily("Medieval"), "medieval");
+  assert.equal(eraVisualFamily("Industrial"), "industrial");
+  assert.equal(eraVisualFamily("Modern"), "modern");
 });

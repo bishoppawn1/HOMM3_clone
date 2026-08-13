@@ -24,12 +24,15 @@ test("GitHub Pages workflow builds and deploys the static export", async () => {
 });
 
 test("branch-based GitHub Pages serves the game instead of the README", async () => {
-  const [html] = await Promise.all([
+  const [html, syncScript] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
+    readFile(new URL("scripts/sync-pages-root.mjs", root), "utf8"),
     access(new URL(".nojekyll", root)),
+    access(new URL("public/assets/map/city-preindustrial.webp", root)),
   ]);
   assert.match(html, /Through the Ages/);
   assert.match(html, /HOMM3_clone\/_next/);
+  assert.match(syncScript, /exportDirectory}\/assets/);
 });
 
 test("entering a city uses a dedicated full-screen management surface", async () => {

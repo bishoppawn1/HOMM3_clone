@@ -1,26 +1,24 @@
 export const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-export const MAP_WIDTH = 20;
-export const MAP_HEIGHT = 12;
+export const MAP_WIDTH = 32;
+export const MAP_HEIGHT = 20;
 export const MAX_MOVEMENT = 16;
 export const COMBAT_WIDTH = 15;
 export const COMBAT_HEIGHT = 9;
 
-const terrainRows = [
-  "fffffppppppphhhhhwww",
-  "ffffppprrrppphhhhwww",
-  "fffpppprrppppphhhwww",
-  "ffpppprrrppffffppwww",
-  "fpppprpppppffffppwww",
-  "pppprrpphhfffppppwww",
-  "ppprrrppphhpfppppwww",
-  "hppprppppppppppppwww",
-  "hhpprppffffppppppwww",
-  "fppprppffffphhhppwww",
-  "ffpprpppppphhhhppwww",
-  "ffffppppppphhhhhpwww",
-];
-const terrainKey = { f: "forest", p: "plains", h: "hill", r: "road", w: "water" };
-export const BOARD = terrainRows.join("").split("").map((key) => terrainKey[key]);
+export const ERAS = ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"];
+
+export const BOARD = Array.from({ length: MAP_WIDTH * MAP_HEIGHT }, (_, tile) => {
+  const row = Math.floor(tile / MAP_WIDTH), col = tile % MAP_WIDTH;
+  if (col === MAP_WIDTH - 1 || (col === MAP_WIDTH - 2 && row >= 6 && row <= 14)) return "water";
+  if ((row < 7 && col < 10) || (row > 14 && col < 11) || (row > 15 && col > 25)) return "forest";
+  if ((row < 6 && col > 21) || (row > 12 && col > 20)) return "hill";
+  if (col === 12 + Math.floor(row / 5) || (row === 10 && col >= 12 && col <= 23)) return "road";
+  return "plains";
+});
+
+export function eraVisualFamily(era) {
+  return ERAS.includes(era) ? era.toLowerCase() : "ancient";
+}
 
 export const RESEARCH = [
   { id: "surveying", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, description: "Improves travel and reveals nearby territory." },
@@ -459,44 +457,51 @@ export function retreatCombat(game) {
 
 export function createGame() {
   return {
-    year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero: 170, moves: MAX_MOVEMENT,
+    year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero: 399, moves: MAX_MOVEMENT,
     gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
     army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0 },
     techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null, combat: null,
     constructionThisTurn: {},
     buildings: { aurum: ["town-hall", "militia-yard", "archery-range", "scout-camp"], freehaven: ["town-hall", "militia-yard"] },
     settlements: {
-      aurum: { id: "aurum", name: "Aurum", tile: 130, owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
-      freehaven: { id: "freehaven", name: "Freehaven", tile: 75, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 26 },
+      aurum: { id: "aurum", name: "Aurum", tile: 367, footprint: [334, 335, 336, 366, 367, 368], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
+      freehaven: { id: "freehaven", name: "Freehaven", tile: 179, footprint: [146, 147, 148, 178, 179, 180], owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 26 },
     },
     producers: {
-      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [41, 42, 61, 62], entrance: 62, owner: "neutral", garrison: 24 },
-      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [172, 173, 174, 192, 193, 194], entrance: 193, owner: "neutral", garrison: 32 },
+      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [131, 132, 163, 164], entrance: 164, owner: "neutral", garrison: 24 },
+      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [472, 473, 474, 504, 505, 506], entrance: 505, owner: "neutral", garrison: 32 },
+      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [120, 121, 122, 152, 153, 154], entrance: 153, owner: "neutral", garrison: 38 },
     },
-    sites: { 112: "raiders" },
-    pickups: { 34: "dust", 44: "knowledge", 103: "timber", 216: "stone", 207: "gold" },
+    sites: { 307: "raiders" },
+    pickups: { 76: "dust", 174: "knowledge", 322: "timber", 556: "stone", 430: "gold" },
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
     log: ["The campaign began in Year 1.", "Marcellus Vale departed Aurum."],
   };
 }
 
 export function settlementAt(game, tile) {
-  return Object.values(game.settlements).find((settlement) => settlement.tile === tile) ?? null;
+  return Object.values(game.settlements).find((settlement) => (settlement.footprint ?? [settlement.tile]).includes(tile)) ?? null;
 }
 
 export function producerAt(game, tile) {
   return Object.values(game.producers ?? {}).find((producer) => producer.footprint.includes(tile)) ?? null;
 }
 
+function resourceName(resource) {
+  return resource === "wood" ? "timber" : resource === "magicDust" ? "magic dust" : resource;
+}
+
 function destinationFor(game, tile) {
   const producer = producerAt(game, tile);
-  return producer?.entrance ?? tile;
+  const settlement = settlementAt(game, tile);
+  return producer?.entrance ?? settlement?.tile ?? tile;
 }
 
 function isPassable(game, tile) {
   if (tile < 0 || tile >= BOARD.length || BOARD[tile] === "water") return false;
   const producer = producerAt(game, tile);
-  return !producer || producer.entrance === tile;
+  const settlement = settlementAt(game, tile);
+  return (!producer || producer.entrance === tile) && (!settlement || settlement.tile === tile);
 }
 
 export function canMoveTo(game, index) {
@@ -507,12 +512,11 @@ export function canMoveTo(game, index) {
 }
 
 export function findPath(game, requestedTile) {
-  if (game.moves <= 0 || game.researchChoice || game.pendingBattle) return null;
+  if (game.researchChoice || game.pendingBattle) return null;
   const target = destinationFor(game, requestedTile);
   if (target === game.hero || !isPassable(game, target)) return null;
   const queue = [game.hero];
   const previous = new Map([[game.hero, null]]);
-  const distance = new Map([[game.hero, 0]]);
   while (queue.length) {
     const current = queue.shift();
     const row = Math.floor(current / MAP_WIDTH);
@@ -525,10 +529,7 @@ export function findPath(game, requestedTile) {
     ];
     for (const neighbor of neighbors) {
       if (neighbor < 0 || previous.has(neighbor) || !isPassable(game, neighbor)) continue;
-      const nextDistance = distance.get(current) + 1;
-      if (nextDistance > game.moves) continue;
       previous.set(neighbor, current);
-      distance.set(neighbor, nextDistance);
       if (neighbor === target) {
         const path = [];
         let step = target;
@@ -548,7 +549,7 @@ export function routeCommand(game, plannedTarget, requestedTile) {
   const path = findPath(game, requestedTile);
   if (!path) return { type: "invalid", target: null, path: [] };
   const target = path[path.length - 1];
-  return { type: plannedTarget === target ? "travel" : "preview", target, path };
+  return { type: plannedTarget === target ? "travel" : "preview", target, path, reachablePath: path.slice(0, game.moves), futurePath: path.slice(game.moves) };
 }
 
 export function moveAlongPath(game, path) {
@@ -569,7 +570,7 @@ export function collectAt(game) {
   }
   const producer = producerAt(game, game.hero);
   if (producer && game.hero === producer.entrance) {
-    if (producer.owner === "player") return { ...game, notice: `${producer.name} is under your control and produces ${producer.amount} ${producer.resource === "wood" ? "timber" : producer.resource} each month.` };
+    if (producer.owner === "player") return { ...game, notice: `${producer.name} is under your control and produces ${producer.amount} ${resourceName(producer.resource)} each month.` };
     return { ...game, pendingBattle: { type: "producer", producerId: producer.id, name: producer.name, strength: producer.garrison }, notice: `A guarding force holds ${producer.name}.` };
   }
   const site = game.sites[game.hero];
@@ -617,7 +618,7 @@ export function resolveBattle(game) {
   if (battle.type === "producer") {
     const producer = game.producers[battle.producerId];
     const producers = { ...game.producers, [producer.id]: { ...producer, owner: "player", garrison: 0 } };
-    return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${producer.name} is secured. It will produce ${producer.amount} ${producer.resource === "wood" ? "timber" : producer.resource} each month.`, log: [...game.log, `Defeated the guards and took control of ${producer.name}.`] };
+    return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${producer.name} is secured. It will produce ${producer.amount} ${resourceName(producer.resource)} each month.`, log: [...game.log, `Defeated the guards and took control of ${producer.name}.`] };
   }
   const sites = { ...game.sites };
   delete sites[game.hero];
@@ -667,6 +668,7 @@ export function advanceMonth(game) {
   const controlledProducers = Object.values(game.producers ?? {}).filter((producer) => producer.owner === "player");
   const timberIncome = controlledProducers.filter((producer) => producer.resource === "wood").reduce((total, producer) => total + producer.amount, 0);
   const quarryIncome = controlledProducers.filter((producer) => producer.resource === "stone").reduce((total, producer) => total + producer.amount, 0);
+  const dustIncome = controlledProducers.filter((producer) => producer.resource === "magicDust").reduce((total, producer) => total + producer.amount, 0);
   const settlements = Object.fromEntries(Object.entries(game.settlements).map(([id, city]) => {
     if (city.owner !== "player") return [id, city];
     const built = game.buildings[id] ?? [];
@@ -682,8 +684,8 @@ export function advanceMonth(game) {
   const yearMessage = nextYear > game.year ? `Year ${nextYear} begins. Annual growth has been assessed.` : `${MONTHS[nextMonth - 1]} begins.`;
   const produced = applyResearch(game, researchIncome);
   const goldIncome = 75 * owned.length + bankIncome;
-  const siteProduction = timberIncome || quarryIncome ? ` Controlled sites produced ${timberIncome} timber and ${quarryIncome} stone.` : "";
-  return { ...produced, settlements, constructionThisTurn: {}, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: MAX_MOVEMENT, gold: game.gold + goldIncome, wood: game.wood + timberIncome + cityTimberIncome, stone: game.stone + stoneIncome + quarryIncome, notice: `${yearMessage} Cities produced ${goldIncome} gold and ${researchIncome} research.${siteProduction}`, log: [...produced.log, yearMessage] };
+  const siteProduction = timberIncome || quarryIncome || dustIncome ? ` Controlled sites produced ${timberIncome} timber, ${quarryIncome} stone, and ${dustIncome} magic dust.` : "";
+  return { ...produced, settlements, constructionThisTurn: {}, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: MAX_MOVEMENT, gold: game.gold + goldIncome, wood: game.wood + timberIncome + cityTimberIncome, stone: game.stone + stoneIncome + quarryIncome, magicDust: game.magicDust + dustIncome, notice: `${yearMessage} Cities produced ${goldIncome} gold and ${researchIncome} research.${siteProduction}`, log: [...produced.log, yearMessage] };
 }
 
 export function buildInCity(game, cityId, buildingId) {
@@ -699,12 +701,14 @@ export function buildInCity(game, cityId, buildingId) {
   return { ...game, gold: game.gold - building.gold, wood: game.wood - building.wood, stone: game.stone - building.stone, settlements, constructionThisTurn: { ...(game.constructionThisTurn ?? {}), [cityId]: true }, buildings: { ...game.buildings, [cityId]: [...cityBuildings, buildingId] }, notice: `${building.name} completed in ${city.name}. That city's construction is finished for this turn.`, log: [...game.log, `${city.name} completed its ${building.name}.`] };
 }
 
-export function recruitFromCity(game, cityId, unitId) {
+export function recruitFromCity(game, cityId, unitId, amount = 1) {
   const city = game.settlements[cityId];
   const unit = UNITS.find((item) => item.id === unitId);
   const cityBuildings = game.buildings[cityId] ?? [];
-  if (!city || city.owner !== "player" || game.hero !== city.tile || !unit || !cityBuildings.includes(unit.requires) || city.recruits[unitId] <= 0 || game.gold < unit.cost) return game;
-  return { ...game, gold: game.gold - unit.cost, army: { ...game.army, [unitId]: game.army[unitId] + 1 }, settlements: { ...game.settlements, [cityId]: { ...city, recruits: { ...city.recruits, [unitId]: city.recruits[unitId] - 1 } } }, notice: `One ${unit.name} unit joined Marcellus in ${city.name}.` };
+  const quantity = Number(amount);
+  const totalCost = unit ? unit.cost * quantity : Infinity;
+  if (!city || city.owner !== "player" || game.hero !== city.tile || !unit || !Number.isInteger(quantity) || quantity < 1 || !cityBuildings.includes(unit.requires) || city.recruits[unitId] < quantity || game.gold < totalCost) return game;
+  return { ...game, gold: game.gold - totalCost, army: { ...game.army, [unitId]: game.army[unitId] + quantity }, settlements: { ...game.settlements, [cityId]: { ...city, recruits: { ...city.recruits, [unitId]: city.recruits[unitId] - quantity } } }, notice: `${quantity} ${unit.name} joined Marcellus in ${city.name}.` };
 }
 
 export function cityDefense(game, cityId) {
