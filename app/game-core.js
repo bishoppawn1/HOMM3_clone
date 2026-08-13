@@ -135,12 +135,12 @@ export const BUILDINGS = [
   { id: "monument", name: "Monument", icon: "▲", tier: 4, branch: "civic", x: 3, y: 4, gold: 760, wood: 10, stone: 36, requires: ["city-hall", "academy"], description: "Improves civic prestige." },
   { id: "great-library", name: "Great Library", icon: "▤", tier: 4, branch: "civic", x: 4, y: 4, gold: 900, wood: 24, stone: 28, requires: ["academy"], description: "+40 research each month." },
   { id: "training-grounds", name: "Training Grounds", icon: "◎", tier: 4, branch: "military", x: 5, y: 4, gold: 700, wood: 26, stone: 20, requires: ["barracks-ii", "academy"], description: "+1 monthly Swordsman growth." },
-  { id: "siege-workshop", name: "Siege Workshop", icon: "☷", tier: 4, branch: "military", x: 6, y: 4, gold: 820, wood: 32, stone: 26, requires: ["foundry", "barracks-ii"], description: "Prepares siege equipment." },
+  { id: "siege-workshop", name: "Siege Workshop", icon: "☷", tier: 4, branch: "military", x: 6, y: 4, gold: 820, wood: 32, stone: 26, requires: ["foundry", "barracks-ii"], description: "Recruits long-range Artillery." },
   { id: "stone-walls", name: "Stone Walls", icon: "▦", tier: 4, branch: "defense", x: 7, y: 4, gold: 800, wood: 12, stone: 42, requires: ["garrison"], description: "+10 city defense." },
   { id: "treasury", name: "Treasury", icon: "◇", tier: 5, branch: "economy", x: 1, y: 5, gold: 1100, wood: 20, stone: 30, requires: ["trade-guild"], description: "+200 gold each month." },
   { id: "civic-forum", name: "Civic Forum", icon: "◫", tier: 5, branch: "civic", x: 3, y: 5, gold: 1050, wood: 26, stone: 40, requires: ["monument", "great-library"], description: "Upgrades the city to civic tier III." },
-  { id: "war-college", name: "War College", icon: "✥", tier: 5, branch: "military", x: 5, y: 5, gold: 1120, wood: 30, stone: 36, requires: ["training-grounds", "siege-workshop"], description: "Improves advanced troop training." },
-  { id: "cavalry-school", name: "Cavalry School", icon: "♘", tier: 5, branch: "military", x: 6, y: 5, gold: 1080, wood: 34, stone: 30, requires: ["stable", "training-grounds"], description: "+1 monthly Horseman growth." },
+  { id: "war-college", name: "War College", icon: "✥", tier: 5, branch: "military", x: 5, y: 5, gold: 1120, wood: 30, stone: 36, requires: ["training-grounds", "siege-workshop"], description: "Recruits armored formations." },
+  { id: "cavalry-school", name: "Cavalry School", icon: "♘", tier: 5, branch: "military", x: 6, y: 5, gold: 1080, wood: 34, stone: 30, requires: ["stable", "training-grounds"], description: "Recruits aerial reconnaissance formations." },
   { id: "citadel", name: "Citadel", icon: "♝", tier: 5, branch: "defense", x: 7, y: 5, gold: 1250, wood: 24, stone: 54, requires: ["stone-walls", "garrison"], description: "+20 city defense." },
 ];
 
@@ -150,6 +150,9 @@ export const UNITS = [
   { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 12, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false, role: "Very cheap light troops that move early and reach exposed enemies quickly." },
   { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false, role: "Heavy line infantry with balanced attack, defense, and staying power." },
   { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false, role: "Mobile shock troops with high speed and strong charge damage." },
+  { id: "artillery", name: "Stone Throwers", icon: "☄", tier: 3, cost: 180, requires: "siege-workshop", attack: 10, defense: 3, damage: [10, 16], health: 24, speed: 2, initiative: 2, ranged: true, range: 12, shots: 5, longRange: true, role: "Slow long-range engines that bombard formations from well behind the battle line." },
+  { id: "armor", name: "War Chariots", icon: "▣", tier: 3, cost: 220, requires: "war-college", attack: 10, defense: 11, damage: [8, 12], health: 42, speed: 5, initiative: 5, ranged: false, rangedFromEra: 3, range: 4, shots: 5, armored: true, role: "Durable mobile formations that reduce incoming damage and develop ranged weapons in the Gunpowder Age." },
+  { id: "aircraft", name: "Kite Scouts", icon: "⌁", tier: 3, cost: 195, requires: "cavalry-school", attack: 7, defense: 5, damage: [5, 8], health: 20, speed: 8, initiative: 9, ranged: false, rangedFromEra: 3, range: 6, shots: 4, flyingFromEra: 3, role: "Fast reconnaissance formations that become truly airborne in the Gunpowder Age and can cross battlefield obstacles." },
 ];
 
 const UNIT_ERA_NAMES = {
@@ -158,6 +161,9 @@ const UNIT_ERA_NAMES = {
   scouts: ["Scouts", "Skirmishers", "Rangers", "Light Dragoons", "Cavalry Scouts", "Recon Troops"],
   swordsmen: ["Swordsmen", "Legionaries", "Men-at-Arms", "Grenadiers", "Shock Troops", "Assault Infantry"],
   horsemen: ["Horsemen", "Companion Cavalry", "Knights", "Cuirassiers", "Lancers", "Armored Cars"],
+  artillery: ["Stone Throwers", "Ballistae", "Trebuchets", "Field Cannons", "Heavy Howitzers", "Rocket Artillery"],
+  armor: ["War Chariots", "Cataphracts", "War Wagons", "Armored Gun Wagons", "Early Tanks", "Main Battle Tanks"],
+  aircraft: ["Kite Scouts", "Observation Kites", "Reconnaissance Kites", "Balloon Observers", "Reconnaissance Biplanes", "Utility Helicopters"],
 };
 
 export function unitForEra(unitId, era = "Ancient") {
@@ -165,6 +171,8 @@ export function unitForEra(unitId, era = "Ancient") {
   if (!base) return null;
   const eraIndex = Math.max(0, ERAS.indexOf(era));
   const damageBonus = eraIndex * 2;
+  const rangedFromEra = base.ranged ? 0 : (base.rangedFromEra ?? Infinity);
+  const ranged = eraIndex >= rangedFromEra;
   return {
     ...base,
     name: UNIT_ERA_NAMES[unitId]?.[eraIndex] ?? base.name,
@@ -173,8 +181,10 @@ export function unitForEra(unitId, era = "Ancient") {
     defense: base.defense + eraIndex * 2,
     damage: [base.damage[0] + damageBonus, base.damage[1] + damageBonus],
     health: base.health + eraIndex * 4,
-    range: base.ranged ? (base.range ?? 6) + Math.min(eraIndex, 3) : undefined,
-    shots: base.ranged ? (base.shots ?? 0) + eraIndex * 2 : undefined,
+    ranged,
+    range: ranged ? (base.range ?? 6) + Math.min(Math.max(0, eraIndex - rangedFromEra), 3) : undefined,
+    shots: ranged ? (base.shots ?? 0) + Math.max(0, eraIndex - rangedFromEra) * 2 : undefined,
+    flying: base.flyingFromEra !== undefined && eraIndex >= base.flyingFromEra,
   };
 }
 
@@ -287,7 +297,7 @@ function findCombatRoute(combat, stackId, destinations, maximumDistance = Infini
   const goals = new Set(destinations);
   if (goals.has(stack.position)) return [];
   const occupied = occupiedCombatTiles(combat, stackId);
-  const blocked = blockedCombatTiles(combat);
+  const blocked = unitById(stack.unitId, stack.era).flying ? new Set() : blockedCombatTiles(combat);
   const queue = [stack.position];
   const previous = new Map([[stack.position, null]]);
   const distance = new Map([[stack.position, 0]]);
@@ -328,7 +338,7 @@ export function combatReachable(combat, stackId = combat?.activeStackId) {
   const stack = combat?.stacks.find((item) => item.id === stackId);
   if (!stack || combatStackCount(stack) <= 0) return [];
   const occupied = occupiedCombatTiles(combat, stack.id);
-  const blocked = blockedCombatTiles(combat);
+  const blocked = unitById(stack.unitId, stack.era).flying ? new Set() : blockedCombatTiles(combat);
   const queue = [stack.position];
   const distance = new Map([[stack.position, 0]]);
   while (queue.length) {
@@ -374,7 +384,8 @@ function attackPlan(combat, attacker, defender) {
   if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker) && combatDistance(attacker.position, defender.position) <= unit.range) {
     return { ranged: true, route: [] };
   }
-  const destinations = combatNeighbors(defender.position).filter((tile) => tile === attacker.position || (!occupiedCombatTiles(combat, attacker.id).has(tile) && !blockedCombatTiles(combat).has(tile)));
+  const blocked = unit.flying ? new Set() : blockedCombatTiles(combat);
+  const destinations = combatNeighbors(defender.position).filter((tile) => tile === attacker.position || (!occupiedCombatTiles(combat, attacker.id).has(tile) && !blocked.has(tile)));
   const route = findCombatRoute(combat, attacker.id, destinations, combatMovementRemaining(combat, attacker.id));
   return route ? { ranged: false, route } : null;
 }
@@ -473,8 +484,9 @@ function strikeCombatStack(combat, attackerId, defenderId, ranged, retaliation =
   const difference = attackerUnit.attack - defense;
   const attackModifier = difference >= 0 ? 1 + Math.min(3, difference * .05) : 1 / (1 + Math.abs(difference) * .025);
   const meleeShootingModifier = !ranged && attackerUnit.ranged ? .5 : 1;
+  const armoredModifier = defenderUnit.armored ? .75 : 1;
   const baseDamage = attackerCount * (attackerUnit.damage[0] + attackerUnit.damage[1]) / 2;
-  const damage = Math.max(1, Math.round(baseDamage * attackModifier * meleeShootingModifier));
+  const damage = Math.max(1, Math.round(baseDamage * attackModifier * meleeShootingModifier * armoredModifier));
   const updatedDefender = { ...defender, totalHealth: Math.max(0, defender.totalHealth - damage) };
   const after = combatStackCount(updatedDefender);
   const label = retaliation ? " retaliated against " : " struck ";
@@ -662,13 +674,13 @@ export function createGame() {
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
     gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
-    army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0 },
+    army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0, artillery: 0, armor: 0, aircraft: 0 },
     techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null, combat: null,
     constructionThisTurn: {},
     buildings: { aurum: ["town-hall", "militia-yard", "archery-range", "scout-camp"], freehaven: ["town-hall", "militia-yard"] },
     settlements: {
-      aurum: { id: "aurum", name: "Aurum", tile: aurum, footprint: [adventureTile(17, 15), adventureTile(18, 15), adventureTile(19, 15), adventureTile(17, 16), aurum, adventureTile(19, 16)], territory: [[10, 13], [12, 10], [17, 9], [22, 10], [25, 13], [26, 18], [23, 22], [18, 24], [13, 22], [9, 18]], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
-      freehaven: { id: "freehaven", name: "Freehaven", tile: freehaven, footprint: [adventureTile(60, 12), adventureTile(61, 12), adventureTile(62, 12), adventureTile(60, 13), freehaven, adventureTile(62, 13)], territory: [[56, 8], [61, 7], [65, 9], [66, 13], [64, 17], [59, 19], [55, 16], [54, 12]], blockedBy: freehavenBandits, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 0 },
+      aurum: { id: "aurum", name: "Aurum", tile: aurum, footprint: [adventureTile(17, 15), adventureTile(18, 15), adventureTile(19, 15), adventureTile(17, 16), aurum, adventureTile(19, 16)], territory: [[10, 13], [12, 10], [17, 9], [22, 10], [25, 13], [26, 18], [23, 22], [18, 24], [13, 22], [9, 18]], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0, artillery: 0, armor: 0, aircraft: 0 } },
+      freehaven: { id: "freehaven", name: "Freehaven", tile: freehaven, footprint: [adventureTile(60, 12), adventureTile(61, 12), adventureTile(62, 12), adventureTile(60, 13), freehaven, adventureTile(62, 13)], territory: [[56, 8], [61, 7], [65, 9], [66, 13], [64, 17], [59, 19], [55, 16], [54, 12]], blockedBy: freehavenBandits, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0, artillery: 0, armor: 0, aircraft: 0 }, garrison: 0 },
     },
     producers: {
       pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(7, 7), adventureTile(8, 7), adventureTile(7, 8), pinewater], entrance: pinewater, owner: "neutral", garrison: 24 },
@@ -925,6 +937,9 @@ export function advanceMonth(game) {
       scouts: city.recruits.scouts + (built.includes("scout-camp") ? 1 : 0),
       swordsmen: city.recruits.swordsmen + (built.includes("barracks-ii") ? 2 : 0) + (built.includes("training-grounds") ? 1 : 0),
       horsemen: city.recruits.horsemen + (built.includes("stable") ? 1 : 0) + (built.includes("cavalry-school") ? 1 : 0),
+      artillery: (city.recruits.artillery ?? 0) + (built.includes("siege-workshop") ? 1 : 0),
+      armor: (city.recruits.armor ?? 0) + (built.includes("war-college") ? 1 : 0),
+      aircraft: (city.recruits.aircraft ?? 0) + (built.includes("cavalry-school") ? 1 : 0),
     }, defenders: built.includes("garrison") ? Math.min(12, (city.defenders ?? 0) + 2) : (city.defenders ?? 0) }];
   }));
   const yearMessage = nextYear > game.year ? `Year ${nextYear} begins. Annual growth has been assessed.` : `${MONTHS[nextMonth - 1]} begins.`;
@@ -940,7 +955,7 @@ export function buildInCity(game, cityId, buildingId) {
   const cityBuildings = game.buildings[cityId] ?? [];
   const prerequisitesMet = building?.requires.every((required) => cityBuildings.includes(required));
   if (!city || city.owner !== "player" || !building || game.constructionThisTurn?.[cityId] || cityBuildings.includes(buildingId) || !prerequisitesMet || game.gold < building.gold || game.wood < building.wood || game.stone < building.stone) return game;
-  const recruitSeeds = { "archery-range": ["slingers", 3], "scout-camp": ["scouts", 1], "barracks-ii": ["swordsmen", 2], stable: ["horsemen", 1] };
+  const recruitSeeds = { "archery-range": ["slingers", 3], "scout-camp": ["scouts", 1], "barracks-ii": ["swordsmen", 2], stable: ["horsemen", 1], "siege-workshop": ["artillery", 1], "war-college": ["armor", 1], "cavalry-school": ["aircraft", 1] };
   const seed = recruitSeeds[buildingId];
   const defenders = buildingId === "garrison" ? 8 : (city.defenders ?? 0);
   const settlements = seed || buildingId === "garrison" ? { ...game.settlements, [cityId]: { ...city, defenders, recruits: seed ? { ...city.recruits, [seed[0]]: city.recruits[seed[0]] + seed[1] } : city.recruits } } : game.settlements;

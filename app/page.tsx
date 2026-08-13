@@ -421,16 +421,16 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
             const canAttack = stack ? attackable.has(stack.id) : false;
             const canMove = !stack && reachable.has(tile);
             const unit = stack ? unitForEra(stack.unitId, stack.era ?? game.era)! : null;
-            const label = obstacle ? `Impassable ${obstacle}` : stack && unit ? `${stack.side === "player" ? "Allied" : "Enemy"} ${unit.name}, ${stackCount(stack)} remaining${canAttack ? ", attack available" : ""}` : `Battlefield hex ${tile + 1}${canMove ? ", movement available" : ""}`;
+            const label = stack && unit ? `${stack.side === "player" ? "Allied" : "Enemy"} ${unit.name}, ${stackCount(stack)} remaining${canAttack ? ", attack available" : ""}` : obstacle ? `${activeUnit?.flying && canMove ? "Fly over" : "Impassable"} ${obstacle}${canMove ? ", movement available" : ""}` : `Battlefield hex ${tile + 1}${canMove ? ", movement available" : ""}`;
             return <button
               key={tile}
-              className={`combat-hex ${canMove ? "reachable" : ""} ${canAttack ? "attackable" : ""} ${stack?.id === combat.activeStackId ? "active-stack" : ""} ${obstacle ? "blocked" : ""}`}
+              className={`combat-hex ${canMove ? "reachable" : ""} ${canAttack ? "attackable" : ""} ${stack?.id === combat.activeStackId ? "active-stack" : ""} ${obstacle && !canMove && !canAttack ? "blocked" : ""}`}
               style={combatHexPosition(row, col)}
               onClick={(event) => event.preventDefault()}
               onContextMenu={(event) => { event.preventDefault(); handleHex(tile, stack); }}
               onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handleHex(tile, stack); } }}
               aria-label={label}
-              disabled={Boolean(combat.result) || Boolean(obstacle) || (!canMove && !canAttack)}
+              disabled={Boolean(combat.result) || (!canMove && !canAttack)}
               title={label}
             >
               {obstacle && <span className={`combat-obstacle ${obstacle}`} aria-hidden="true">{obstacleGlyph[obstacle]}</span>}
@@ -450,7 +450,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
     </div>
 
     <footer className="combat-controls">
-      <div>{active && activeUnit && !combat.result ? <><span><img src={unitPortrait(active.unitId, active.era ?? game.era)} alt="" /></span><b>{activeUnit.name}</b><small>Movement {combatMovementRemaining(combat, active.id)}/{activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · Range ${activeUnit.range} · ${active.shots} shots` : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
+      <div>{active && activeUnit && !combat.result ? <><span><img src={unitPortrait(active.unitId, active.era ?? game.era)} alt="" /></span><b>{activeUnit.name}</b><small>Movement {combatMovementRemaining(combat, active.id)}/{activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · Range ${activeUnit.range} · ${active.shots} shots` : ""}{activeUnit.longRange ? " · Long range" : ""}{activeUnit.armored ? " · Armored" : ""}{activeUnit.flying ? " · Flying" : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
       <button disabled={!active || active.side !== "player" || active.waited || (active.movementUsed ?? 0) > 0 || Boolean(combat.result)} onClick={() => updateGame(waitCombatTurn)}>⌛ Wait</button>
       <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(finishCombatTurn)}>✓ Finish Turn</button>
       <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(defendCombatTurn)}>⛨ Defend</button>
@@ -601,7 +601,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
             {selectedUnitId === unit.id && <div className="unit-inspector" role="region" aria-label={`${unit.name} statistics`}>
               <p>{unit.role}</p>
               <div><span><b>{unit.attack}</b>Attack</span><span><b>{unit.defense}</b>Defense</span><span><b>{unit.damage[0]}–{unit.damage[1]}</b>Damage</span><span><b>{unit.health}</b>Health</span><span><b>{unit.speed}</b>Speed</span><span><b>{unit.initiative}</b>Initiative</span></div>
-              <small>{unit.ranged ? `Ranged · Range ${unit.range} · ${unit.shots} shots per battle` : "Melee unit"} · {unit.cost} gold each</small>
+              <small>{unit.ranged ? `Ranged · Range ${unit.range} · ${unit.shots} shots per battle` : "Melee unit"}{unit.longRange ? " · Long range" : ""}{unit.armored ? " · Armored" : ""}{unit.flying ? " · Flying over obstacles" : ""} · {unit.cost} gold each</small>
             </div>}
             {unlocked && <div className="recruit-quantity"><button type="button" aria-label={`Recruit one fewer ${unit.name}`} disabled={maximum < 1 || amount <= 1} onClick={() => chooseAmount(amount - 1)}>−</button><input aria-label={`${unit.name} recruitment quantity`} type="number" min="1" max={Math.max(1, maximum)} value={amount} disabled={maximum < 1} onChange={(event) => chooseAmount(Number(event.target.value) || 1)} /><button type="button" aria-label={`Recruit one more ${unit.name}`} disabled={maximum < 1 || amount >= maximum} onClick={() => chooseAmount(amount + 1)}>+</button><button type="button" disabled={maximum < 1} onClick={() => chooseAmount(maximum)}>Max</button></div>}
             <button disabled={!unlocked || !present || maximum < 1} onClick={() => { updateGame(g => recruitFromCity(g, city.id, unit.id, amount)); chooseAmount(1); }}>{unlocked ? `Recruit ${amount} · ${amount * unit.cost} ◆` : "Building required"}</button>

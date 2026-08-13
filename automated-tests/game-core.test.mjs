@@ -11,6 +11,7 @@ import {
   MAX_MOVEMENT,
   MAX_TROOPS_PER_STACK,
   RESEARCH,
+  UNITS,
   adventureTile,
   advanceMonth,
   advanceEra,
@@ -457,6 +458,41 @@ test("every age upgrades each persistent recruitment line with a distinct histor
   assert.equal(unitForEra("slingers", "Modern").name, "Machine Gunners");
   assert.ok(unitForEra("slingers", "Modern").attack > unitForEra("slingers", "Ancient").attack);
   assert.ok(unitForEra("slingers", "Modern").health > unitForEra("slingers", "Ancient").health);
+});
+
+test("advanced lines progress into long-range artillery, tanks, and flying aircraft", () => {
+  const ancientArtillery = unitForEra("artillery", "Ancient");
+  const modernArtillery = unitForEra("artillery", "Modern");
+  assert.equal(ancientArtillery.name, "Stone Throwers");
+  assert.equal(ancientArtillery.longRange, true);
+  assert.equal(ancientArtillery.range, 12);
+  assert.equal(modernArtillery.name, "Rocket Artillery");
+  assert.equal(modernArtillery.range, 15);
+
+  assert.equal(unitForEra("armor", "Ancient").name, "War Chariots");
+  assert.equal(unitForEra("armor", "Ancient").armored, true);
+  assert.equal(unitForEra("armor", "Ancient").ranged, false);
+  assert.equal(unitForEra("armor", "Modern").name, "Main Battle Tanks");
+  assert.equal(unitForEra("armor", "Modern").ranged, true);
+
+  assert.equal(unitForEra("aircraft", "Medieval").flying, false);
+  assert.equal(unitForEra("aircraft", "Gunpowder").name, "Balloon Observers");
+  assert.equal(unitForEra("aircraft", "Gunpowder").flying, true);
+  assert.equal(unitForEra("aircraft", "Modern").name, "Utility Helicopters");
+  assert.equal(unitForEra("aircraft", "Modern").ranged, true);
+});
+
+test("flying formations cross battlefield obstacles while ground formations cannot", () => {
+  const initial = createGame();
+  const pendingBattle = { type: "field", name: "Flight Trial", strength: 18 };
+  const army = Object.fromEntries(UNITS.map((unit) => [unit.id, unit.id === "aircraft" ? 1 : 0]));
+  const deployed = startCombat({ ...initial, era: "Gunpowder", army, pendingBattle });
+  const aircraft = deployed.combat.stacks.find((stack) => stack.id === "player-aircraft");
+  const obstacle = deployed.combat.obstacles[0].tile;
+  const adjacent = combatNeighbors(obstacle).find((tile) => !deployed.combat.obstacles.some((item) => item.tile === tile));
+  const arranged = { ...deployed.combat, activeStackId: aircraft.id, stacks: deployed.combat.stacks.map((stack) => stack.id === aircraft.id ? { ...stack, position: adjacent } : stack) };
+  assert.deepEqual(combatPath(arranged, aircraft.id, obstacle), [obstacle]);
+  assert.equal(combatReachable(arranged, aircraft.id).includes(obstacle), true);
 });
 
 test("recruitment and tactical stacks use the civilization's current-age unit profile", () => {

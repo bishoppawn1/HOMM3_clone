@@ -46,7 +46,7 @@ test("every age has distinct city and producer artwork", async () => {
 
 test("every troop line has an age-specific portrait and combat uses right-click orders with health feedback", async () => {
   const ages = ["ancient", "classical", "medieval", "gunpowder", "industrial", "modern"];
-  const units = ["spearmen", "slingers", "scouts", "swordsmen", "horsemen"];
+  const units = ["spearmen", "slingers", "scouts", "swordsmen", "horsemen", "artillery", "armor", "aircraft"];
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
@@ -56,6 +56,8 @@ test("every troop line has an age-specific portrait and combat uses right-click 
   assert.match(page, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); handleHex\(tile, stack\); \}\}/);
   assert.match(page, /className="unit-health"/);
   assert.match(page, /Right-click a yellow hex to move/);
+  assert.match(page, /activeUnit\?\.flying && canMove/);
+  assert.doesNotMatch(page, /disabled=\{Boolean\(combat\.result\) \|\| Boolean\(obstacle\)/);
   assert.match(styles, /\.combat-unit>img/);
   assert.match(styles, /\.unit-health>small/);
 });
