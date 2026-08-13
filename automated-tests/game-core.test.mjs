@@ -21,6 +21,7 @@ import {
   combatCanAttack,
   combatDistance,
   combatHasLineOfSight,
+  combatMovementRemaining,
   combatNeighbors,
   combatPath,
   combatReachable,
@@ -620,6 +621,39 @@ test("movement records an animatable action and enemy turns remain visibly selec
   const enemyActed = performEnemyCombatTurn(enemySelected);
   assert.equal(enemyActed.combat.lastAction.stackId, "enemy-scouts");
   assert.notEqual(enemyActed.combat.activeStackId, "enemy-scouts");
+});
+
+test("player stacks can split movement across clicks and then attack", () => {
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
+  const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
+  const firstDestination = combatReachable(deployed.combat, active.id).find((tile) => combatPath(deployed.combat, active.id, tile).length === 1);
+  const firstMove = moveCombatStack(deployed, firstDestination);
+  const afterFirstMove = firstMove.combat.stacks.find((stack) => stack.id === active.id);
+  assert.equal(firstMove.combat.activeStackId, active.id);
+  assert.equal(afterFirstMove.done, false);
+  assert.equal(afterFirstMove.movementUsed, 1);
+  assert.equal(combatMovementRemaining(firstMove.combat, active.id), unitForEra(active.unitId, active.era).speed - 1);
+
+  const secondDestination = combatReachable(firstMove.combat, active.id).find((tile) => combatPath(firstMove.combat, active.id, tile).length === 1);
+  const secondMove = moveCombatStack(firstMove, secondDestination);
+  assert.equal(secondMove.combat.activeStackId, active.id);
+  assert.equal(secondMove.combat.stacks.find((stack) => stack.id === active.id).movementUsed, 2);
+  assert.equal(waitCombatTurn(secondMove), secondMove);
+
+  const arrangedStacks = deployed.combat.stacks.map((stack) => {
+    if (stack.id === "player-scouts") return { ...stack, position: 60 };
+    if (stack.id === "enemy-scouts") return { ...stack, position: 62, totalHealth: 120, done: true };
+    if (stack.side === "enemy") return { ...stack, totalHealth: 0 };
+    return stack;
+  });
+  const arranged = { ...deployed, combat: { ...deployed.combat, activeStackId: "player-scouts", stacks: arrangedStacks } };
+  const partialMove = moveCombatStack(arranged, 61);
+  const defenderBefore = partialMove.combat.stacks.find((stack) => stack.id === "enemy-scouts").totalHealth;
+  assert.equal(combatCanAttack(partialMove.combat, "player-scouts", "enemy-scouts"), true);
+  const attacked = attackCombatStack(partialMove, "enemy-scouts");
+  assert.ok(attacked.combat.stacks.find((stack) => stack.id === "enemy-scouts").totalHealth < defenderBefore);
+  assert.equal(attacked.combat.stacks.find((stack) => stack.id === "player-scouts").done, true);
 });
 
 test("melee defenders retaliate once and wait or defend changes the current round", () => {

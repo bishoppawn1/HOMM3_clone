@@ -304,6 +304,12 @@ export function combatPath(combat, stackId, destination) {
   return findCombatRoute(combat, stackId, [destination]);
 }
 
+export function combatMovementRemaining(combat, stackId = combat?.activeStackId) {
+  const stack = combat?.stacks.find((item) => item.id === stackId);
+  if (!stack || combatStackCount(stack) <= 0) return 0;
+  return Math.max(0, unitById(stack.unitId, stack.era).speed - (stack.movementUsed ?? 0));
+}
+
 export function combatReachable(combat, stackId = combat?.activeStackId) {
   const stack = combat?.stacks.find((item) => item.id === stackId);
   if (!stack || combatStackCount(stack) <= 0) return [];
@@ -316,7 +322,7 @@ export function combatReachable(combat, stackId = combat?.activeStackId) {
     for (const neighbor of combatNeighbors(current)) {
       if (distance.has(neighbor) || occupied.has(neighbor) || blocked.has(neighbor)) continue;
       const nextDistance = distance.get(current) + 1;
-      if (nextDistance > unitById(stack.unitId, stack.era).speed) continue;
+      if (nextDistance > combatMovementRemaining(combat, stack.id)) continue;
       distance.set(neighbor, nextDistance);
       queue.push(neighbor);
     }
@@ -355,7 +361,7 @@ function attackPlan(combat, attacker, defender) {
     return { ranged: true, route: [] };
   }
   const destinations = combatNeighbors(defender.position).filter((tile) => tile === attacker.position || (!occupiedCombatTiles(combat, attacker.id).has(tile) && !blockedCombatTiles(combat).has(tile)));
-  const route = findCombatRoute(combat, attacker.id, destinations, unit.speed);
+  const route = findCombatRoute(combat, attacker.id, destinations, combatMovementRemaining(combat, attacker.id));
   return route ? { ranged: false, route } : null;
 }
 
@@ -393,6 +399,7 @@ function makeCombatStack(side, unitId, count, position, era) {
     defending: false,
     retaliated: false,
     done: false,
+    movementUsed: 0,
   };
 }
 
@@ -453,7 +460,7 @@ function performCombatAttack(combat, attackerId, defenderId) {
   const plan = attackPlan(combat, attacker, defender);
   if (!plan) return combat;
   if (plan.route.length) {
-    attacker = { ...attacker, position: plan.route.at(-1) };
+    attacker = { ...attacker, position: plan.route.at(-1), movementUsed: (attacker.movementUsed ?? 0) + plan.route.length };
     combat = replaceCombatStack(combat, attacker);
   }
   if (plan.ranged) {
@@ -489,7 +496,7 @@ function performEnemyTurn(combat) {
   const route = findCombatRoute(combat, stack.id, [...destinations]);
   if (route?.length) {
     const movement = route.slice(0, unitById(stack.unitId, stack.era).speed);
-    const moved = { ...stack, position: movement.at(-1), done: true };
+    const moved = { ...stack, position: movement.at(-1), movementUsed: (stack.movementUsed ?? 0) + movement.length, done: true };
     const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} advanced ${movement.length} hex${movement.length === 1 ? "" : "es"}.`] };
     return recordCombatAction(advanced, { type: "move", stackId: stack.id, from: stack.position, to: moved.position, path: movement });
   }
@@ -502,7 +509,7 @@ function continueCombat(combat) {
   if (result) return { ...next, result, activeStackId: null, log: [...next.log, result === "victory" ? "The enemy formation broke." : "Marcellus's field army was defeated."] };
   let active = nextCombatStack(next);
   if (!active) {
-    const stacks = next.stacks.map((stack) => ({ ...stack, done: false, waited: false, defending: false, retaliated: false }));
+    const stacks = next.stacks.map((stack) => ({ ...stack, done: false, waited: false, defending: false, retaliated: false, movementUsed: 0 }));
     next = { ...next, round: next.round + 1, stacks, log: [...next.log, `Round ${next.round + 1} began.`] };
     active = nextCombatStack(next);
   }
@@ -540,12 +547,12 @@ export function moveCombatStack(game, destination) {
   if (!combat || combat.result) return game;
   const stack = combat.stacks.find((item) => item.id === combat.activeStackId);
   if (!stack || stack.side !== "player") return game;
-  const route = findCombatRoute(combat, stack.id, [destination], unitById(stack.unitId, stack.era).speed);
+  const route = findCombatRoute(combat, stack.id, [destination], combatMovementRemaining(combat, stack.id));
   if (!route?.length) return game;
-  const moved = { ...stack, position: destination, done: true, defending: false };
+  const moved = { ...stack, position: destination, movementUsed: (stack.movementUsed ?? 0) + route.length, defending: false };
   const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} moved ${route.length} hex${route.length === 1 ? "" : "es"}.`] };
   const next = recordCombatAction(advanced, { type: "move", stackId: stack.id, from: stack.position, to: destination, path: route });
-  return { ...game, combat: continueCombat(next) };
+  return { ...game, combat: next };
 }
 
 export function performEnemyCombatTurn(game) {
@@ -566,7 +573,7 @@ export function attackCombatStack(game, defenderId) {
 export function waitCombatTurn(game) {
   const combat = game.combat;
   const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);
-  if (!combat || combat.result || !stack || stack.side !== "player" || stack.waited) return game;
+  if (!combat || combat.result || !stack || stack.side !== "player" || stack.waited || (stack.movementUsed ?? 0) > 0) return game;
   const waiting = { ...stack, waited: true };
   return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, waiting), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} waited for an opening.`] }) };
 }

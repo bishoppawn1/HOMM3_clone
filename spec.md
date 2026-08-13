@@ -153,10 +153,11 @@ Adventure-map encounters deploy both armies onto a 21-by-13 odd-row-offset hex b
 
 - Living stacks act in descending initiative order. Player stacks win ties against enemy stacks.
 - A stack may move to a reachable empty hex, attack an eligible enemy, wait once for the later initiative phase, or defend.
-- Movement uses shortest-path traversal across adjacent hexes and cannot exceed the active stack's speed.
+- Movement uses shortest-path traversal across adjacent hexes and draws from the active stack's speed as a per-turn movement budget. A player stack may move in several partial steps, then move again or attack with its remaining movement. Moving does not end its action; attacking or defending does.
+- Waiting is available only before a stack spends movement. A stack that has moved partially can defend to end its action without attacking.
 - Waiting postpones the stack until all non-waiting stacks have acted. Waiting stacks then act from lower to higher initiative.
 - Defending ends the stack's action and adds 3 defense until the next round.
-- When every living stack has acted, a new round resets retaliation, waiting, and defense state.
+- When every living stack has acted, a new round resets movement, retaliation, waiting, and defense state.
 - Enemy stacks use the same movement, attack, and obstacle rules as the player. Enemy actions resolve one stack at a time so the active enemy and its movement remain visible instead of the whole AI phase completing instantly.
 
 ### 9.2 Battlefield positioning — Prototype
