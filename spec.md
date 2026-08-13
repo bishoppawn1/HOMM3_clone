@@ -80,7 +80,7 @@ Each age has technologies with economic, civic, military, and logistical branche
 
 The player selects one technology as the active research project. Monthly research points are automatically applied to that project's individual cost. If no technology is selected, new points remain in an unspent pool and never expire. Selecting a project immediately applies any stored points to it, up to its remaining cost. There is no combined age-wide progress meter; progress is displayed separately on each technology.
 
-The prototype contains Surveying, Bronze Working, and Written Records as its first Ancient Age technologies.
+The prototype provides three research projects for every age. Only projects belonging to the current age are shown or selectable. Surveying, Bronze Working, and Written Records form the Ancient track; advancing reveals the Classical track while completed earlier research remains recorded.
 
 ### 6.2 Knowledge Huts — Prototype
 
@@ -98,29 +98,19 @@ A hut cannot award an advancement waiver, readiness token, city, building, milit
 
 ### 7.1 General rule
 
-Advancement requires both:
+In the prototype, advancement requires completion of the current age's research track. The Advance button changes the civilization to the next age, reveals that age's research projects, changes age-based map visuals, and records the transition in the campaign log.
 
-- completion of the relevant research track; and
-- satisfaction of visible, systemic readiness requirements.
-
-The final requirements for each age transition will be tuned during development. Examples in conversation are illustrative and are not automatically binding rules.
+Early transitions deliberately do not require another settlement, a particular building, or a military victory. A player must not be locked out of later ages because an opponent captured a limited settlement first.
 
 ### 7.2 Requirement categories
 
-Possible requirement categories include territorial administration, city infrastructure, economic capacity, population, military experience, and cultural or scientific development. Requirements should scale where map size or scenario settings would otherwise make them unfair.
+Possible later requirement categories include economic capacity, population, military experience, and cultural or scientific development. Any future non-research requirement must scale to the map and remain attainable independently by every player.
 
-Requirements must never identify a particular AI player, scripted opponent, or mandatory named target. Players should be able to satisfy military requirements through any qualifying enemies and territorial requirements through any qualifying settlements.
+Requirements must never identify a particular AI player, scripted opponent, mandatory named target, or fixed number of scarce settlements. Rapid territorial expansion by one player must not prevent another player from progressing through research.
 
-### 7.3 Prototype Ancient readiness
+### 7.3 Prototype readiness
 
-The current vertical slice temporarily demonstrates the system with four requirements:
-
-- complete the prototype Ancient research list;
-- administer two settlements;
-- construct a Civic Workshop; and
-- win one field engagement.
-
-These are prototype tuning values, not final progression design.
+Ancient, Classical, and later prototype transitions currently require only completion of the three research projects shown for the current age. Each project appears as its own checklist item; there is no city, building, settlement-count, or combat gate.
 
 ### 7.4 Planned ages
 
@@ -140,11 +130,11 @@ Each military recruitment building generates its own stock of available troops o
 
 ### 8.2 Building tree — Prototype
 
-Construction is presented as a branching, spatial prerequisite tree in the style of a classic adventure-strategy city screen. A building can be purchased only when all parent nodes are complete and the city has every listed resource. Built, available, unaffordable, and prerequisite-locked nodes must be visually distinct.
+Construction is presented as a branching, spatial prerequisite tree in the style of a classic adventure-strategy city screen. A building can be purchased only when all parent nodes are complete and the city has every listed resource. Built, available, unaffordable, and prerequisite-locked nodes must be visually distinct. Routed arrow connectors run from every prerequisite building to the building it unlocks, completed dependency paths use a distinct color, and every dependent node names all of its requirements.
 
 Each city may complete at most one building per turn. Constructing in one city does not consume another owned city's construction opportunity. The construction limit resets for every city when the player ends the month, and the city screen must clearly show whether that city's construction opportunity is available or already used.
 
-The economy branch runs from Market, Mason's Yard, Warehouse, and Bank toward Trade Guild, Foundry, and Treasury. The civic branch runs from Town Hall through Archive and City Hall toward Workshop, Academy, Monument, Great Library, and Civic Forum. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce.
+The economy branch runs from Market, Mason's Yard, Warehouse, and Bank toward Trade Guild, Foundry, and Treasury. The civic branch runs from Town Hall through Archive and City Hall toward Workshop, Academy, Monument, Great Library, and Civic Forum. Research-producing buildings—Scribes' Archive, Academy, and Great Library—occupy one consistent vertical line, while the City Hall, Civic Workshop, Monument, and Civic Forum form the parallel civic-development line. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce.
 
 The military branch contains separate recruitment sources: Militia Yard for Spearmen, Archery Range for Slingers, Scout Camp for Scouts, Tier II Barracks for Swordsmen, and Stable for Horsemen. It continues through Training Grounds, Siege Workshop, War College, and Cavalry School. Constructing a recruitment building seeds its first recruit pool; later months add more troops. Units remain visible but locked until their source building exists.
 

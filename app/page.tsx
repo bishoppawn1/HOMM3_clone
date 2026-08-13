@@ -13,6 +13,7 @@ import {
   UNITS,
   createGame,
   advanceMonth,
+  advanceEra,
   chooseResearch,
   startResearch,
   buildInCity,
@@ -71,6 +72,7 @@ export default function Home() {
   const [plannedPath, setPlannedPath] = useState<number[]>([]);
   const [plannedTarget, setPlannedTarget] = useState<number | null>(null);
   const readiness = useMemo(() => eraReadiness(game), [game]);
+  const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
   const visualEra = eraVisualFamily(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
@@ -213,7 +215,7 @@ export default function Home() {
               <p className="muted">Complete the age&apos;s knowledge and prove your civilization is ready to advance.</p>
               <div className="research-guidance"><b>{game.research} stored · +35 base each month</b><span>{game.activeResearch ? "New points go to the selected study." : "No active study. Points are being saved."}</span></div>
               <div className="tech-list">
-                {RESEARCH.map((tech) => {
+                {currentResearch.map((tech) => {
                   const completed = game.techs.includes(tech.id);
                   const active = game.activeResearch === tech.id;
                   const progress = game.techProgress[tech.id] ?? 0;
@@ -225,7 +227,7 @@ export default function Home() {
               </div>
               <p className="section-kicker readiness-title">Era readiness</p>
               <ul className="checklist">{readiness.checks.map((item) => <li key={item.label} className={item.met ? "met" : ""}><span>{item.met ? "✓" : "○"}</span>{item.label}</li>)}</ul>
-              <button className="advance-button" disabled={!readiness.ready}>Advance to the Classical Age</button>
+              <button className="advance-button" disabled={!readiness.ready} onClick={() => setGame(advanceEra)}>{readiness.nextEra ? `Advance to the ${readiness.nextEra} Age` : "Modern Age reached"}</button>
             </>
           ) : (
             <CitiesPanel game={game} selectCity={setSelectedCity} />
@@ -493,7 +495,17 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
       </aside>
       <section className="city-construction">
         <div className="construction-heading"><div><p className="section-kicker">Construction tree</p><h3>Develop {city.name}</h3><p className={`construction-status ${constructionUsed ? "used" : "available"}`}>{constructionUsed ? "Construction complete for this turn. End the month to build again." : "Construction available: this city may complete one building this turn."}</p></div><div className="tree-legend"><span>Economy</span><span>Civic</span><span>Military</span><span>Defense</span></div></div>
-        <div className="construction-tree full-tree">{BUILDINGS.map(building => {
+        <div className="construction-tree full-tree">
+          <svg className="construction-connectors" viewBox="0 0 7 5" preserveAspectRatio="none" aria-hidden="true">
+            <defs><marker id="dependency-arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" /></marker></defs>
+            {BUILDINGS.flatMap(building => building.requires.map(requiredId => {
+              const required = BUILDINGS.find(item => item.id === requiredId);
+              if (!required) return null;
+              const complete = cityBuildings.includes(requiredId) && cityBuildings.includes(building.id);
+              return <path key={`${requiredId}-${building.id}`} className={`${complete ? "complete" : "pending"} dependency-${building.branch}`} d={buildingConnectorPath(required, building)} markerEnd="url(#dependency-arrow)" />;
+            }))}
+          </svg>
+          {BUILDINGS.map(building => {
           const built = cityBuildings.includes(building.id);
           const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
           const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone;
@@ -501,11 +513,22 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
           return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
             <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
             <small>{building.description}</small>
-            {!built && !prerequisitesMet && <p>Requires {requirementNames}</p>}
+            {building.requires.length > 0 && <p className="requirement-label">Requires: {requirementNames}</p>}
             {built ? <strong>✓ Built</strong> : <button disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{constructionUsed ? "Built this turn" : <>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</>}</button>}
           </article>;
         })}</div>
       </section>
     </div>
   </section>;
+}
+
+function buildingConnectorPath(parent: {x: number; y: number}, child: {x: number; y: number}) {
+  const startX = parent.x - .5, startY = parent.y - .5;
+  const endX = child.x - .5, endY = child.y - .5;
+  if (parent.y === child.y) {
+    const direction = Math.sign(endX - startX) || 1;
+    const lift = .16 + Math.abs(endX - startX) * .035;
+    return `M ${startX + direction * .43} ${startY} C ${startX + direction * .68} ${startY - lift}, ${endX - direction * .68} ${endY - lift}, ${endX - direction * .43} ${endY}`;
+  }
+  return `M ${startX} ${startY + .43} C ${startX} ${startY + .68}, ${endX} ${endY - .68}, ${endX} ${endY - .43}`;
 }

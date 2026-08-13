@@ -10,6 +10,7 @@ import {
   MAX_MOVEMENT,
   RESEARCH,
   advanceMonth,
+  advanceEra,
   attackCombatStack,
   buildInCity,
   canMoveTo,
@@ -450,10 +451,34 @@ test("retreat preserves survivors, returns the commander to Aurum, and leaves th
   assert.deepEqual(retreated.army, initial.army);
 });
 
-test("era advancement requires every concrete readiness condition", () => {
-  const almostReady = { ...createGame(), techs: RESEARCH.map((technology) => technology.id), cities: 2, buildings: { aurum: ["workshop"], freehaven: [] }, victories: 0 };
-  assert.equal(eraReadiness(almostReady).ready, false);
-  assert.equal(eraReadiness({ ...almostReady, victories: 1 }).ready, true);
+test("early era advancement requires research but not settlements, buildings, or victories", () => {
+  const ancientResearch = RESEARCH.filter((technology) => technology.era === "Ancient");
+  const incomplete = { ...createGame(), cities: 20, victories: 20, buildings: { aurum: ["workshop"], freehaven: [] }, techs: ancientResearch.slice(0, 2).map((technology) => technology.id) };
+  assert.equal(eraReadiness(incomplete).ready, false);
+
+  const ready = { ...createGame(), cities: 1, victories: 0, buildings: { aurum: [], freehaven: [] }, techs: ancientResearch.map((technology) => technology.id), activeResearch: "surveying" };
+  assert.equal(eraReadiness(ready).ready, true);
+  assert.equal(eraReadiness(ready).nextEra, "Classical");
+  const advanced = advanceEra(ready);
+  assert.equal(advanced.era, "Classical");
+  assert.equal(advanced.activeResearch, null);
+  assert.match(advanced.notice, /Classical Age begins/);
+  assert.equal(advanceEra(advanced), advanced);
+});
+
+test("research selection is limited to the current age", () => {
+  const ancient = createGame();
+  assert.equal(startResearch(ancient, "irrigation"), ancient);
+  const ready = { ...ancient, techs: RESEARCH.filter((technology) => technology.era === "Ancient").map((technology) => technology.id) };
+  const classical = advanceEra(ready);
+  assert.equal(startResearch(classical, "surveying"), classical);
+  assert.notEqual(startResearch(classical, "irrigation"), classical);
+});
+
+test("research-producing city buildings share one construction-tree column", () => {
+  const researchBuildings = BUILDINGS.filter((building) => ["archive", "academy", "great-library"].includes(building.id));
+  assert.deepEqual(researchBuildings.map((building) => building.x), [4, 4, 4]);
+  assert.deepEqual(researchBuildings.map((building) => building.y), [2, 3, 4]);
 });
 
 test("landmarks select an era-specific visual family", () => {

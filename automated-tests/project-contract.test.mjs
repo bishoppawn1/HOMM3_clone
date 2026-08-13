@@ -43,6 +43,23 @@ test("entering a city uses a dedicated full-screen management surface", async ()
   assert.match(page, /Permanent city guard/);
   assert.match(page, /Construction available: this city may complete one building this turn/);
   assert.match(page, /Construction complete for this turn/);
+  assert.match(page, /construction-connectors/);
+  assert.match(page, /buildingConnectorPath/);
+  assert.match(page, /Requires:/);
+});
+
+test("the age advancement control changes game state", async () => {
+  const [page, core, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/game-core.js", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /onClick=\{\(\) => setGame\(advanceEra\)\}/);
+  assert.match(core, /export function advanceEra/);
+  assert.doesNotMatch(core, /Administer at least two settlements/);
+  assert.doesNotMatch(core, /Complete a Civic Workshop/);
+  assert.match(styles, /\.world>\.right-rail\s*\{[^}]*height:100%[^}]*max-height:100%/);
+  assert.match(styles, /\.world\s*\{height:calc\(100vh - 162px\);min-height:0\}/);
 });
 
 test("tactical combat exposes active-unit and movement feedback for both sides", async () => {

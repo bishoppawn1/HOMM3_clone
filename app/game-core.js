@@ -21,24 +21,39 @@ export function eraVisualFamily(era) {
 }
 
 export const RESEARCH = [
-  { id: "surveying", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, description: "Improves travel and reveals nearby territory." },
-  { id: "bronze", name: "Bronze Working", icon: "⚒", cost: 220, bonus: 110, description: "Unlocks stronger arms and civic tools." },
-  { id: "records", name: "Written Records", icon: "≡", cost: 260, bonus: 130, description: "Improves administration and research." },
+  { id: "surveying", era: "Ancient", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, description: "Improves travel and reveals nearby territory." },
+  { id: "bronze", era: "Ancient", name: "Bronze Working", icon: "⚒", cost: 220, bonus: 110, description: "Unlocks stronger arms and civic tools." },
+  { id: "records", era: "Ancient", name: "Written Records", icon: "≡", cost: 260, bonus: 130, description: "Improves administration and research." },
+  { id: "irrigation", era: "Classical", name: "Irrigation", icon: "≈", cost: 300, bonus: 150, description: "Coordinates waterworks and steadier harvests." },
+  { id: "iron-working", era: "Classical", name: "Iron Working", icon: "⚒", cost: 340, bonus: 170, description: "Develops stronger tools, weapons, and fittings." },
+  { id: "civic-law", era: "Classical", name: "Civic Law", icon: "⚖", cost: 380, bonus: 190, description: "Formalizes administration across growing communities." },
+  { id: "crop-rotation", era: "Medieval", name: "Crop Rotation", icon: "◌", cost: 430, bonus: 215, description: "Improves agricultural output without territorial expansion." },
+  { id: "guilds", era: "Medieval", name: "Craft Guilds", icon: "◇", cost: 470, bonus: 235, description: "Organizes skilled labor and specialist production." },
+  { id: "steel-working", era: "Medieval", name: "Steel Working", icon: "⚔", cost: 510, bonus: 255, description: "Refines dependable steel arms and tools." },
+  { id: "printing", era: "Gunpowder", name: "Printing Press", icon: "▤", cost: 570, bonus: 285, description: "Accelerates the circulation of technical knowledge." },
+  { id: "black-powder", era: "Gunpowder", name: "Black Powder", icon: "✹", cost: 620, bonus: 310, description: "Introduces grounded gunpowder weapons and engineering." },
+  { id: "navigation", era: "Gunpowder", name: "Oceanic Navigation", icon: "⌖", cost: 670, bonus: 335, description: "Improves long-distance navigation and mapping." },
+  { id: "steam-power", era: "Industrial", name: "Steam Power", icon: "⚙", cost: 740, bonus: 370, description: "Provides mechanical power for transport and industry." },
+  { id: "mechanization", era: "Industrial", name: "Mechanization", icon: "⌘", cost: 800, bonus: 400, description: "Standardizes machine-assisted production." },
+  { id: "public-schooling", era: "Industrial", name: "Public Schooling", icon: "≡", cost: 860, bonus: 430, description: "Broadens literacy and technical education." },
+  { id: "electricity", era: "Modern", name: "Electricity", icon: "ϟ", cost: 940, bonus: 470, description: "Builds reliable electrical generation and distribution." },
+  { id: "combustion", era: "Modern", name: "Combustion Engines", icon: "⚙", cost: 1000, bonus: 500, description: "Powers mobile machines with compact engines." },
+  { id: "radio", era: "Modern", name: "Radio Communication", icon: "⌁", cost: 1060, bonus: 530, description: "Coordinates distant forces and cities rapidly." },
 ];
 
 export const BUILDINGS = [
-  { id: "town-hall", name: "Town Hall", icon: "♜", tier: 1, branch: "civic", x: 2, y: 1, gold: 0, wood: 0, stone: 0, requires: [], description: "+75 gold each month." },
+  { id: "town-hall", name: "Town Hall", icon: "♜", tier: 1, branch: "civic", x: 3, y: 1, gold: 0, wood: 0, stone: 0, requires: [], description: "+75 gold each month." },
   { id: "militia-yard", name: "Militia Yard", icon: "⚑", tier: 1, branch: "military", x: 6, y: 1, gold: 0, wood: 0, stone: 0, requires: [], description: "Recruits Spearmen." },
   { id: "market", name: "Market", icon: "¤", tier: 2, branch: "economy", x: 1, y: 2, gold: 260, wood: 10, stone: 0, requires: ["town-hall"], description: "+25 gold each month." },
   { id: "mason-yard", name: "Mason's Yard", icon: "⬟", tier: 2, branch: "economy", x: 2, y: 2, gold: 240, wood: 14, stone: 0, requires: ["town-hall"], description: "+8 stone each month. Costs timber, not stone." },
-  { id: "archive", name: "Scribes' Archive", icon: "≡", tier: 2, branch: "civic", x: 3, y: 2, gold: 410, wood: 10, stone: 8, requires: ["town-hall"], description: "+25 research each month." },
-  { id: "city-hall", name: "City Hall", icon: "♛", tier: 2, branch: "civic", x: 4, y: 2, gold: 450, wood: 15, stone: 15, requires: ["town-hall"], description: "Upgrades the settlement to city tier II." },
+  { id: "archive", name: "Scribes' Archive", icon: "≡", tier: 2, branch: "civic", x: 4, y: 2, gold: 410, wood: 10, stone: 8, requires: ["town-hall"], description: "+25 research each month." },
+  { id: "city-hall", name: "City Hall", icon: "♛", tier: 2, branch: "civic", x: 3, y: 2, gold: 450, wood: 15, stone: 15, requires: ["town-hall"], description: "Upgrades the settlement to city tier II." },
   { id: "archery-range", name: "Archery Range", icon: "◉", tier: 2, branch: "military", x: 5, y: 2, gold: 300, wood: 18, stone: 4, requires: ["militia-yard"], description: "Recruits Slingers." },
   { id: "scout-camp", name: "Scout Camp", icon: "⌖", tier: 2, branch: "military", x: 6, y: 2, gold: 320, wood: 16, stone: 4, requires: ["militia-yard"], description: "Recruits Scouts." },
   { id: "palisade", name: "Palisade", icon: "▥", tier: 2, branch: "defense", x: 7, y: 2, gold: 280, wood: 24, stone: 0, requires: ["town-hall"], description: "+4 city defense." },
   { id: "warehouse", name: "Warehouse", icon: "▰", tier: 3, branch: "economy", x: 1, y: 3, gold: 380, wood: 20, stone: 8, requires: ["market"], description: "+5 timber each month." },
   { id: "bank", name: "Bank", icon: "◆", tier: 3, branch: "economy", x: 2, y: 3, gold: 650, wood: 12, stone: 20, requires: ["market", "city-hall"], description: "+100 gold each month." },
-  { id: "workshop", name: "Civic Workshop", icon: "⚒", tier: 3, branch: "civic", x: 3, y: 3, gold: 320, wood: 12, stone: 10, requires: ["mason-yard", "city-hall"], description: "Required civic capacity for the next age." },
+  { id: "workshop", name: "Civic Workshop", icon: "⚒", tier: 3, branch: "civic", x: 3, y: 3, gold: 320, wood: 12, stone: 10, requires: ["mason-yard", "city-hall"], description: "Supports advanced civic construction." },
   { id: "academy", name: "Academy", icon: "⌘", tier: 3, branch: "civic", x: 4, y: 3, gold: 620, wood: 14, stone: 18, requires: ["archive", "city-hall"], description: "+15 research each month." },
   { id: "barracks-ii", name: "Tier II Barracks", icon: "⚔", tier: 3, branch: "military", x: 5, y: 3, gold: 480, wood: 18, stone: 12, requires: ["militia-yard", "city-hall"], description: "Recruits Swordsmen." },
   { id: "stable", name: "Stable", icon: "♞", tier: 3, branch: "military", x: 6, y: 3, gold: 600, wood: 24, stone: 14, requires: ["scout-camp", "city-hall"], description: "Recruits Horsemen." },
@@ -608,7 +623,7 @@ export function collectAt(game) {
   const pickups = { ...game.pickups };
   delete pickups[game.hero];
   if (pickup === "knowledge") {
-    const available = RESEARCH.filter((tech) => !game.techs.includes(tech.id)).slice(0, 2);
+    const available = RESEARCH.filter((tech) => tech.era === game.era && !game.techs.includes(tech.id)).slice(0, 2);
     return { ...game, pickups, researchChoice: available, notice: "Scholars offer two paths of discovery." };
   }
   if (pickup === "timber") return { ...game, pickups, wood: game.wood + 20, notice: "The army secured 20 timber.", log: [...game.log, "Collected timber from an old logging camp."] };
@@ -664,7 +679,7 @@ export function chooseResearch(game, techId) {
 
 export function startResearch(game, techId) {
   const technology = RESEARCH.find((tech) => tech.id === techId);
-  if (!technology || game.techs.includes(techId)) return game;
+  if (!technology || technology.era !== game.era || game.techs.includes(techId)) return game;
   const previous = game.techProgress[techId] ?? 0;
   const spent = Math.min(technology.cost - previous, game.research);
   const progress = previous + spent;
@@ -747,12 +762,22 @@ export function cityDefense(game, cityId) {
 }
 
 export function eraReadiness(game) {
-  const allBuildings = Object.values(game.buildings).flat();
-  const checks = [
-    { label: "Complete all Ancient Age research", met: game.techs.length === RESEARCH.length },
-    { label: "Administer at least two settlements", met: game.cities >= 2 },
-    { label: "Complete a Civic Workshop", met: allBuildings.includes("workshop") },
-    { label: "Win a field engagement", met: game.victories >= 1 },
-  ];
-  return { checks, ready: checks.every((check) => check.met) };
+  const eraIndex = ERAS.indexOf(game.era);
+  const nextEra = eraIndex >= 0 && eraIndex < ERAS.length - 1 ? ERAS[eraIndex + 1] : null;
+  const eraResearch = RESEARCH.filter((technology) => technology.era === game.era);
+  const checks = eraResearch.map((technology) => ({ label: `Research ${technology.name}`, met: game.techs.includes(technology.id) }));
+  return { checks, nextEra, ready: Boolean(nextEra) && checks.length > 0 && checks.every((check) => check.met) };
+}
+
+export function advanceEra(game) {
+  const readiness = eraReadiness(game);
+  if (!readiness.ready || !readiness.nextEra) return game;
+  return {
+    ...game,
+    era: readiness.nextEra,
+    activeResearch: null,
+    researchChoice: null,
+    notice: `${readiness.nextEra} Age begins. Select a new research project to continue advancing.`,
+    log: [...game.log, `The civilization advanced to the ${readiness.nextEra} Age.`],
+  };
 }
