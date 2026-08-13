@@ -44,3 +44,26 @@ test("entering a city uses a dedicated full-screen management surface", async ()
   assert.match(page, /Construction available: this city may complete one building this turn/);
   assert.match(page, /Construction complete for this turn/);
 });
+
+test("tactical combat exposes active-unit and movement feedback for both sides", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /Enemy selected:/);
+  assert.match(page, /active-marker/);
+  assert.match(page, /combat-moving-token/);
+  assert.match(styles, /@keyframes combat-stack-move/);
+  assert.match(styles, /selected-stack-pulse/);
+});
+
+test("the tactical battlefield renders an interlocking point-top honeycomb", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /top: `\$\{row \* \.75 \/ verticalSpan \* 100\}%`/);
+  assert.match(page, /left: `\$\{\(col \+ \(row % 2\) \* \.5\)/);
+  assert.match(page, /className="hex-battlefield">/);
+  assert.match(styles, /clip-path:polygon\(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%\)/);
+});

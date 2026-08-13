@@ -162,7 +162,7 @@ Adventure-map encounters deploy both armies onto a 15-by-9 odd-row-offset hex ba
 - Waiting postpones the stack until all non-waiting stacks have acted. Waiting stacks then act from lower to higher initiative.
 - Defending ends the stack's action and adds 3 defense until the next round.
 - When every living stack has acted, a new round resets retaliation, waiting, and defense state.
-- Enemy stacks use the same movement, attack, line-of-sight, and obstacle rules as the player.
+- Enemy stacks use the same movement, attack, and obstacle rules as the player. Enemy actions resolve one stack at a time so the active enemy and its movement remain visible instead of the whole AI phase completing instantly.
 
 ### 9.2 Battlefield positioning — Prototype
 
@@ -170,7 +170,9 @@ Field, producer, and settlement encounters use distinct fixed obstacle arrangeme
 
 Melee stacks may move up to their full speed into a free hex adjacent to a target and attack in the same action. A surviving melee defender retaliates immediately, but only once per round. A stack killed by the initial strike cannot retaliate.
 
-Ranged stacks begin with a limited number of shots. They may fire only when they have ammunition, are not engaged by an adjacent enemy, and have a clear hex line of sight. Obstacles and intervening living stacks block line of sight. Ranged damage is halved beyond ten hexes. An engaged ranged stack may make a melee attack at half damage.
+Ranged stacks begin with a limited number of shots. While they have ammunition and are not engaged by an adjacent enemy, they may target any living enemy stack anywhere on the battlefield; they are not restricted to straight-line targets. Ranged damage is halved beyond ten hexes. An engaged ranged stack may make a melee attack at half damage.
+
+The currently acting stack is identified in the initiative strip, its army card, its battlefield hex, and the instruction banner for both player and enemy turns. Movement is animated from the origin hex to the destination hex, including movement performed automatically by enemy stacks and movement that precedes a melee strike. Reduced-motion preferences shorten these animations.
 
 ### 9.3 Outcomes — Prototype
 
@@ -217,4 +219,4 @@ The interface must remain usable on desktop and mobile layouts and expose meanin
 
 ## 13. Testing requirements
 
-Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, era readiness, hex adjacency and distance, battlefield pathfinding and obstacles, ranged line of sight and ammunition, retaliation, wait and defend state, retreat, and tactical battle outcomes. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.
+Automated tests must cover calendar rollover, monthly production, movement legality, route preview and confirmation, pickup persistence, Knowledge Hut choice constraints, guarded producer capture, building costs, era readiness, hex adjacency and distance, battlefield pathfinding and obstacles, unrestricted ranged targeting and ammunition, animatable combat actions, enemy turn pacing, retaliation, wait and defend state, retreat, and tactical battle outcomes. New systems must add focused deterministic tests before being considered complete. The production static build must also pass before a push.

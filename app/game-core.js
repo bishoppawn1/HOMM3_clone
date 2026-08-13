@@ -236,7 +236,7 @@ function enemyAdjacent(combat, stack) {
 function attackPlan(combat, attacker, defender) {
   if (!attacker || !defender || attacker.side === defender.side || combatStackCount(attacker) <= 0 || combatStackCount(defender) <= 0) return null;
   const unit = unitById(attacker.unitId);
-  if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker) && combatHasLineOfSight(combat, attacker.position, defender.position)) {
+  if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker)) {
     return { ranged: true, route: [] };
   }
   const destinations = combatNeighbors(defender.position).filter((tile) => tile === attacker.position || (!occupiedCombatTiles(combat, attacker.id).has(tile) && !blockedCombatTiles(combat).has(tile)));
@@ -305,6 +305,11 @@ function replaceCombatStack(combat, stack) {
   return { ...combat, stacks: combat.stacks.map((item) => item.id === stack.id ? stack : item) };
 }
 
+function recordCombatAction(combat, action) {
+  const actionSerial = (combat.actionSerial ?? 0) + 1;
+  return { ...combat, actionSerial, lastAction: { ...action, id: actionSerial } };
+}
+
 function strikeCombatStack(combat, attackerId, defenderId, ranged, retaliation = false) {
   const attacker = combat.stacks.find((stack) => stack.id === attackerId);
   const defender = combat.stacks.find((stack) => stack.id === defenderId);
@@ -328,6 +333,8 @@ function strikeCombatStack(combat, attackerId, defenderId, ranged, retaliation =
 function performCombatAttack(combat, attackerId, defenderId) {
   let attacker = combat.stacks.find((stack) => stack.id === attackerId);
   const defender = combat.stacks.find((stack) => stack.id === defenderId);
+  const origin = attacker?.position;
+  const target = defender?.position;
   const plan = attackPlan(combat, attacker, defender);
   if (!plan) return combat;
   if (plan.route.length) {
@@ -346,7 +353,8 @@ function performCombatAttack(combat, attackerId, defenderId) {
     combat = strikeCombatStack(combat, defenderId, attackerId, false, true);
   }
   const finalAttacker = combat.stacks.find((stack) => stack.id === attackerId);
-  return replaceCombatStack(combat, { ...finalAttacker, done: true, defending: false });
+  combat = replaceCombatStack(combat, { ...finalAttacker, done: true, defending: false });
+  return recordCombatAction(combat, { type: plan.ranged ? "ranged" : "melee", stackId: attackerId, from: origin, to: finalAttacker.position, target });
 }
 
 function nearestEnemyStacks(combat, stack) {
@@ -367,28 +375,23 @@ function performEnemyTurn(combat) {
   if (route?.length) {
     const movement = route.slice(0, unitById(stack.unitId).speed);
     const moved = { ...stack, position: movement.at(-1), done: true };
-    return { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} advanced ${movement.length} hex${movement.length === 1 ? "" : "es"}.`] };
+    const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} advanced ${movement.length} hex${movement.length === 1 ? "" : "es"}.`] };
+    return recordCombatAction(advanced, { type: "move", stackId: stack.id, from: stack.position, to: moved.position, path: movement });
   }
   return replaceCombatStack(combat, { ...stack, defending: true, done: true });
 }
 
 function continueCombat(combat) {
   let next = { ...combat, activeStackId: null };
-  for (let safety = 0; safety < 100; safety += 1) {
-    const result = combatOutcome(next);
-    if (result) return { ...next, result, activeStackId: null, log: [...next.log, result === "victory" ? "The enemy formation broke." : "Marcellus's field army was defeated."] };
-    let active = nextCombatStack(next);
-    if (!active) {
-      const stacks = next.stacks.map((stack) => ({ ...stack, done: false, waited: false, defending: false, retaliated: false }));
-      next = { ...next, round: next.round + 1, stacks, log: [...next.log, `Round ${next.round + 1} began.`] };
-      active = nextCombatStack(next);
-    }
-    next = { ...next, activeStackId: active.id };
-    if (active.side === "player") return next;
-    next = performEnemyTurn(next);
-    next = { ...next, activeStackId: null };
+  const result = combatOutcome(next);
+  if (result) return { ...next, result, activeStackId: null, log: [...next.log, result === "victory" ? "The enemy formation broke." : "Marcellus's field army was defeated."] };
+  let active = nextCombatStack(next);
+  if (!active) {
+    const stacks = next.stacks.map((stack) => ({ ...stack, done: false, waited: false, defending: false, retaliated: false }));
+    next = { ...next, round: next.round + 1, stacks, log: [...next.log, `Round ${next.round + 1} began.`] };
+    active = nextCombatStack(next);
   }
-  return next;
+  return { ...next, activeStackId: active.id };
 }
 
 export function startCombat(game) {
@@ -408,6 +411,8 @@ export function startCombat(game) {
     stacks: [...playerStacks, ...enemyStacks],
     obstacles,
     activeStackId: null,
+    actionSerial: 0,
+    lastAction: null,
     result: null,
     log: [`Battle for ${game.pendingBattle.name} began.`],
   });
@@ -422,8 +427,16 @@ export function moveCombatStack(game, destination) {
   const route = findCombatRoute(combat, stack.id, [destination], unitById(stack.unitId).speed);
   if (!route?.length) return game;
   const moved = { ...stack, position: destination, done: true, defending: false };
-  const next = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} moved ${route.length} hex${route.length === 1 ? "" : "es"}.`] };
+  const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} moved ${route.length} hex${route.length === 1 ? "" : "es"}.`] };
+  const next = recordCombatAction(advanced, { type: "move", stackId: stack.id, from: stack.position, to: destination, path: route });
   return { ...game, combat: continueCombat(next) };
+}
+
+export function performEnemyCombatTurn(game) {
+  const combat = game.combat;
+  const active = combat?.stacks.find((stack) => stack.id === combat.activeStackId);
+  if (!combat || combat.result || !active || active.side !== "enemy") return game;
+  return { ...game, combat: continueCombat(performEnemyTurn(combat)) };
 }
 
 export function attackCombatStack(game, defenderId) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BOARD,
   BUILDINGS,
@@ -21,6 +21,7 @@ import {
   combatReachable,
   defendCombatTurn,
   moveCombatStack,
+  performEnemyCombatTurn,
   recruitFromCity,
   retreatCombat,
   resolveBattle,
@@ -45,6 +46,8 @@ type CombatState = {
   width: number; height: number; round: number; activeStackId: string | null; result: "victory" | "defeat" | "retreat" | null;
   battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number};
   stacks: CombatStack[]; obstacles: {tile: number; kind: string}[]; log: string[];
+  actionSerial: number;
+  lastAction: {id: number; type: "move" | "melee" | "ranged"; stackId: string; from: number; to: number; target?: number; path?: number[]} | null;
 };
 type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
@@ -263,6 +266,7 @@ export default function Home() {
 
 function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Dispatch<React.SetStateAction<GameState>>}) {
   const combat = game.combat!;
+  const [animatingActionId, setAnimatingActionId] = useState<number | null>(null);
   const active = combat.stacks.find(stack => stack.id === combat.activeStackId) ?? null;
   const activeUnit = active ? UNITS.find(unit => unit.id === active.unitId) : null;
   const reachable = new Set(active?.side === "player" ? combatReachable(combat, active.id) : []);
@@ -279,6 +283,23 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
   const playerAlive = combat.stacks.filter(stack => stack.side === "player" && stackCount(stack) > 0);
   const enemyAlive = combat.stacks.filter(stack => stack.side === "enemy" && stackCount(stack) > 0);
   const obstacleGlyph: Record<string, string> = { tree: "♣", boulder: "⬟", timber: "▰", cart: "▥", barricade: "╫", rubble: "▦" };
+  const movementAction = combat.lastAction && combat.lastAction.from !== combat.lastAction.to ? combat.lastAction : null;
+  const movingStack = movementAction ? combat.stacks.find(stack => stack.id === movementAction.stackId) ?? null : null;
+  const movingUnit = movingStack ? UNITS.find(unit => unit.id === movingStack.unitId) ?? null : null;
+  const showMovement = Boolean(movementAction && movingStack && movingUnit && animatingActionId === movementAction.id);
+
+  useEffect(() => {
+    if (!movementAction) return;
+    setAnimatingActionId(movementAction.id);
+    const timer = window.setTimeout(() => setAnimatingActionId(null), 650);
+    return () => window.clearTimeout(timer);
+  }, [movementAction?.id]);
+
+  useEffect(() => {
+    if (combat.result || active?.side !== "enemy") return;
+    const timer = window.setTimeout(() => updateGame(current => performEnemyCombatTurn(current)), 800);
+    return () => window.clearTimeout(timer);
+  }, [active?.id, combat.result, updateGame]);
 
   function handleHex(tile: number, stack: CombatStack | undefined) {
     if (combat.result || !active || active.side !== "player") return;
@@ -307,9 +328,10 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
 
       <section className="battlefield-wrap">
         <div className="battlefield-instructions" aria-live="polite">
-          {combat.result ? "The engagement is over." : active && activeUnit ? <><b>{activeUnit.name} act now.</b> Gold hexes are movement; red targets can be attacked.</> : "Resolving the enemy turn…"}
+          {combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> Gold hexes are movement; red targets can be attacked.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
         </div>
-        <div className="hex-battlefield" style={{gridTemplateColumns: `repeat(${COMBAT_WIDTH * 2 + 1}, 1fr)`, gridTemplateRows: `repeat(${COMBAT_HEIGHT}, 1fr)`}}>
+        <div className="hex-battlefield">
+          {showMovement && movementAction && movingStack && movingUnit && <span key={movementAction.id} className="combat-moving-token" style={combatMovementStyle(movementAction.from, movementAction.to)} aria-hidden="true"><span className={`combat-unit ${movingStack.side} selected`}><i>{movingUnit.icon}</i><b>{stackCount(movingStack)}</b></span></span>}
           {Array.from({length: COMBAT_WIDTH * COMBAT_HEIGHT}, (_, tile) => {
             const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
             const stack = stackAt.get(tile);
@@ -321,14 +343,14 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
             return <button
               key={tile}
               className={`combat-hex ${canMove ? "reachable" : ""} ${canAttack ? "attackable" : ""} ${stack?.id === combat.activeStackId ? "active-stack" : ""} ${obstacle ? "blocked" : ""}`}
-              style={{gridColumn: `${col * 2 + (row % 2) + 1} / span 2`, gridRow: row + 1}}
+              style={combatHexPosition(row, col)}
               onClick={() => handleHex(tile, stack)}
               aria-label={label}
               disabled={Boolean(combat.result) || Boolean(obstacle) || (!canMove && !canAttack)}
               title={label}
             >
               {obstacle && <span className={`combat-obstacle ${obstacle}`} aria-hidden="true">{obstacleGlyph[obstacle]}</span>}
-              {stack && unit && <span className={`combat-unit ${stack.side}`} aria-hidden="true"><i>{unit.icon}</i><b>{stackCount(stack)}</b>{stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}</span>}
+              {stack && unit && <span className={`combat-unit ${stack.side} ${stack.id === combat.activeStackId ? "selected" : ""} ${showMovement && stack.id === movingStack?.id ? "movement-hidden" : ""}`} aria-hidden="true"><i>{unit.icon}</i><b>{stackCount(stack)}</b>{stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}{stack.id === combat.activeStackId && <strong className="active-marker">ACTING</strong>}</span>}
             </button>;
           })}
         </div>
@@ -362,9 +384,31 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
   </section>;
 }
 
+function combatHexPosition(row: number, col: number): React.CSSProperties {
+  const horizontalSpan = COMBAT_WIDTH + .5;
+  const verticalSpan = 1 + (COMBAT_HEIGHT - 1) * .75;
+  return {
+    left: `${(col + (row % 2) * .5) / horizontalSpan * 100}%`,
+    top: `${row * .75 / verticalSpan * 100}%`,
+    width: `calc(${100 / horizontalSpan}% + 1px)`,
+    height: `calc(${100 / verticalSpan}% + 1px)`,
+  };
+}
+
 function stackCount(stack: CombatStack) {
   const unit = UNITS.find(item => item.id === stack.unitId)!;
   return stack.totalHealth > 0 ? Math.ceil(stack.totalHealth / unit.health) : 0;
+}
+
+function combatMovementStyle(from: number, to: number): React.CSSProperties {
+  const point = (tile: number) => {
+    const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
+    const horizontalSpan = COMBAT_WIDTH + .5;
+    const verticalSpan = 1 + (COMBAT_HEIGHT - 1) * .75;
+    return { x: (col + (row % 2) * .5 + .5) / horizontalSpan * 100, y: (row * .75 + .5) / verticalSpan * 100 };
+  };
+  const start = point(from), end = point(to);
+  return { "--from-x": `${start.x}%`, "--from-y": `${start.y}%`, "--to-x": `${end.x}%`, "--to-y": `${end.y}%` } as React.CSSProperties;
 }
 
 function CombatStackCard({stack, active}: {stack: CombatStack; active: boolean}) {

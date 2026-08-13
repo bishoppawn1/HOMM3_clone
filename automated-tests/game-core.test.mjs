@@ -28,6 +28,8 @@ import {
   eraVisualFamily,
   findPath,
   moveAlongPath,
+  moveCombatStack,
+  performEnemyCombatTurn,
   producerAt,
   recruitFromCity,
   retreatCombat,
@@ -361,6 +363,18 @@ test("obstacles and intervening stacks block ranged line of sight", () => {
   assert.equal(combatHasLineOfSight(obstructed, 45, 59), false);
 });
 
+test("ranged stacks can target enemies anywhere on the battlefield despite intervening obstacles", () => {
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const combat = {
+    ...deployed.combat,
+    activeStackId: "player-slingers",
+    obstacles: [...deployed.combat.obstacles, { tile: 51, kind: "boulder" }],
+  };
+  assert.equal(combatHasLineOfSight(combat, 45, 59), false);
+  assert.equal(combatCanAttack(combat, "player-slingers", "enemy-slingers"), true);
+  assert.equal(combatCanAttack(combat, "player-slingers", "enemy-scouts"), true);
+});
+
 test("ranged stacks spend shots and inflict deterministic casualties", () => {
   const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
   const combat = { ...deployed.combat, activeStackId: "player-slingers" };
@@ -369,6 +383,22 @@ test("ranged stacks spend shots and inflict deterministic casualties", () => {
   const attacked = attackCombatStack({ ...deployed, combat }, "enemy-slingers");
   assert.equal(attacked.combat.stacks.find((stack) => stack.id === "player-slingers").shots, 7);
   assert.ok(attacked.combat.stacks.find((stack) => stack.id === "enemy-slingers").totalHealth < before);
+});
+
+test("movement records an animatable action and enemy turns remain visibly selected before acting", () => {
+  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
+  const destination = combatReachable(deployed.combat, active.id)[0];
+  const moved = moveCombatStack(deployed, destination);
+  assert.deepEqual(
+    { type: moved.combat.lastAction.type, stackId: moved.combat.lastAction.stackId, from: moved.combat.lastAction.from, to: moved.combat.lastAction.to },
+    { type: "move", stackId: active.id, from: active.position, to: destination },
+  );
+
+  const enemySelected = { ...deployed, combat: { ...deployed.combat, activeStackId: "enemy-scouts" } };
+  const enemyActed = performEnemyCombatTurn(enemySelected);
+  assert.equal(enemyActed.combat.lastAction.stackId, "enemy-scouts");
+  assert.notEqual(enemyActed.combat.activeStackId, "enemy-scouts");
 });
 
 test("melee defenders retaliate once and wait or defend changes the current round", () => {
