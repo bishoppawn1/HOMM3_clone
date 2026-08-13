@@ -66,6 +66,20 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.doesNotMatch(styles, /object-fit:fill/);
 });
 
+test("the adventure map supports WASD camera panning and keeps roads above forest artwork", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /MAP_PAN_DIRECTIONS/);
+  assert.match(page, /window\.addEventListener\("keydown", panMap\)/);
+  assert.match(page, /viewport\.scrollBy/);
+  assert.match(page, /WASD to pan/);
+  assert.match(page, /className="road-layer"/);
+  assert.match(styles, /\.road-layer \{ z-index:3/);
+  assert.match(styles, /\.map-tile \{[^}]*z-index:4/);
+});
+
 test("entering a city uses a dedicated full-screen management surface", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   assert.match(page, /className="city-screen"/);

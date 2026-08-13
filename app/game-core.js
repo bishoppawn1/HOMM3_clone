@@ -29,18 +29,22 @@ function coastColumn(row) {
   return 67 + Math.round(Math.sin((row - 2) / 5.2) * 1.6 + Math.sin(row / 2.8) * .7);
 }
 
-function isRoadCoordinate(col, row) {
+function isRoadCorridor(col, row, clearance = 1) {
   const capitalBranch = 18 + Math.round(Math.sin((row - 3) / 5) * 1.1);
   const quarryBranch = 41 + Math.round(Math.sin((row + 1) / 5.5));
   const easternBranch = 61 + Math.round(Math.sin((row - 2) / 4.7));
   const pinewaterBranch = 8 + Math.round(Math.sin(row / 3.2));
-  return (col >= 6 && col <= 64 && Math.abs(row - northernRoadRow(col)) <= 1)
-    || (col >= 4 && col <= 64 && Math.abs(row - southernRoadRow(col)) <= 1)
-    || (row >= 8 && row <= 34 && Math.abs(col - capitalBranch) <= 1)
-    || (row >= 7 && row <= 13 && col >= pinewaterBranch - 1 && col <= 19)
-    || (row >= 7 && row <= 13 && Math.abs(col - pinewaterBranch) <= 1)
-    || (row >= 13 && row <= 38 && Math.abs(col - quarryBranch) <= 1)
-    || (row >= 10 && row <= 35 && Math.abs(col - easternBranch) <= 1);
+  return (col >= 6 - clearance && col <= 64 + clearance && Math.abs(row - northernRoadRow(col)) <= clearance)
+    || (col >= 4 - clearance && col <= 64 + clearance && Math.abs(row - southernRoadRow(col)) <= clearance)
+    || (row >= 8 - clearance && row <= 34 + clearance && Math.abs(col - capitalBranch) <= clearance)
+    || (row >= 7 - clearance && row <= 13 + clearance && col >= pinewaterBranch - clearance && col <= 18 + clearance)
+    || (row >= 7 - clearance && row <= 13 + clearance && Math.abs(col - pinewaterBranch) <= clearance)
+    || (row >= 13 - clearance && row <= 38 + clearance && Math.abs(col - quarryBranch) <= clearance)
+    || (row >= 10 - clearance && row <= 35 + clearance && Math.abs(col - easternBranch) <= clearance);
+}
+
+function isRoadCoordinate(col, row) {
+  return isRoadCorridor(col, row);
 }
 
 function isMountainCoordinate(col, row) {
@@ -58,11 +62,12 @@ function isDenseForestCoordinate(col, row) {
   const easternBelt = 23 + Math.round(Math.sin((col - 49) / 3.1) * 2.1);
   const southWestEdge = 38 + Math.round(Math.sin((col + 3) / 3.5) * 2);
   const southEastEdge = 37 + Math.round(Math.sin((col - 52) / 3.2) * 1.7);
-  const northernWood = col <= 18 && row <= northWestEdge;
-  const westernWood = col <= 27 && Math.abs(row - westernBelt) <= (col % 6 === 0 ? 2 : 1);
-  const easternWood = col >= 54 && col < coastColumn(row) && Math.abs(row - easternBelt) <= (col % 5 === 0 ? 2 : 1);
-  const southernWood = col <= 24 && row >= southWestEdge;
-  const southEasternWood = col >= 55 && col < coastColumn(row) && row >= southEastEdge;
+  if (isRoadCorridor(col, row, 3)) return false;
+  const northernWood = col <= 16 && row <= northWestEdge - 1;
+  const westernWood = col <= 24 && Math.abs(row - westernBelt) <= (col % 7 === 0 ? 2 : 1);
+  const easternWood = col >= 56 && col < coastColumn(row) && Math.abs(row - easternBelt) <= (col % 7 === 0 ? 2 : 1);
+  const southernWood = col <= 21 && row >= southWestEdge + 1;
+  const southEasternWood = col >= 57 && col < coastColumn(row) && row >= southEastEdge + 1;
   return northernWood || westernWood || easternWood || southernWood || southEasternWood;
 }
 

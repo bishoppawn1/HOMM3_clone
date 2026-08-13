@@ -50,8 +50,9 @@ h2 { font-size:20px; }
 .map-viewport { position:relative; flex:1; min-height:0; overflow:auto; border:8px solid #5c492e; outline:2px solid #b18b4b; box-shadow:0 0 38px #000d; scrollbar-color:#947849 #293328; }
 .map-grid { position:relative; width:max(100%,2520px); height:max(100%,1575px); display:grid; box-shadow:inset 0 0 55px #192015; overflow:hidden; isolation:isolate; background-color:#71805c; background-image:radial-gradient(ellipse at 15% 20%,#344d32d4 0 9%,transparent 20%),radial-gradient(ellipse at 51% 54%,#b5ac6f80 0 13%,transparent 30%),radial-gradient(ellipse at 75% 17%,#8b845988 0 8%,transparent 25%),radial-gradient(ellipse at 82% 85%,#5b704bbb 0 10%,transparent 27%),repeating-linear-gradient(117deg,transparent 0 31px,#d5cf9a0a 32px 33px,transparent 34px 63px),linear-gradient(145deg,#849266,#6f8058 48%,#82906a); }
 .map-grid:after { content:""; position:absolute; inset:0; z-index:8; pointer-events:none; background:radial-gradient(ellipse at center,transparent 48%,#15211377 100%),linear-gradient(18deg,transparent 48%,#e5dfaa10 49%,transparent 50%); mix-blend-mode:multiply; }
-.terrain-layer,.route-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.terrain-layer,.road-layer,.route-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 .terrain-layer { z-index:1; }
+.road-layer { z-index:3; overflow:visible; }
 .territory-fill{fill:#d5b75a0b;stroke:none}.territory-fill.neutral{fill:#a9443609}
 .river-bank { fill:#355f67; stroke:#2d4e4e; stroke-width:.4; vector-effect:non-scaling-stroke; }
 .river-shine { fill:none; stroke:#a7c1b777; stroke-width:2; stroke-linecap:round; stroke-dasharray:8 12; vector-effect:non-scaling-stroke; }
@@ -59,7 +60,7 @@ h2 { font-size:20px; }
 .road-shadow { stroke:#443d2f88; stroke-width:26; }
 .road-ribbon { stroke:#baa878; stroke-width:16; stroke-linecap:round; }
 .terrain-patches{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}.terrain-patch{position:absolute;height:auto;object-fit:contain;transform-origin:center;filter:drop-shadow(0 7px 5px #17201899)}.terrain-patch.forest{filter:saturate(.86) brightness(.86) drop-shadow(0 7px 5px #172018aa)}.terrain-patch.mountain{filter:drop-shadow(0 8px 5px #151712aa)}
-.map-tile { border:0; padding:0; position:relative; cursor:crosshair; overflow:visible; min-width:0; min-height:0; background:transparent; color:inherit; z-index:2; }
+.map-tile { border:0; padding:0; position:relative; cursor:crosshair; overflow:visible; min-width:0; min-height:0; background:transparent; color:inherit; z-index:4; }
 .map-tile:hover { background:radial-gradient(circle,#f5dfa43d 0 18%,transparent 62%); }
 .map-tile:focus-visible { outline:2px solid #f3d679; outline-offset:-3px; z-index:7; }
 .map-tile.water,.map-tile.mountain,.map-tile.dense-forest { cursor:not-allowed; }
@@ -69,7 +70,7 @@ h2 { font-size:20px; }
 .terrain-glyph { color:#1e371fbb; font-size:clamp(10px,1.05vw,17px); position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); filter:drop-shadow(4px 2px 0 #29462b99) drop-shadow(-4px 2px 0 #3d5635aa) drop-shadow(0 4px 2px #17251a); }
 .map-tile.hill .terrain-glyph { color:#655f45cc; filter:drop-shadow(4px 2px 0 #8d865f99) drop-shadow(0 3px 2px #3f4735); }
 .site,.hero { position:absolute; inset:-35%; display:flex; align-items:center; justify-content:center; text-shadow:0 2px 3px #000; z-index:4; pointer-events:none; }.site b,.hero b { font-size:clamp(15px,1.65vw,26px);color:#e2c66f;line-height:1; }.site.pickup{inset:-75%;z-index:5}.site.pickup img{width:115%;height:115%;object-fit:contain;filter:drop-shadow(0 3px 2px #17190fbb)}.site.enemy{inset:-135%;z-index:5}.site.enemy img{width:130%;height:130%;object-fit:contain;filter:drop-shadow(0 5px 3px #17130fbb)}.hero { z-index:7; transform:translateY(-8%); }.hero b { font-size:clamp(22px,2.5vw,38px); color:#f0e0a6; filter:drop-shadow(0 3px 2px #000); }
-.map-bandit-camp{position:absolute;z-index:2;pointer-events:none;border:3px dashed #6d4b2d;border-radius:20% 28% 18% 25%;background:radial-gradient(ellipse at center,#6d512c5c 0 52%,#35281b80 73%,transparent 76%);box-shadow:inset 0 0 0 3px #ba98614d,0 5px 9px #17150f99;transform:scale(.92)}
+.map-bandit-camp{position:absolute;z-index:4;pointer-events:none;border:3px dashed #6d4b2d;border-radius:20% 28% 18% 25%;background:radial-gradient(ellipse at center,#6d512c5c 0 52%,#35281b80 73%,transparent 76%);box-shadow:inset 0 0 0 3px #ba98614d,0 5px 9px #17150f99;transform:scale(.92)}
 .map-bandit-camp:before{content:"";position:absolute;inset:-5px;border:5px dotted #3b2d1e;border-radius:inherit;opacity:.72}
 .map-bandit-camp>span{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);padding:2px 5px;border:1px solid #4d3823;background:#39291de6;color:#e4c780;white-space:nowrap;text-transform:uppercase;font:700 6px var(--font-display);letter-spacing:.06em}
 .map-bandit-camp.cleared{opacity:.36;filter:grayscale(.7)}

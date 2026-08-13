@@ -110,7 +110,7 @@ test("movement permits adjacent land and blocks water, mountains, dense forest, 
   const game = createGame();
   assert.equal(canMoveTo(game, adventureTile(18, 18)), true);
   assert.equal(canMoveTo({ ...game, hero: adventureTile(28, 1) }, adventureTile(29, 1)), false);
-  assert.equal(canMoveTo({ ...game, hero: adventureTile(19, 1) }, adventureTile(18, 1)), false);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(17, 1) }, adventureTile(16, 1)), false);
   assert.equal(canMoveTo({ ...game, hero: adventureTile(66, 1) }, adventureTile(67, 1)), false);
   assert.equal(canMoveTo(game, adventureTile(20, 17)), false);
   assert.equal(canMoveTo({ ...game, moves: 0 }, adventureTile(18, 18)), false);
@@ -172,7 +172,7 @@ test("pathfinding rejects natural barriers but uses the guarded mountain passes"
   const game = createGame();
   assert.equal(findPath(game, adventureTile(68, 10)), null);
   assert.equal(findPath(game, adventureTile(29, 1)), null);
-  assert.equal(findPath(game, adventureTile(18, 1)), null);
+  assert.equal(findPath(game, adventureTile(16, 1)), null);
   const command = routeCommand({ ...game, moves: 2 }, null, adventureTile(12, 19));
   assert.equal(command.path.length, 8);
   assert.equal(command.reachablePath.length, 2);
@@ -180,6 +180,23 @@ test("pathfinding rejects natural barriers but uses the guarded mountain passes"
   const moved = moveAlongPath({ ...game, moves: 2 }, command.path);
   assert.equal(moved.hero, command.reachablePath.at(-1));
   assert.equal(moved.moves, 0);
+});
+
+test("dense forest leaves a clear buffer around every road", () => {
+  for (let tile = 0; tile < BOARD.length; tile += 1) {
+    if (BOARD[tile] !== "dense-forest") continue;
+    const row = Math.floor(tile / MAP_WIDTH);
+    const col = tile % MAP_WIDTH;
+    for (let rowOffset = -2; rowOffset <= 2; rowOffset += 1) {
+      for (let colOffset = -2; colOffset <= 2; colOffset += 1) {
+        if (Math.abs(rowOffset) + Math.abs(colOffset) > 2) continue;
+        const nearRow = row + rowOffset;
+        const nearCol = col + colOffset;
+        if (nearRow < 0 || nearRow >= MAP_HEIGHT || nearCol < 0 || nearCol >= MAP_WIDTH) continue;
+        assert.notEqual(BOARD[adventureTile(nearCol, nearRow)], "road");
+      }
+    }
+  }
 });
 
 test("resource pickups are consumed permanently and stone replaces food", () => {

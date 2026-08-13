@@ -42,6 +42,10 @@ import {
 } from "./game-core.js";
 
 const tileGlyph: Record<string, string> = { hill: "▲" };
+const MAP_PAN_STEP = 210;
+const MAP_PAN_DIRECTIONS: Record<string, readonly [number, number]> = {
+  w: [0, -MAP_PAN_STEP], a: [-MAP_PAN_STEP, 0], s: [0, MAP_PAN_STEP], d: [MAP_PAN_STEP, 0],
+};
 
 const adventureRoads = [
   "M 6 13 C 14 11 22 14.5 31 13 S 48 11.5 64 13",
@@ -54,23 +58,23 @@ const adventureRoads = [
 ];
 
 const terrainArtwork = [
-  { kind: "forest", col: -2, row: -2, size: 10, turn: -8 },
-  { kind: "forest", col: 5, row: -1, size: 10, turn: 5 },
-  { kind: "forest", col: 11, row: 2, size: 9, turn: -4 },
-  { kind: "forest", col: -3, row: 6, size: 10, turn: 4 },
-  { kind: "forest", col: 4, row: 7, size: 9, turn: -7 },
-  { kind: "forest", col: -3, row: 19, size: 10, turn: -5 },
-  { kind: "forest", col: 5, row: 20, size: 10, turn: 6 },
-  { kind: "forest", col: 13, row: 19, size: 9, turn: -4 },
-  { kind: "forest", col: 20, row: 20, size: 9, turn: 7 },
-  { kind: "forest", col: -2, row: 35, size: 11, turn: 4 },
-  { kind: "forest", col: 7, row: 37, size: 10, turn: -7 },
-  { kind: "forest", col: 16, row: 36, size: 10, turn: 5 },
-  { kind: "forest", col: 52, row: 18, size: 9, turn: -6 },
-  { kind: "forest", col: 58, row: 20, size: 9, turn: 5 },
-  { kind: "forest", col: 62, row: 17, size: 6, turn: -5 },
-  { kind: "forest", col: 53, row: 34, size: 10, turn: 6 },
-  { kind: "forest", col: 59, row: 36, size: 8, turn: -7 },
+  { kind: "forest", col: -2, row: -2, size: 9, turn: -8 },
+  { kind: "forest", col: 5, row: -1, size: 8, turn: 5 },
+  { kind: "forest", col: 12, row: 1, size: 7, turn: -4 },
+  { kind: "forest", col: -3, row: 6, size: 8, turn: 4 },
+  { kind: "forest", col: 3, row: 7, size: 7, turn: -7 },
+  { kind: "forest", col: -3, row: 21, size: 8, turn: -5 },
+  { kind: "forest", col: 5, row: 22, size: 8, turn: 6 },
+  { kind: "forest", col: 13, row: 21, size: 7, turn: -4 },
+  { kind: "forest", col: 20, row: 22, size: 7, turn: 7 },
+  { kind: "forest", col: -2, row: 37, size: 9, turn: 4 },
+  { kind: "forest", col: 7, row: 39, size: 8, turn: -7 },
+  { kind: "forest", col: 15, row: 38, size: 8, turn: 5 },
+  { kind: "forest", col: 53, row: 18, size: 7, turn: -6 },
+  { kind: "forest", col: 58, row: 21, size: 7, turn: 5 },
+  { kind: "forest", col: 63, row: 18, size: 5, turn: -5 },
+  { kind: "forest", col: 54, row: 37, size: 8, turn: 6 },
+  { kind: "forest", col: 60, row: 39, size: 7, turn: -7 },
   ...[-2, 3, 8, 16, 21, 26, 35, 40].flatMap((row, index) => [
     { kind: "mountain", col: 26 + [1, 2, 3, 1, -1, 0, 2, 1][index], row, size: 5, turn: [-8, -3, 5, 8, 3, -5, -8, 4][index] },
     { kind: "mountain", col: 50 + [2, 0, -1, -2, 0, 2, 1, -1][index], row, size: 5, turn: [6, 2, -6, -9, -3, 5, 8, -4][index] },
@@ -126,6 +130,21 @@ export default function Home() {
     const row = Math.floor(game.hero / MAP_WIDTH);
     viewport.scrollLeft = Math.max(0, column / MAP_WIDTH * viewport.scrollWidth - viewport.clientWidth / 2);
     viewport.scrollTop = Math.max(0, row / MAP_HEIGHT * viewport.scrollHeight - viewport.clientHeight / 2);
+  }, []);
+
+  useEffect(() => {
+    function panMap(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.matches("input, textarea, select") || target.isContentEditable)) return;
+      const direction = MAP_PAN_DIRECTIONS[event.key.toLowerCase()];
+      const viewport = mapViewport.current;
+      if (!direction || !viewport) return;
+      event.preventDefault();
+      viewport.scrollBy({ left: direction[0], top: direction[1], behavior: event.repeat ? "auto" : "smooth" });
+    }
+    window.addEventListener("keydown", panMap);
+    return () => window.removeEventListener("keydown", panMap);
   }, []);
 
   function handleRoute(index: number) {
@@ -196,19 +215,21 @@ export default function Home() {
         </aside>
 
         <section className="map-wrap" aria-label="Campaign map">
-          <div className="map-caption"><span>THE WESTERN MARCHES</span><b>Early Spring · Clear skies</b></div>
+          <div className="map-caption"><span>THE WESTERN MARCHES</span><b>WASD to pan · Early Spring · Clear skies</b></div>
           <div className="map-viewport" ref={mapViewport}>
           <div className={`map-grid era-${visualEra}`} style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
             <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
               <path className="river-bank" d="M 67 0 C 69 6 65 11 67 17 C 69 23 64.5 28 66.5 34 C 68.5 39 65 42 67 45 L 72 45 L 72 0 Z" />
               <path className="river-shine" d="M 68.2 0 C 70 6 66.4 12 68 18 C 69.5 24 66 29 67.7 35 C 69 40 66.5 42 68 45" />
-              {adventureRoads.map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
-              {adventureRoads.map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
               {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-fill-${city.id}`} className={`territory-fill ${city.owner}`} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
             </svg>
             <div className="terrain-patches" aria-hidden="true">
               {terrainArtwork.map((patch, index) => <img key={`${patch.kind}-${index}`} className={`terrain-patch ${patch.kind}`} style={terrainPatchBounds(patch)} src={`assets/map-v2/terrain-${patch.kind}.webp`} alt="" />)}
             </div>
+            <svg className="road-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+              {adventureRoads.map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
+              {adventureRoads.map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
+            </svg>
             {banditCamps.map((camp) => <div key={`camp-${camp.guard}`} className={`map-bandit-camp ${game.sites[camp.guard] ? "occupied" : "cleared"}`} style={producerBounds(camp.footprint)} aria-hidden="true"><span>Bandit camp spoils</span></div>)}
             {BOARD.map((tile, index) => {
               const pickup = game.pickups[index];
