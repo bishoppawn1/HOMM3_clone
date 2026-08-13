@@ -48,42 +48,37 @@ h2 { font-size:20px; }
 .map-wrap:before { content:""; position:absolute; inset:0; opacity:.22; background:radial-gradient(ellipse at 20% 80%,#d7be7044,transparent 30%),radial-gradient(ellipse at 80% 10%,#adc58c33,transparent 35%); pointer-events:none; }
 .map-caption { position:absolute; top:12px; left:25px; right:25px; display:flex; justify-content:space-between; color:#ddd0a7; text-shadow:0 2px #000; }.map-caption span { font:700 12px var(--font-display); letter-spacing:.13em; }.map-caption b { font-size:10px;font-weight:400;color:#aaa486; }
 .map-viewport { position:relative; flex:1; min-height:0; overflow:auto; border:8px solid #5c492e; outline:2px solid #b18b4b; box-shadow:0 0 38px #000d; scrollbar-color:#947849 #293328; }
-.map-grid { position:relative; width:max(100%,1120px); height:max(100%,700px); display:grid; box-shadow:inset 0 0 55px #192015; overflow:hidden; isolation:isolate; background-color:#71805c; background-image:radial-gradient(ellipse at 15% 20%,#344d32d4 0 9%,transparent 20%),radial-gradient(ellipse at 51% 54%,#b5ac6f80 0 13%,transparent 30%),radial-gradient(ellipse at 75% 17%,#8b845988 0 8%,transparent 25%),radial-gradient(ellipse at 82% 85%,#5b704bbb 0 10%,transparent 27%),repeating-linear-gradient(117deg,transparent 0 31px,#d5cf9a0a 32px 33px,transparent 34px 63px),linear-gradient(145deg,#849266,#6f8058 48%,#82906a); }
+.map-grid { position:relative; width:max(100%,1680px); height:max(100%,1050px); display:grid; box-shadow:inset 0 0 55px #192015; overflow:hidden; isolation:isolate; background-color:#71805c; background-image:radial-gradient(ellipse at 15% 20%,#344d32d4 0 9%,transparent 20%),radial-gradient(ellipse at 51% 54%,#b5ac6f80 0 13%,transparent 30%),radial-gradient(ellipse at 75% 17%,#8b845988 0 8%,transparent 25%),radial-gradient(ellipse at 82% 85%,#5b704bbb 0 10%,transparent 27%),repeating-linear-gradient(117deg,transparent 0 31px,#d5cf9a0a 32px 33px,transparent 34px 63px),linear-gradient(145deg,#849266,#6f8058 48%,#82906a); }
 .map-grid:after { content:""; position:absolute; inset:0; z-index:8; pointer-events:none; background:radial-gradient(ellipse at center,transparent 48%,#15211377 100%),linear-gradient(18deg,transparent 48%,#e5dfaa10 49%,transparent 50%); mix-blend-mode:multiply; }
-.terrain-layer,.route-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.terrain-layer,.route-layer,.territory-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 .terrain-layer { z-index:1; }
+.territory-fill{fill:#d5b75a0b;stroke:none}.territory-fill.neutral{fill:#a9443609}
 .river-bank { fill:#355f67; stroke:#2d4e4e; stroke-width:.28; vector-effect:non-scaling-stroke; }
 .river-shine { fill:none; stroke:#a7c1b777; stroke-width:1.5; stroke-dasharray:7 9; vector-effect:non-scaling-stroke; }
 .road-shadow,.road-ribbon { fill:none; vector-effect:non-scaling-stroke; }
 .road-shadow { stroke:#443d2f88; stroke-width:26; }
 .road-ribbon { stroke:#baa878; stroke-width:16; stroke-linecap:round; }
+.terrain-patches{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}.terrain-patch{position:absolute;object-fit:fill;filter:drop-shadow(0 7px 5px #17201899)}.terrain-patch.forest{filter:saturate(.86) brightness(.86) drop-shadow(0 7px 5px #172018aa)}.terrain-patch.north-west{left:-2%;top:-7%;width:34%;height:31%}.terrain-patch.west-wall{left:-4%;top:40%;width:43%;height:25%;transform:rotate(2deg)}.terrain-patch.south-west{left:-3%;top:76%;width:36%;height:31%}.terrain-patch.east-wall{left:72%;top:38%;width:30%;height:25%}.terrain-patch.south-east{left:75%;top:74%;width:27%;height:30%}.terrain-patch.mountain{width:11%;height:48%;filter:drop-shadow(0 8px 5px #151712aa)}.terrain-patch.west-range{left:34.5%;top:-5%}.terrain-patch.east-range{left:70%;top:-5%;transform:scaleX(-1)}
 .map-tile { border:0; padding:0; position:relative; cursor:crosshair; overflow:visible; min-width:0; min-height:0; background:transparent; color:inherit; z-index:2; }
 .map-tile:hover { background:radial-gradient(circle,#f5dfa43d 0 18%,transparent 62%); }
 .map-tile:focus-visible { outline:2px solid #f3d679; outline-offset:-3px; z-index:7; }
-.map-tile.water { cursor:not-allowed; }
+.map-tile.water,.map-tile.mountain,.map-tile.dense-forest { cursor:not-allowed; }
+.map-tile.mountain { background:#5f5b4717; }
+.map-tile.dense-forest { background:#29462f17; }
 .terrain-glyph { color:#1e371fbb; font-size:clamp(10px,1.05vw,17px); position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); filter:drop-shadow(4px 2px 0 #29462b99) drop-shadow(-4px 2px 0 #3d5635aa) drop-shadow(0 4px 2px #17251a); }
 .map-tile.hill .terrain-glyph { color:#655f45cc; filter:drop-shadow(4px 2px 0 #8d865f99) drop-shadow(0 3px 2px #3f4735); }
-.site,.hero { position:absolute; inset:-35%; display:flex; align-items:center; justify-content:center; text-shadow:0 2px 3px #000; z-index:4; pointer-events:none; }.site b,.hero b { font-size:clamp(15px,1.65vw,26px);color:#e2c66f;line-height:1; }.site.enemy b { color:#a72f27; font-size:clamp(18px,2vw,29px); }.site.pickup b { color:#c79b50; filter:drop-shadow(0 2px 1px #2b2114); }.site.stone b{color:#d2cbb5}.site.dust b{color:#d5a9ee}.site.city b { color:#d1bd83; font-size:clamp(23px,2.6vw,40px); }.site.city i{position:absolute;right:14%;top:10%;color:#a82f27;font-size:13px;font-style:normal}.site.capital { inset:-70%; z-index:5; }.site.capital b { font-size:clamp(30px,3.3vw,50px);color:#f1d17f;filter:drop-shadow(0 4px 2px #18150d); }.hero { z-index:7; transform:translateY(-8%); }.hero b { font-size:clamp(22px,2.5vw,38px); color:#f0e0a6; filter:drop-shadow(0 3px 2px #000); }
+.site,.hero { position:absolute; inset:-35%; display:flex; align-items:center; justify-content:center; text-shadow:0 2px 3px #000; z-index:4; pointer-events:none; }.site b,.hero b { font-size:clamp(15px,1.65vw,26px);color:#e2c66f;line-height:1; }.site.pickup{inset:-75%;z-index:5}.site.pickup img{width:115%;height:115%;object-fit:contain;filter:drop-shadow(0 3px 2px #17190fbb)}.site.enemy{inset:-135%;z-index:5}.site.enemy img{width:130%;height:130%;object-fit:contain;filter:drop-shadow(0 5px 3px #17130fbb)}.hero { z-index:7; transform:translateY(-8%); }.hero b { font-size:clamp(22px,2.5vw,38px); color:#f0e0a6; filter:drop-shadow(0 3px 2px #000); }
 .route-layer { z-index:6; overflow:visible; }
 .route-layer polyline { fill:none; stroke:#f7d66e; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:8 7; vector-effect:non-scaling-stroke; filter:drop-shadow(0 2px 2px #352817); }
 .route-layer circle { fill:#fff0ad; stroke:#6d4b22; stroke-width:1.5; vector-effect:non-scaling-stroke; }
 .route-layer .route-later polyline { stroke:#a5a79f; stroke-width:3; filter:drop-shadow(0 2px 2px #242923); }
 .route-layer .route-later circle { fill:#c4c6bf; stroke:#555b55; }
+.territory-layer{z-index:4;overflow:visible}.territory-layer polygon{fill:none;stroke:#e6c867;stroke-width:3;stroke-dasharray:9 7;vector-effect:non-scaling-stroke;filter:drop-shadow(0 2px 1px #25301d);opacity:.9}.territory-layer polygon.neutral{stroke:#b36151}
 .map-tile.path-target:before { content:""; position:absolute; inset:16%; border:2px solid #ffe58a; border-radius:50%; box-shadow:0 0 12px #f8dc77; z-index:7; }
 .map-producer,.map-city { position:absolute; z-index:5; pointer-events:none; display:grid; place-items:center; filter:drop-shadow(0 5px 3px #1a2017aa); }
 .map-producer>img,.map-city>img { width:118%; height:118%; object-fit:contain; position:relative; z-index:1; }
 .map-city>img { width:145%; height:145%; transform:translateY(-8%); }
 .map-city.aurum>img { filter:drop-shadow(0 0 8px #efd77b88); }
-.era-classical .map-city>img { filter:saturate(.82) brightness(1.06) drop-shadow(0 5px 3px #1a2017aa); }
-.era-medieval .map-city>img { filter:sepia(.2) saturate(.85) contrast(1.08); }
-.era-gunpowder .map-city>img { filter:saturate(.65) contrast(1.13); }
-.era-industrial .map-city>img { filter:saturate(.45) contrast(1.08); }
-.era-gunpowder .map-city:before,.era-industrial .map-city:before { content:""; position:absolute; z-index:2; right:2%; top:-7%; width:16%; height:55%; background:linear-gradient(90deg,#4b4540 0 25%,#9a8e7d 26% 73%,#3e3935 74%); clip-path:polygon(33% 0,66% 0,72% 80%,100% 100%,0 100%,28% 80%); opacity:.9; }
-.map-producer.visual-medieval>img { filter:sepia(.18) saturate(.85) contrast(1.06); }
-.map-producer.visual-classical>img { filter:saturate(.88) brightness(1.05); }
-.map-producer.visual-gunpowder>img { filter:saturate(.7) contrast(1.12); }
-.map-producer.visual-industrial>img,.map-producer.visual-modern>img { filter:saturate(.55) contrast(1.08) brightness(.98); }
-.map-producer.visual-industrial:before,.map-producer.visual-modern:before { content:""; position:absolute; z-index:2; right:7%; top:8%; width:31%; height:32%; border:2px solid #40484a; background:repeating-linear-gradient(90deg,#a8b0aa 0 4px,#687272 5px 8px); clip-path:polygon(50% 0,100% 24%,88% 100%,12% 100%,0 24%); opacity:.9; }
 .map-producer>i { position:absolute; z-index:2; right:8%; top:3%; color:#a82e27; font-size:clamp(18px,2.2vw,32px); font-style:normal; filter:drop-shadow(0 2px 1px #251715); }
 .map-producer.player:after { content:"✓"; position:absolute; z-index:2; right:8%; top:8%; width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#3e613c;color:#f1e3b5;border:1px solid #c5b36e;font:bold 11px sans-serif; }
 .map-city>i { position:absolute; z-index:3; right:5%; top:0; color:#a82e27; font-size:clamp(18px,2.2vw,32px); font-style:normal; filter:drop-shadow(0 2px 1px #251715); }
@@ -134,6 +129,22 @@ h2 { font-size:20px; }
 @keyframes combat-stack-move{0%{left:var(--from-x);top:var(--from-y);transform:translate(-50%,-50%) scale(1)}45%{transform:translate(-50%,-58%) scale(1.12)}100%{left:var(--to-x);top:var(--to-y);transform:translate(-50%,-50%) scale(1)}}
 @media(prefers-reduced-motion:reduce){.combat-unit.selected:after,.combat-moving-token{animation-duration:.01ms;animation-iteration-count:1}}
 @media(max-width:720px){.world{height:auto}}
+
+/* Era-aware recruitment and persistent construction costs */
+.recruit-unit{width:100%;padding:6px 4px;border:1px solid transparent;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.recruit-unit:hover,.recruit-unit.selected{border-color:#80683d;background:#e2d1a5}
+.recruit-unit:focus-visible{outline:2px solid #6b2d27;outline-offset:1px}
+.unit-inspector{margin:0 0 7px;padding:7px;border:1px solid #7e6a43;background:#e5d7b3;box-shadow:inset 0 0 12px #8b764233}
+.unit-inspector>p{margin:0 0 6px;font-size:7px;line-height:1.35;color:#504735}
+.unit-inspector>div{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.unit-inspector>div span{padding:4px 2px;background:#c4b083;text-align:center;font-size:6px;text-transform:uppercase}
+.unit-inspector>div b{display:block;font:700 10px var(--font-display);color:#672b27}
+.unit-inspector>small{display:block;margin-top:6px;font-size:6px;color:#625844}
+.recruit-buildings article>button.recruit-unit{border-color:transparent;background:transparent;color:inherit}
+.recruit-buildings article>button.recruit-unit:hover,.recruit-buildings article>button.recruit-unit.selected{border-color:#80683d;background:#e2d1a5;color:inherit}
+.full-tree .build-node>button.construction-cost{display:flex;flex-direction:column;align-items:center;gap:2px}
+.construction-cost>span{line-height:1.25}
+.construction-cost>small{font-size:6px;text-transform:uppercase;letter-spacing:.04em}
 
 .battle-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
 .battle-actions button{min-width:190px}

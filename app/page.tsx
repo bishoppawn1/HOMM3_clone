@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BOARD,
   BUILDINGS,
@@ -36,14 +36,17 @@ import {
   cityDefense,
   eraReadiness,
   eraVisualFamily,
+  isTerrainPassable,
+  unitForEra,
+  unitsForEra,
 } from "./game-core.js";
 
-const tileGlyph: Record<string, string> = { forest: "♣", hill: "▲" };
+const tileGlyph: Record<string, string> = { hill: "▲" };
 
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
-type Settlement = { id: string; name: string; tile: number; footprint?: number[]; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
+type Settlement = { id: string; name: string; tile: number; footprint?: number[]; territory?: number[][]; blockedBy?: number | null; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
 type Producer = { id: string; name: string; kind: string; resource: string; amount: number; footprint: number[]; entrance: number; owner: string; garrison: number };
-type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; position: number; totalHealth: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean };
+type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; era?: string; position: number; totalHealth: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean };
 type CombatState = {
   width: number; height: number; round: number; activeStackId: string | null; result: "victory" | "defeat" | "retreat" | null;
   battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number; returnTile?: number};
@@ -71,10 +74,21 @@ export default function Home() {
   const [logOpen, setLogOpen] = useState(false);
   const [plannedPath, setPlannedPath] = useState<number[]>([]);
   const [plannedTarget, setPlannedTarget] = useState<number | null>(null);
+  const mapViewport = useRef<HTMLDivElement>(null);
   const readiness = useMemo(() => eraReadiness(game), [game]);
   const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
+  const currentUnits = useMemo(() => unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null), [game.era]);
   const visualEra = eraVisualFamily(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
+
+  useEffect(() => {
+    const viewport = mapViewport.current;
+    if (!viewport) return;
+    const column = game.hero % MAP_WIDTH;
+    const row = Math.floor(game.hero / MAP_WIDTH);
+    viewport.scrollLeft = Math.max(0, column / MAP_WIDTH * viewport.scrollWidth - viewport.clientWidth / 2);
+    viewport.scrollTop = Math.max(0, row / MAP_HEIGHT * viewport.scrollHeight - viewport.clientHeight / 2);
+  }, []);
 
   function handleRoute(index: number) {
     const command = routeCommand(game, plannedTarget, index);
@@ -133,11 +147,7 @@ export default function Home() {
           </div>
           <div className="army">
             <p className="section-kicker">Field Army</p>
-            <Army name="Spearmen" count={game.army.spearmen} icon="♙" />
-            <Army name="Slingers" count={game.army.slingers} icon="◉" />
-            <Army name="Scouts" count={game.army.scouts} icon="♞" />
-            {game.army.swordsmen > 0 && <Army name="Swordsmen" count={game.army.swordsmen} icon="⚔" />}
-            {game.army.horsemen > 0 && <Army name="Horsemen" count={game.army.horsemen} icon="♞" />}
+            {currentUnits.map(unit => game.army[unit.id] > 0 && <Army key={unit.id} name={unit.name} count={game.army[unit.id]} icon={unit.icon} />)}
           </div>
           <div className="movement">
             <span>Movement</span><strong>{game.moves}/{MAX_MOVEMENT}</strong>
@@ -149,21 +159,41 @@ export default function Home() {
 
         <section className="map-wrap" aria-label="Campaign map">
           <div className="map-caption"><span>THE WESTERN MARCHES</span><b>Early Spring · Clear skies</b></div>
-          <div className="map-viewport">
+          <div className="map-viewport" ref={mapViewport}>
           <div className={`map-grid era-${visualEra}`} style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
             <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
-              <path className="river-bank" d="M 29.9 0 C 30.7 4 29.6 7 30.4 10 C 31 13 29.7 16 30.1 20 L 32 20 L 32 0 Z" />
-              <path className="river-shine" d="M 30.6 0 C 31 4 30.1 7 30.8 10 C 31.2 13 30.4 17 30.8 20" />
-              <path className="road-shadow" d="M 12.5 0 C 12.1 5 13.4 8 14.5 10 C 16 13 15.4 17 16.4 20" />
-              <path className="road-ribbon" d="M 12.5 0 C 12.1 5 13.4 8 14.5 10 C 16 13 15.4 17 16.4 20" />
+              <path className="river-bank" d="M 46.4 0 C 47.2 6 46.2 12 46.6 17 C 47 22 46.4 26 46.8 30 L 48 30 L 48 0 Z" />
+              <path className="river-shine" d="M 47.1 0 C 47.4 7 46.7 12 47.2 18 C 47.5 23 47 27 47.3 30" />
+              {[
+                "M 4.5 8.5 L 44.5 8.5", "M 3.5 22.5 L 45.5 22.5", "M 12.5 5.5 L 12.5 22.5",
+                "M 5.5 5.5 L 12.5 5.5", "M 5.5 5.5 L 5.5 8.5", "M 27.5 8.5 L 27.5 25.5", "M 42.5 6.5 L 42.5 24.5",
+              ].map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
+              {[
+                "M 4.5 8.5 L 44.5 8.5", "M 3.5 22.5 L 45.5 22.5", "M 12.5 5.5 L 12.5 22.5",
+                "M 5.5 5.5 L 12.5 5.5", "M 5.5 5.5 L 5.5 8.5", "M 27.5 8.5 L 27.5 25.5", "M 42.5 6.5 L 42.5 24.5",
+              ].map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
+              {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-fill-${city.id}`} className={`territory-fill ${city.owner}`} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
             </svg>
+            <div className="terrain-patches" aria-hidden="true">
+              <img className="terrain-patch forest north-west" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest west-wall" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest south-west" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest east-wall" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch forest south-east" src="assets/map-v2/terrain-forest.webp" alt="" />
+              <img className="terrain-patch mountain west-range" src="assets/map-v2/terrain-mountain.webp" alt="" />
+              <img className="terrain-patch mountain east-range" src="assets/map-v2/terrain-mountain.webp" alt="" />
+            </div>
             {BOARD.map((tile, index) => {
+              const row = Math.floor(index / MAP_WIDTH);
+              const col = index % MAP_WIDTH;
               const pickup = game.pickups[index];
               const site = game.sites[index];
               const city = settlementAt(game, index) as Settlement | null;
               const producer = producerAt(game, index) as Producer | null;
               const onPath = plannedPath.includes(index);
-              const description = `${tile}${pickup ? `, ${pickup}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
+              const passable = isTerrainPassable(index);
+              const terrainName = tile.replace("dense-forest", "dense forest");
+              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}
@@ -173,15 +203,13 @@ export default function Home() {
                   onContextMenu={(event) => { event.preventDefault(); handleRoute(index); }}
                   onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handleRoute(index); } }}
                   title={description}
-                  aria-label={`Map position ${index + 1}, ${description}. Press Enter twice or right-click twice to travel here.`}
+                  aria-disabled={!passable}
+                  aria-label={`Map position ${index + 1}, ${description}. ${passable ? "Press Enter twice or right-click twice to travel here." : "Travel is blocked here."}`}
                 >
                   {tileGlyph[tile] && index % 3 === 0 && <span className="terrain-glyph" aria-hidden="true">{tileGlyph[tile]}</span>}
                   {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
-                  {pickup === "timber" && <span className="site pickup" aria-hidden="true"><b>▰</b></span>}
-                  {pickup === "stone" && <span className="site pickup stone" aria-hidden="true"><b>⬟</b></span>}
-                  {pickup === "dust" && <span className="site pickup dust" aria-hidden="true"><b>✧</b></span>}
-                  {pickup === "gold" && <span className="site pickup gold" aria-hidden="true"><b>◆</b></span>}
-                  {site === "raiders" && <span className="site enemy" aria-hidden="true"><b>⚑</b></span>}
+                  {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={`assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
+                  {(site === "raiders" || site === "freehaven-bandits") && <span className="site enemy" aria-hidden="true"><img src="assets/map-v2/enemy-bandits.webp" alt="" /></span>}
                   {game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
                 </button>
               );
@@ -190,17 +218,19 @@ export default function Home() {
               {routeSegment(game.hero, plannedPath.slice(0, game.moves), "route-now")}
               {routeSegment(plannedPath[Math.min(game.moves, plannedPath.length) - 1] ?? game.hero, plannedPath.slice(game.moves), "route-later")}
             </svg>}
+            <svg className="territory-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+              {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-${city.id}`} className={city.owner} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
+            </svg>
             {Object.values(game.settlements).map((city) => <div key={city.id} className={`map-city ${city.owner} ${city.id}`} style={producerBounds(city.footprint ?? [city.tile])} aria-hidden="true">
-              <img src={`assets/map/city-${visualEra === "modern" ? "modern" : "preindustrial"}.webp`} alt="" />
-              {city.owner === "neutral" && <i>⚑</i>}
+              <img src={`assets/map-v2/city-${visualEra}.webp`} alt="" />
             </div>)}
             {Object.values(game.producers).map((producer) => <div key={producer.id} className={`map-producer ${producer.kind} ${producer.owner} visual-${visualEra}`} style={producerBounds(producer.footprint)} aria-hidden="true">
-              <img src={`assets/map/${producer.kind}.webp`} alt="" />
+              <img src={`assets/map-v2/${producer.kind}-${visualEra}.webp`} alt="" />
               {producer.owner === "neutral" && <i>⚑</i>}
             </div>)}
           </div>
           </div>
-          <div className="legend" aria-live="polite"><span><i className="route-swatch" />{plannedPath.length ? `${Math.min(plannedPath.length, game.moves)} now · ${Math.max(0, plannedPath.length - game.moves)} later` : "Right-click once to plot a route"}</span><span><i className="future-swatch" />Gray continues next month</span><span>Right-click again to travel</span></div>
+          <div className="legend" aria-live="polite"><span><i className="route-swatch" />{plannedPath.length ? `${Math.min(plannedPath.length, game.moves)} now · ${Math.max(0, plannedPath.length - game.moves)} later` : "Right-click once to plot a route"}</span><span><i className="future-swatch" />Gray continues next month</span><span>Mountains and dense forest block travel</span></div>
         </section>
 
         <aside className="right-rail parchment-panel">
@@ -274,7 +304,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
   const combat = game.combat!;
   const [animatingActionId, setAnimatingActionId] = useState<number | null>(null);
   const active = combat.stacks.find(stack => stack.id === combat.activeStackId) ?? null;
-  const activeUnit = active ? UNITS.find(unit => unit.id === active.unitId) : null;
+  const activeUnit = active ? unitForEra(active.unitId, active.era ?? game.era) : null;
   const reachable = new Set(active?.side === "player" ? combatReachable(combat, active.id) : []);
   const attackable = new Set(combat.stacks
     .filter(stack => active && stack.side !== active.side && stackCount(stack) > 0 && combatCanAttack(combat, active.id, stack.id))
@@ -282,8 +312,8 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
   const obstacles = new Map(combat.obstacles.map(obstacle => [obstacle.tile, obstacle.kind]));
   const stackAt = new Map(combat.stacks.filter(stack => stackCount(stack) > 0).map(stack => [stack.position, stack]));
   const turnOrder = [...combat.stacks].filter(stack => stackCount(stack) > 0).sort((a, b) => {
-    const aUnit = UNITS.find(unit => unit.id === a.unitId)!;
-    const bUnit = UNITS.find(unit => unit.id === b.unitId)!;
+    const aUnit = unitForEra(a.unitId, a.era ?? game.era)!;
+    const bUnit = unitForEra(b.unitId, b.era ?? game.era)!;
     return bUnit.initiative - aUnit.initiative || (a.side === "player" ? -1 : 1);
   });
   const playerAlive = combat.stacks.filter(stack => stack.side === "player" && stackCount(stack) > 0);
@@ -291,7 +321,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
   const obstacleGlyph: Record<string, string> = { tree: "♣", boulder: "⬟", timber: "▰", cart: "▥", barricade: "╫", rubble: "▦" };
   const movementAction = combat.lastAction && combat.lastAction.from !== combat.lastAction.to ? combat.lastAction : null;
   const movingStack = movementAction ? combat.stacks.find(stack => stack.id === movementAction.stackId) ?? null : null;
-  const movingUnit = movingStack ? UNITS.find(unit => unit.id === movingStack.unitId) ?? null : null;
+  const movingUnit = movingStack ? unitForEra(movingStack.unitId, movingStack.era ?? game.era) : null;
   const showMovement = Boolean(movementAction && movingStack && movingUnit && animatingActionId === movementAction.id);
 
   useEffect(() => {
@@ -318,7 +348,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
       <div><span className="section-kicker">Tactical engagement</span><h2>{combat.battle.name}</h2><p>Round {combat.round} · Odd-row hex battlefield</p></div>
       <div className="combat-turn-order" aria-label="Initiative order">
         {turnOrder.map(stack => {
-          const unit = UNITS.find(item => item.id === stack.unitId)!;
+          const unit = unitForEra(stack.unitId, stack.era ?? game.era)!;
           return <span key={stack.id} className={`${stack.side} ${stack.id === combat.activeStackId ? "active" : ""} ${stack.done ? "done" : ""}`} title={`${stack.side === "player" ? "Marcellus" : "Guard"} ${unit.name}, initiative ${unit.initiative}`}>{unit.icon}<b>{stackCount(stack)}</b></span>;
         })}
       </div>
@@ -344,7 +374,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
             const obstacle = obstacles.get(tile);
             const canAttack = stack ? attackable.has(stack.id) : false;
             const canMove = !stack && reachable.has(tile);
-            const unit = stack ? UNITS.find(item => item.id === stack.unitId)! : null;
+            const unit = stack ? unitForEra(stack.unitId, stack.era ?? game.era)! : null;
             const label = obstacle ? `Impassable ${obstacle}` : stack && unit ? `${stack.side === "player" ? "Allied" : "Enemy"} ${unit.name}, ${stackCount(stack)} remaining${canAttack ? ", attack available" : ""}` : `Battlefield hex ${tile + 1}${canMove ? ", movement available" : ""}`;
             return <button
               key={tile}
@@ -402,7 +432,7 @@ function combatHexPosition(row: number, col: number): React.CSSProperties {
 }
 
 function stackCount(stack: CombatStack) {
-  const unit = UNITS.find(item => item.id === stack.unitId)!;
+  const unit = unitForEra(stack.unitId, stack.era)!;
   return stack.totalHealth > 0 ? Math.ceil(stack.totalHealth / unit.health) : 0;
 }
 
@@ -418,7 +448,7 @@ function combatMovementStyle(from: number, to: number): React.CSSProperties {
 }
 
 function CombatStackCard({stack, active}: {stack: CombatStack; active: boolean}) {
-  const unit = UNITS.find(item => item.id === stack.unitId)!;
+  const unit = unitForEra(stack.unitId, stack.era)!;
   const count = stackCount(stack);
   const topHealth = count > 0 ? stack.totalHealth - (count - 1) * unit.health : 0;
   return <article className={`combat-stack-card ${stack.side} ${active ? "active" : ""} ${count === 0 ? "fallen" : ""}`}>
@@ -462,6 +492,8 @@ function CitiesPanel({game, selectCity}: {game: GameState; selectCity: (id: stri
 
 function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: Settlement; updateGame: React.Dispatch<React.SetStateAction<GameState>>; exitCity: () => void}) {
   const [recruitAmounts, setRecruitAmounts] = useState<Record<string, number>>(() => Object.fromEntries(UNITS.map((unit) => [unit.id, 1])));
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const recruitableUnits = unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null);
   const cityBuildings = game.buildings[city.id] ?? [];
   const present = game.hero === city.tile;
   const defense = cityDefense(game, city.id);
@@ -478,7 +510,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
         <p className="section-kicker">Hero & recruitment</p>
         <div className={`city-hero-card ${present ? "present" : "away"}`}><span>♞</span><div><b>Marcellus Vale</b><small>{present ? "Inside the city" : "Away on the map"}</small></div></div>
         <p className="city-rule">{present ? "Recruitment buildings can transfer their available troops directly into this hero's army." : "A hero must stand on the city tile before any recruitment building can transfer troops."}</p>
-        <div className="recruit-buildings">{UNITS.map(unit => {
+        <div className="recruit-buildings">{recruitableUnits.map(unit => {
           const source = BUILDINGS.find(building => building.id === unit.requires);
           const unlocked = cityBuildings.includes(unit.requires);
           const maximum = Math.min(city.recruits[unit.id], Math.floor(game.gold / unit.cost));
@@ -486,7 +518,12 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
           const chooseAmount = (value: number) => setRecruitAmounts((current) => ({...current, [unit.id]: Math.min(Math.max(1, value), Math.max(1, maximum))}));
           return <article key={unit.id} className={!unlocked ? "locked" : ""}>
             <header><span>{source?.icon}</span><div><b>{source?.name}</b><small>{unlocked ? "Operational" : "Not constructed"}</small></div></header>
-            <div className="recruit-unit"><span>{unit.icon}</span><div><b>{unit.name}</b><small>Tier {unit.tier} · {city.recruits[unit.id]} available</small></div></div>
+            <button type="button" className={`recruit-unit ${selectedUnitId === unit.id ? "selected" : ""}`} aria-expanded={selectedUnitId === unit.id} onClick={() => setSelectedUnitId(current => current === unit.id ? null : unit.id)}><span>{unit.icon}</span><div><b>{unit.name}</b><small>Tier {unit.tier} · {city.recruits[unit.id]} available · Click for details</small></div></button>
+            {selectedUnitId === unit.id && <div className="unit-inspector" role="region" aria-label={`${unit.name} statistics`}>
+              <p>{unit.role}</p>
+              <div><span><b>{unit.attack}</b>Attack</span><span><b>{unit.defense}</b>Defense</span><span><b>{unit.damage[0]}–{unit.damage[1]}</b>Damage</span><span><b>{unit.health}</b>Health</span><span><b>{unit.speed}</b>Speed</span><span><b>{unit.initiative}</b>Initiative</span></div>
+              <small>{unit.ranged ? `Ranged · ${unit.shots} shots per battle` : "Melee unit"} · {unit.cost} gold each</small>
+            </div>}
             {unlocked && <div className="recruit-quantity"><button type="button" aria-label={`Recruit one fewer ${unit.name}`} disabled={maximum < 1 || amount <= 1} onClick={() => chooseAmount(amount - 1)}>−</button><input aria-label={`${unit.name} recruitment quantity`} type="number" min="1" max={Math.max(1, maximum)} value={amount} disabled={maximum < 1} onChange={(event) => chooseAmount(Number(event.target.value) || 1)} /><button type="button" aria-label={`Recruit one more ${unit.name}`} disabled={maximum < 1 || amount >= maximum} onClick={() => chooseAmount(amount + 1)}>+</button><button type="button" disabled={maximum < 1} onClick={() => chooseAmount(maximum)}>Max</button></div>}
             <button disabled={!unlocked || !present || maximum < 1} onClick={() => { updateGame(g => recruitFromCity(g, city.id, unit.id, amount)); chooseAmount(1); }}>{unlocked ? `Recruit ${amount} · ${amount * unit.cost} ◆` : "Building required"}</button>
           </article>;
@@ -512,9 +549,9 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
           const requirementNames = building.requires.map(required => BUILDINGS.find(item => item.id === required)?.name).join(" + ");
           return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
             <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
-            <small>{building.description}</small>
+            <small>{recruitableUnits.find(unit => unit.requires === building.id) ? `Recruits ${recruitableUnits.find(unit => unit.requires === building.id)?.name}.` : building.description}</small>
             {building.requires.length > 0 && <p className="requirement-label">Requires: {requirementNames}</p>}
-            {built ? <strong>✓ Built</strong> : <button disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}>{constructionUsed ? "Built this turn" : <>{building.gold} ◆ {building.wood > 0 && `· ${building.wood} ▰`} {building.stone > 0 && `· ${building.stone} ⬟`}</>}</button>}
+            {built ? <strong>✓ Built</strong> : <button className="construction-cost" disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn; the listed cost remains unchanged" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}><span>◆ {building.gold} gold{building.wood > 0 && ` · ▰ ${building.wood} timber`}{building.stone > 0 && ` · ⬟ ${building.stone} stone`}</span>{constructionUsed && <small>Available next turn</small>}</button>}
           </article>;
         })}</div>
       </section>

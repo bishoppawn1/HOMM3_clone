@@ -9,6 +9,7 @@ import {
   MAP_WIDTH,
   MAX_MOVEMENT,
   RESEARCH,
+  adventureTile,
   advanceMonth,
   advanceEra,
   attackCombatStack,
@@ -29,6 +30,7 @@ import {
   eraReadiness,
   eraVisualFamily,
   findPath,
+  isTerrainPassable,
   moveAlongPath,
   moveCombatStack,
   performEnemyCombatTurn,
@@ -39,8 +41,18 @@ import {
   routeCommand,
   startCombat,
   startResearch,
+  unitForEra,
+  unitsForEra,
   waitCombatTurn,
 } from "../app/game-core.js";
+
+function siteTile(game, kind) {
+  return Number(Object.entries(game.sites).find(([, value]) => value === kind)?.[0]);
+}
+
+function pickupTile(game, kind) {
+  return Number(Object.entries(game.pickups).find(([, value]) => value === kind)?.[0]);
+}
 
 function markCombatVictory(game) {
   const started = startCombat(game);
@@ -84,39 +96,68 @@ test("a Bank adds monthly gold income", () => {
   assert.equal(next.gold, game.gold + 175);
 });
 
-test("the adventure map uses a larger thirty-two-by-twenty hidden movement grid", () => {
-  assert.equal(MAP_WIDTH, 32);
-  assert.equal(MAP_HEIGHT, 20);
-  assert.equal(BOARD.length, 640);
+test("the adventure map uses a forty-eight-by-thirty hidden movement grid", () => {
+  assert.equal(MAP_WIDTH, 48);
+  assert.equal(MAP_HEIGHT, 30);
+  assert.equal(BOARD.length, 1440);
+  assert.equal(BOARD.includes("mountain"), true);
+  assert.equal(BOARD.includes("dense-forest"), true);
 });
 
-test("movement permits adjacent land and blocks water, distance, and exhausted armies", () => {
+test("movement permits adjacent land and blocks water, mountains, dense forest, distance, and exhausted armies", () => {
   const game = createGame();
-  assert.equal(canMoveTo(game, 398), true);
-  assert.equal(canMoveTo(game, 400), true);
-  assert.equal(canMoveTo(game, 335), false);
-  assert.equal(canMoveTo({ ...game, hero: 221 }, 222), false);
-  assert.equal(canMoveTo({ ...game, moves: 0 }, 398), false);
+  assert.equal(canMoveTo(game, adventureTile(12, 12)), true);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(17, 4) }, adventureTile(18, 4)), false);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(7, 14) }, adventureTile(7, 15)), false);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(45, 10) }, adventureTile(46, 10)), false);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(14, 10) }, adventureTile(16, 10)), false);
+  assert.equal(canMoveTo({ ...game, moves: 0 }, adventureTile(12, 12)), false);
+});
+
+test("continuous blockers create two mountain passes and a guarded shortest approach", () => {
+  const game = createGame();
+  for (let row = 0; row < MAP_HEIGHT; row += 1) {
+    const spine = [17, 18, 19, 20, 21].map((col) => BOARD[adventureTile(col, row)]);
+    if (row === 8 || row === 22) assert.equal(spine.includes("road"), true);
+    else assert.equal(spine.includes("mountain"), true);
+  }
+  const freehavenRoute = findPath(game, game.settlements.freehaven.tile);
+  assert.equal(freehavenRoute.includes(siteTile(game, "raiders")), true);
+});
+
+test("every settlement and producer entrance remains connected to the capital", () => {
+  const game = createGame();
+  const destinations = [
+    ...Object.values(game.settlements).map((settlement) => settlement.tile),
+    ...Object.values(game.producers).map((producer) => producer.entrance),
+  ];
+  for (const destination of destinations) {
+    assert.equal(isTerrainPassable(destination), true);
+    if (destination !== game.hero) assert.notEqual(findPath(game, destination), null);
+  }
 });
 
 test("the first route command previews a path and the second command travels it", () => {
   const game = createGame();
-  const preview = routeCommand(game, null, 395);
+  const destination = adventureTile(12, 14);
+  const preview = routeCommand(game, null, destination);
   assert.equal(preview.type, "preview");
-  assert.equal(preview.target, 395);
-  assert.equal(preview.path.length, 4);
-  assert.equal(routeCommand(game, preview.target, 396).type, "preview");
-  const confirmed = routeCommand(game, preview.target, 395);
+  assert.equal(preview.target, destination);
+  assert.equal(preview.path.length, 3);
+  assert.equal(routeCommand(game, preview.target, adventureTile(13, 14)).type, "preview");
+  const confirmed = routeCommand(game, preview.target, destination);
   assert.equal(confirmed.type, "travel");
   const moved = moveAlongPath(game, confirmed.path);
-  assert.equal(moved.hero, 395);
-  assert.equal(moved.moves, game.moves - 4);
+  assert.equal(moved.hero, destination);
+  assert.equal(moved.moves, game.moves - 3);
 });
 
-test("pathfinding rejects water but previews destinations beyond remaining movement", () => {
+test("pathfinding rejects natural barriers but uses the guarded mountain passes", () => {
   const game = createGame();
-  assert.equal(findPath(game, 415), null);
-  const command = routeCommand({ ...game, moves: 2 }, null, 391);
+  assert.equal(findPath(game, adventureTile(47, 10)), null);
+  assert.equal(findPath(game, adventureTile(19, 4)), null);
+  assert.equal(findPath(game, adventureTile(7, 16)), null);
+  const command = routeCommand({ ...game, moves: 2 }, null, adventureTile(12, 19));
   assert.equal(command.path.length, 8);
   assert.equal(command.reachablePath.length, 2);
   assert.equal(command.futurePath.length, 6);
@@ -126,23 +167,28 @@ test("pathfinding rejects water but previews destinations beyond remaining movem
 });
 
 test("resource pickups are consumed permanently and stone replaces food", () => {
-  const game = { ...createGame(), hero: 556 };
+  const initial = createGame();
+  const tile = pickupTile(initial, "stone");
+  const game = { ...initial, hero: tile };
   assert.equal("food" in game, false);
   const collected = collectAt(game);
   assert.equal(collected.stone, game.stone + 18);
-  assert.equal(collected.pickups[556], undefined);
-  assert.equal(advanceMonth(collected).pickups[556], undefined);
+  assert.equal(collected.pickups[tile], undefined);
+  assert.equal(advanceMonth(collected).pickups[tile], undefined);
 });
 
 test("magical dust is a distinct collectible special resource", () => {
-  const game = { ...createGame(), hero: 76 };
+  const initial = createGame();
+  const tile = pickupTile(initial, "dust");
+  const game = { ...initial, hero: tile };
   const collected = collectAt(game);
   assert.equal(collected.magicDust, game.magicDust + 4);
-  assert.equal(collected.pickups[76], undefined);
+  assert.equal(collected.pickups[tile], undefined);
 });
 
 test("a Knowledge Hut offers two choices and applies only the selected research bonus", () => {
-  const opened = collectAt({ ...createGame(), hero: 174 });
+  const initial = createGame();
+  const opened = collectAt({ ...initial, hero: pickupTile(initial, "knowledge") });
   assert.equal(opened.researchChoice.length, 2);
   const [selected, rejected] = opened.researchChoice;
   const resolved = chooseResearch(opened, selected.id);
@@ -179,39 +225,61 @@ test("completed research keeps excess points in storage", () => {
 
 test("capital and neutral city occupy separate traversable map tiles", () => {
   const game = createGame();
-  assert.equal(game.settlements.aurum.tile, 367);
-  assert.notEqual(BOARD[game.settlements.aurum.tile], "water");
-  assert.notEqual(BOARD[game.settlements.freehaven.tile], "water");
+  assert.equal(game.settlements.aurum.tile, adventureTile(12, 10));
+  assert.equal(isTerrainPassable(game.settlements.aurum.tile), true);
+  assert.equal(isTerrainPassable(game.settlements.freehaven.tile), true);
   assert.equal(Object.values(game.pickups).includes("city"), false);
 });
 
-test("Freehaven requires a garrison battle and remains on the map after conquest", () => {
-  const confronted = collectAt({ ...createGame(), hero: 179 });
-  assert.equal(confronted.pendingBattle.type, "siege");
+test("settlements expose visible territory boundaries around their map footprints", () => {
+  const game = createGame();
+  for (const settlement of Object.values(game.settlements)) {
+    assert.equal(Array.isArray(settlement.territory), true);
+    assert.equal(settlement.territory.length >= 3, true);
+  }
+});
+
+test("Freehaven refuses entry until its nearby bandits are defeated", () => {
+  const initial = createGame();
+  const city = initial.settlements.freehaven;
+  assert.notEqual(city.blockedBy, city.tile);
+  assert.equal(initial.sites[city.blockedBy], "freehaven-bandits");
+
+  const refused = collectAt({ ...initial, hero: city.tile });
+  assert.equal(refused.pendingBattle, null);
+  assert.equal(refused.settlements.freehaven.owner, "neutral");
+  assert.match(refused.notice, /must defeat the bandits nearby/i);
+
+  const confronted = collectAt({ ...initial, hero: city.blockedBy });
+  assert.equal(confronted.pendingBattle.type, "city-blocker");
+  assert.equal(confronted.pendingBattle.settlementId, "freehaven");
   assert.equal(confronted.cities, 1);
   const deployed = startCombat(confronted);
   assert.equal(deployed.combat.width, COMBAT_WIDTH);
-  assert.equal(deployed.combat.obstacles.some((obstacle) => obstacle.kind === "barricade"), true);
-  const conquered = resolveBattle(markCombatVictory(confronted));
-  assert.equal(conquered.pendingBattle, null);
-  assert.equal(conquered.settlements.freehaven.owner, "player");
-  assert.equal(conquered.settlements.freehaven.tile, 179);
-  assert.equal(conquered.cities, 2);
+  const liberated = resolveBattle(markCombatVictory(confronted));
+  assert.equal(liberated.pendingBattle, null);
+  assert.equal(liberated.sites[city.blockedBy], undefined);
+  assert.equal(liberated.settlements.freehaven.blockedBy, null);
+  assert.equal(liberated.settlements.freehaven.owner, "player");
+  assert.equal(liberated.settlements.freehaven.tile, city.tile);
+  assert.equal(liberated.cities, 2);
+  assert.match(liberated.notice, /free of the bandits/i);
 });
 
 test("a commander may hold position instead of entering a prompted battle", () => {
   const game = createGame();
-  const route = findPath(game, 307);
+  const raiders = siteTile(game, "raiders");
+  const route = findPath(game, raiders);
   const approached = moveAlongPath(game, route);
   const returnTile = route.at(-2) ?? game.hero;
-  assert.equal(approached.hero, 307);
+  assert.equal(approached.hero, raiders);
   assert.equal(approached.pendingBattle.type, "field");
   assert.equal(approached.pendingBattle.returnTile, returnTile);
 
   const held = declineBattle(approached);
   assert.equal(held.hero, returnTile);
   assert.equal(held.pendingBattle, null);
-  assert.equal(held.sites[307], "raiders");
+  assert.equal(held.sites[raiders], "raiders");
   assert.equal(held.moves, approached.moves);
   assert.match(held.notice, /held position/i);
 });
@@ -234,6 +302,32 @@ test("a player can recruit an exact selected quantity", () => {
   assert.equal(recruited.settlements.aurum.recruits.spearmen, game.settlements.aurum.recruits.spearmen - 5);
   assert.equal(recruited.gold, game.gold - 120);
   assert.equal(recruitFromCity(game, "aurum", "spearmen", 99), game);
+});
+
+test("every age upgrades each persistent recruitment line with a distinct historical identity", () => {
+  const rosters = ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"].map(unitsForEra);
+  for (let line = 0; line < rosters[0].length; line += 1) {
+    assert.equal(new Set(rosters.map((roster) => roster[line].name)).size, 6);
+  }
+  assert.equal(unitForEra("slingers", "Ancient").name, "Slingers");
+  assert.equal(unitForEra("slingers", "Classical").name, "Archers");
+  assert.equal(unitForEra("slingers", "Modern").name, "Machine Gunners");
+  assert.ok(unitForEra("slingers", "Modern").attack > unitForEra("slingers", "Ancient").attack);
+  assert.ok(unitForEra("slingers", "Modern").health > unitForEra("slingers", "Ancient").health);
+});
+
+test("recruitment and tactical stacks use the civilization's current-age unit profile", () => {
+  const initial = createGame();
+  const classical = { ...initial, era: "Classical", hero: initial.settlements.aurum.tile };
+  const hoplites = unitForEra("spearmen", "Classical");
+  const recruited = recruitFromCity(classical, "aurum", "spearmen");
+  assert.equal(recruited.gold, classical.gold - hoplites.cost);
+  assert.match(recruited.notice, /Hoplites/);
+
+  const battle = startCombat({ ...classical, pendingBattle: { type: "field", name: "Test Field", strength: 10 } });
+  const stack = battle.combat.stacks.find((item) => item.id === "player-spearmen");
+  assert.equal(stack.era, "Classical");
+  assert.equal(stack.totalHealth, classical.army.spearmen * hoplites.health);
 });
 
 test("the Mason's Yard requires timber rather than stone", () => {
@@ -318,7 +412,8 @@ test("the Garrison creates a small permanent city guard rather than a recruitabl
 });
 
 test("tier-two troops stay locked until their required building exists", () => {
-  const game = { ...createGame(), hero: 367, gold: 3000, wood: 200, stone: 200 };
+  const initial = createGame();
+  const game = { ...initial, hero: initial.settlements.aurum.tile, gold: 3000, wood: 200, stone: 200 };
   game.settlements.aurum.recruits.swordsmen = 3;
   assert.equal(recruitFromCity(game, "aurum", "swordsmen"), game);
   const masonry = buildInCity(game, "aurum", "mason-yard");
@@ -364,7 +459,8 @@ test("tactical combat uses a fifteen-by-nine odd-row hex battlefield", () => {
 });
 
 test("battlefield movement respects stack speed, occupied hexes, and impassable obstacles", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
   const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
   assert.equal(active.unitId, "scouts");
   const reachable = combatReachable(deployed.combat);
@@ -376,14 +472,16 @@ test("battlefield movement respects stack speed, occupied hexes, and impassable 
 });
 
 test("obstacles and intervening stacks block ranged line of sight", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
   assert.equal(combatHasLineOfSight(deployed.combat, 45, 59), true);
   const obstructed = { ...deployed.combat, obstacles: [...deployed.combat.obstacles, { tile: 51, kind: "boulder" }] };
   assert.equal(combatHasLineOfSight(obstructed, 45, 59), false);
 });
 
 test("ranged stacks can target enemies anywhere on the battlefield despite intervening obstacles", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
   const combat = {
     ...deployed.combat,
     activeStackId: "player-slingers",
@@ -395,7 +493,8 @@ test("ranged stacks can target enemies anywhere on the battlefield despite inter
 });
 
 test("ranged stacks spend shots and inflict deterministic casualties", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
   const combat = { ...deployed.combat, activeStackId: "player-slingers" };
   assert.equal(combatCanAttack(combat, "player-slingers", "enemy-slingers"), true);
   const before = combat.stacks.find((stack) => stack.id === "enemy-slingers").totalHealth;
@@ -405,7 +504,8 @@ test("ranged stacks spend shots and inflict deterministic casualties", () => {
 });
 
 test("movement records an animatable action and enemy turns remain visibly selected before acting", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
   const active = deployed.combat.stacks.find((stack) => stack.id === deployed.combat.activeStackId);
   const destination = combatReachable(deployed.combat, active.id)[0];
   const moved = moveCombatStack(deployed, destination);
@@ -421,7 +521,8 @@ test("movement records an animatable action and enemy turns remain visibly selec
 });
 
 test("melee defenders retaliate once and wait or defend changes the current round", () => {
-  const deployed = startCombat(collectAt({ ...createGame(), hero: 307 }));
+  const initial = createGame();
+  const deployed = startCombat(collectAt({ ...initial, hero: siteTile(initial, "raiders") }));
   const arrangedStacks = deployed.combat.stacks.map((stack) => {
     if (stack.id === "player-scouts") return { ...stack, position: 60 };
     if (stack.id === "enemy-scouts") return { ...stack, position: 61, totalHealth: 120, done: true };
@@ -442,12 +543,14 @@ test("melee defenders retaliate once and wait or defend changes the current roun
 });
 
 test("retreat preserves survivors, returns the commander to Aurum, and leaves the enemy site", () => {
-  const initial = collectAt({ ...createGame(), hero: 307 });
+  const game = createGame();
+  const raiders = siteTile(game, "raiders");
+  const initial = collectAt({ ...game, hero: raiders });
   const retreated = resolveBattle(retreatCombat(startCombat(initial)));
   assert.equal(retreated.hero, retreated.settlements.aurum.tile);
   assert.equal(retreated.combat, null);
   assert.equal(retreated.pendingBattle, null);
-  assert.equal(retreated.sites[307], "raiders");
+  assert.equal(retreated.sites[raiders], "raiders");
   assert.deepEqual(retreated.army, initial.army);
 });
 

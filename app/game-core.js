@@ -1,20 +1,60 @@
 export const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-export const MAP_WIDTH = 32;
-export const MAP_HEIGHT = 20;
+export const MAP_WIDTH = 48;
+export const MAP_HEIGHT = 30;
 export const MAX_MOVEMENT = 16;
 export const COMBAT_WIDTH = 15;
 export const COMBAT_HEIGHT = 9;
 
 export const ERAS = ["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"];
 
+export const IMPASSABLE_TERRAIN = Object.freeze(["water", "mountain", "dense-forest"]);
+
+export function adventureTile(col, row) {
+  return row * MAP_WIDTH + col;
+}
+
+function isRoadCoordinate(col, row) {
+  return (row === 8 && col >= 4 && col <= 44)
+    || (row === 22 && col >= 3 && col <= 45)
+    || (col === 12 && row >= 5 && row <= 22)
+    || (row === 5 && col >= 5 && col <= 12)
+    || (col === 5 && row >= 5 && row <= 8)
+    || (col === 27 && row >= 8 && row <= 25)
+    || (col === 42 && row >= 6 && row <= 24);
+}
+
+function isMountainCoordinate(col, row) {
+  if (row === 8 || row === 22) return false;
+  const westernShift = [0, 0, 1, 1, 0, -1][row % 6];
+  const easternShift = [0, -1, -1, 0, 1, 1][row % 6];
+  const westernEdge = 18 + westernShift;
+  const easternEdge = 35 + easternShift;
+  return (col >= westernEdge && col <= westernEdge + 2)
+    || (col >= easternEdge && col <= easternEdge + 2);
+}
+
+function isDenseForestCoordinate(col, row) {
+  const westernWall = row >= 15 && row <= 17 && col <= 18 && (col < 11 || col > 13);
+  const easternWall = row >= 14 && row <= 16 && col >= 36 && (col < 41 || col > 43);
+  const northernWood = row <= 5 && col <= 9 && !(row >= 4 && col >= 4);
+  const southernWood = row >= 25 && col <= 14;
+  return westernWall || easternWall || northernWood || southernWood;
+}
+
 export const BOARD = Array.from({ length: MAP_WIDTH * MAP_HEIGHT }, (_, tile) => {
   const row = Math.floor(tile / MAP_WIDTH), col = tile % MAP_WIDTH;
-  if (col === MAP_WIDTH - 1 || (col === MAP_WIDTH - 2 && row >= 6 && row <= 14)) return "water";
-  if ((row < 7 && col < 10) || (row > 14 && col < 11) || (row > 15 && col > 25)) return "forest";
-  if ((row < 6 && col > 21) || (row > 12 && col > 20)) return "hill";
-  if (col === 12 + Math.floor(row / 5) || (row === 10 && col >= 12 && col <= 23)) return "road";
+  if (isRoadCoordinate(col, row)) return "road";
+  if (col === MAP_WIDTH - 1 || (col === MAP_WIDTH - 2 && row >= 6 && row <= 24)) return "water";
+  if (isMountainCoordinate(col, row)) return "mountain";
+  if (isDenseForestCoordinate(col, row)) return "dense-forest";
+  if ((row < 8 && col < 15) || (row > 23 && col > 37)) return "forest";
+  if ((row < 7 && col > 21 && col < 34) || (row > 18 && col > 20 && col < 35)) return "hill";
   return "plains";
 });
+
+export function isTerrainPassable(tile) {
+  return tile >= 0 && tile < BOARD.length && !IMPASSABLE_TERRAIN.includes(BOARD[tile]);
+}
 
 export function eraVisualFamily(era) {
   return ERAS.includes(era) ? era.toLowerCase() : "ancient";
@@ -73,12 +113,41 @@ export const BUILDINGS = [
 ];
 
 export const UNITS = [
-  { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard", attack: 4, defense: 5, damage: [2, 3], health: 10, speed: 4, initiative: 4, ranged: false },
-  { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range", attack: 4, defense: 3, damage: [2, 3], health: 8, speed: 4, initiative: 5, ranged: true, shots: 8 },
-  { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 55, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false },
-  { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false },
-  { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false },
+  { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard", attack: 4, defense: 5, damage: [2, 3], health: 10, speed: 4, initiative: 4, ranged: false, role: "Defensive infantry that holds ground and protects more fragile formations." },
+  { id: "slingers", name: "Slingers", icon: "◉", tier: 1, cost: 32, requires: "archery-range", attack: 4, defense: 3, damage: [2, 3], health: 8, speed: 4, initiative: 5, ranged: true, shots: 8, role: "Ranged troops that can attack across the battlefield while ammunition remains." },
+  { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 55, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false, role: "Fast light troops that move early and reach exposed enemies quickly." },
+  { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false, role: "Heavy line infantry with balanced attack, defense, and staying power." },
+  { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false, role: "Mobile shock troops with high speed and strong charge damage." },
 ];
+
+const UNIT_ERA_NAMES = {
+  spearmen: ["Spearmen", "Hoplites", "Pikemen", "Halberdiers", "Militia", "Reservists"],
+  slingers: ["Slingers", "Archers", "Longbowmen", "Arquebusiers", "Riflemen", "Machine Gunners"],
+  scouts: ["Scouts", "Skirmishers", "Rangers", "Light Dragoons", "Cavalry Scouts", "Recon Troops"],
+  swordsmen: ["Swordsmen", "Legionaries", "Men-at-Arms", "Grenadiers", "Shock Troops", "Assault Infantry"],
+  horsemen: ["Horsemen", "Companion Cavalry", "Knights", "Cuirassiers", "Lancers", "Armored Cars"],
+};
+
+export function unitForEra(unitId, era = "Ancient") {
+  const base = UNITS.find((unit) => unit.id === unitId);
+  if (!base) return null;
+  const eraIndex = Math.max(0, ERAS.indexOf(era));
+  const damageBonus = eraIndex * 2;
+  return {
+    ...base,
+    name: UNIT_ERA_NAMES[unitId]?.[eraIndex] ?? base.name,
+    cost: base.cost + eraIndex * Math.ceil(base.cost * .3),
+    attack: base.attack + eraIndex * 2,
+    defense: base.defense + eraIndex * 2,
+    damage: [base.damage[0] + damageBonus, base.damage[1] + damageBonus],
+    health: base.health + eraIndex * 4,
+    shots: base.ranged ? (base.shots ?? 0) + eraIndex * 2 : undefined,
+  };
+}
+
+export function unitsForEra(era) {
+  return UNITS.map((unit) => unitForEra(unit.id, era));
+}
 
 const BATTLEFIELD_PATTERNS = {
   field: [
@@ -96,13 +165,13 @@ const BATTLEFIELD_PATTERNS = {
   ],
 };
 
-function unitById(unitId) {
-  return UNITS.find((unit) => unit.id === unitId);
+function unitById(unitId, era = "Ancient") {
+  return unitForEra(unitId, era);
 }
 
 function combatStackCount(stack) {
   if (!stack || stack.totalHealth <= 0) return 0;
-  return Math.ceil(stack.totalHealth / unitById(stack.unitId).health);
+  return Math.ceil(stack.totalHealth / unitById(stack.unitId, stack.era).health);
 }
 
 function combatCoordinates(tile) {
@@ -216,7 +285,7 @@ export function combatReachable(combat, stackId = combat?.activeStackId) {
     for (const neighbor of combatNeighbors(current)) {
       if (distance.has(neighbor) || occupied.has(neighbor) || blocked.has(neighbor)) continue;
       const nextDistance = distance.get(current) + 1;
-      if (nextDistance > unitById(stack.unitId).speed) continue;
+      if (nextDistance > unitById(stack.unitId, stack.era).speed) continue;
       distance.set(neighbor, nextDistance);
       queue.push(neighbor);
     }
@@ -250,7 +319,7 @@ function enemyAdjacent(combat, stack) {
 
 function attackPlan(combat, attacker, defender) {
   if (!attacker || !defender || attacker.side === defender.side || combatStackCount(attacker) <= 0 || combatStackCount(defender) <= 0) return null;
-  const unit = unitById(attacker.unitId);
+  const unit = unitById(attacker.unitId, attacker.era);
   if (unit.ranged && attacker.shots > 0 && !enemyAdjacent(combat, attacker)) {
     return { ranged: true, route: [] };
   }
@@ -279,12 +348,13 @@ function enemyArmyFor(battle) {
   ];
 }
 
-function makeCombatStack(side, unitId, count, position) {
-  const unit = unitById(unitId);
+function makeCombatStack(side, unitId, count, position, era) {
+  const unit = unitById(unitId, era);
   return {
     id: `${side}-${unitId}`,
     side,
     unitId,
+    era,
     position,
     totalHealth: count * unit.health,
     shots: unit.shots ?? 0,
@@ -297,7 +367,7 @@ function makeCombatStack(side, unitId, count, position) {
 
 function nextCombatStack(combat) {
   const sortByInitiative = (direction) => (a, b) => {
-    const initiative = unitById(b.unitId).initiative - unitById(a.unitId).initiative;
+    const initiative = unitById(b.unitId, b.era).initiative - unitById(a.unitId, a.era).initiative;
     if (initiative !== 0) return initiative * direction;
     if (a.side !== b.side) return a.side === "player" ? -1 : 1;
     return a.id.localeCompare(b.id);
@@ -329,7 +399,7 @@ function strikeCombatStack(combat, attackerId, defenderId, ranged, retaliation =
   const attacker = combat.stacks.find((stack) => stack.id === attackerId);
   const defender = combat.stacks.find((stack) => stack.id === defenderId);
   if (!attacker || !defender) return combat;
-  const attackerUnit = unitById(attacker.unitId), defenderUnit = unitById(defender.unitId);
+  const attackerUnit = unitById(attacker.unitId, attacker.era), defenderUnit = unitById(defender.unitId, defender.era);
   const attackerCount = combatStackCount(attacker), before = combatStackCount(defender);
   const defense = defenderUnit.defense + (defender.defending ? 3 : 0);
   const difference = attackerUnit.attack - defense;
@@ -388,9 +458,9 @@ function performEnemyTurn(combat) {
   for (const target of targets) for (const tile of combatNeighbors(target.position)) destinations.add(tile);
   const route = findCombatRoute(combat, stack.id, [...destinations]);
   if (route?.length) {
-    const movement = route.slice(0, unitById(stack.unitId).speed);
+    const movement = route.slice(0, unitById(stack.unitId, stack.era).speed);
     const moved = { ...stack, position: movement.at(-1), done: true };
-    const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} advanced ${movement.length} hex${movement.length === 1 ? "" : "es"}.`] };
+    const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} advanced ${movement.length} hex${movement.length === 1 ? "" : "es"}.`] };
     return recordCombatAction(advanced, { type: "move", stackId: stack.id, from: stack.position, to: moved.position, path: movement });
   }
   return replaceCombatStack(combat, { ...stack, defending: true, done: true });
@@ -415,8 +485,8 @@ export function startCombat(game) {
   const enemyPositions = [29, 59, 74, 104, 134];
   const playerArmy = UNITS.map((unit) => [unit.id, game.army[unit.id] ?? 0]).filter(([, count]) => count > 0);
   if (!playerArmy.length) return { ...game, pendingBattle: null, notice: "Marcellus has no troops available to fight. Recruit an army before returning." };
-  const playerStacks = playerArmy.map(([unitId, count], index) => makeCombatStack("player", unitId, count, playerPositions[index]));
-  const enemyStacks = enemyArmyFor(game.pendingBattle).map(([unitId, count], index) => makeCombatStack("enemy", unitId, count, enemyPositions[index]));
+  const playerStacks = playerArmy.map(([unitId, count], index) => makeCombatStack("player", unitId, count, playerPositions[index], game.era));
+  const enemyStacks = enemyArmyFor(game.pendingBattle).map(([unitId, count], index) => makeCombatStack("enemy", unitId, count, enemyPositions[index], game.era));
   const obstacles = BATTLEFIELD_PATTERNS[game.pendingBattle.type] ?? BATTLEFIELD_PATTERNS.field;
   const combat = continueCombat({
     width: COMBAT_WIDTH,
@@ -439,10 +509,10 @@ export function moveCombatStack(game, destination) {
   if (!combat || combat.result) return game;
   const stack = combat.stacks.find((item) => item.id === combat.activeStackId);
   if (!stack || stack.side !== "player") return game;
-  const route = findCombatRoute(combat, stack.id, [destination], unitById(stack.unitId).speed);
+  const route = findCombatRoute(combat, stack.id, [destination], unitById(stack.unitId, stack.era).speed);
   if (!route?.length) return game;
   const moved = { ...stack, position: destination, done: true, defending: false };
-  const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId).name} moved ${route.length} hex${route.length === 1 ? "" : "es"}.`] };
+  const advanced = { ...replaceCombatStack(combat, moved), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} moved ${route.length} hex${route.length === 1 ? "" : "es"}.`] };
   const next = recordCombatAction(advanced, { type: "move", stackId: stack.id, from: stack.position, to: destination, path: route });
   return { ...game, combat: continueCombat(next) };
 }
@@ -467,7 +537,7 @@ export function waitCombatTurn(game) {
   const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);
   if (!combat || combat.result || !stack || stack.side !== "player" || stack.waited) return game;
   const waiting = { ...stack, waited: true };
-  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, waiting), log: [...combat.log, `${unitById(stack.unitId).name} waited for an opening.`] }) };
+  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, waiting), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} waited for an opening.`] }) };
 }
 
 export function defendCombatTurn(game) {
@@ -475,7 +545,7 @@ export function defendCombatTurn(game) {
   const stack = combat?.stacks.find((item) => item.id === combat.activeStackId);
   if (!combat || combat.result || !stack || stack.side !== "player") return game;
   const defending = { ...stack, defending: true, done: true };
-  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, defending), log: [...combat.log, `${unitById(stack.unitId).name} took a defensive stance.`] }) };
+  return { ...game, combat: continueCombat({ ...replaceCombatStack(combat, defending), log: [...combat.log, `${unitById(stack.unitId, stack.era).name} took a defensive stance.`] }) };
 }
 
 export function retreatCombat(game) {
@@ -484,24 +554,32 @@ export function retreatCombat(game) {
 }
 
 export function createGame() {
+  const aurum = adventureTile(12, 10);
+  const hero = adventureTile(12, 11);
+  const freehaven = adventureTile(42, 8);
+  const pinewater = adventureTile(5, 5);
+  const redcliff = adventureTile(27, 24);
+  const violetworks = adventureTile(42, 19);
+  const raiderPass = adventureTile(19, 8);
+  const freehavenBandits = adventureTile(39, 8);
   return {
-    year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero: 399, moves: MAX_MOVEMENT,
+    year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
     gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
     army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0 },
     techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null, combat: null,
     constructionThisTurn: {},
     buildings: { aurum: ["town-hall", "militia-yard", "archery-range", "scout-camp"], freehaven: ["town-hall", "militia-yard"] },
     settlements: {
-      aurum: { id: "aurum", name: "Aurum", tile: 367, footprint: [334, 335, 336, 366, 367, 368], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
-      freehaven: { id: "freehaven", name: "Freehaven", tile: 179, footprint: [146, 147, 148, 178, 179, 180], owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 26 },
+      aurum: { id: "aurum", name: "Aurum", tile: aurum, footprint: [adventureTile(11, 9), adventureTile(12, 9), adventureTile(13, 9), adventureTile(11, 10), aurum, adventureTile(13, 10)], territory: [[7, 6], [16, 6], [18, 11], [15, 15], [8, 14], [6, 10]], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
+      freehaven: { id: "freehaven", name: "Freehaven", tile: freehaven, footprint: [adventureTile(41, 7), adventureTile(42, 7), adventureTile(43, 7), adventureTile(41, 8), freehaven, adventureTile(43, 8)], territory: [[38, 4], [46, 4], [47, 11], [41, 13], [37, 9]], blockedBy: freehavenBandits, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 0 },
     },
     producers: {
-      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [131, 132, 163, 164], entrance: 164, owner: "neutral", garrison: 24 },
-      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [472, 473, 474, 504, 505, 506], entrance: 505, owner: "neutral", garrison: 32 },
-      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [120, 121, 122, 152, 153, 154], entrance: 153, owner: "neutral", garrison: 38 },
+      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(4, 4), adventureTile(5, 4), adventureTile(4, 5), pinewater], entrance: pinewater, owner: "neutral", garrison: 24 },
+      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(26, 23), adventureTile(27, 23), adventureTile(28, 23), adventureTile(26, 24), redcliff, adventureTile(28, 24)], entrance: redcliff, owner: "neutral", garrison: 32 },
+      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(41, 18), adventureTile(42, 18), adventureTile(43, 18), adventureTile(41, 19), violetworks, adventureTile(43, 19)], entrance: violetworks, owner: "neutral", garrison: 38 },
     },
-    sites: { 307: "raiders" },
-    pickups: { 76: "dust", 174: "knowledge", 322: "timber", 556: "stone", 430: "gold" },
+    sites: { [raiderPass]: "raiders", [freehavenBandits]: "freehaven-bandits" },
+    pickups: { [adventureTile(8, 5)]: "dust", [adventureTile(24, 8)]: "knowledge", [adventureTile(12, 14)]: "timber", [adventureTile(31, 22)]: "stone", [adventureTile(42, 24)]: "gold" },
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
     log: ["The campaign began in Year 1.", "Marcellus Vale departed Aurum."],
   };
@@ -526,7 +604,7 @@ function destinationFor(game, tile) {
 }
 
 function isPassable(game, tile) {
-  if (tile < 0 || tile >= BOARD.length || BOARD[tile] === "water") return false;
+  if (!isTerrainPassable(tile)) return false;
   const producer = producerAt(game, tile);
   const settlement = settlementAt(game, tile);
   return (!producer || producer.entrance === tile) && (!settlement || settlement.tile === tile);
@@ -609,6 +687,7 @@ export function collectAt(game) {
   const settlement = settlementAt(game, game.hero);
   if (settlement) {
     if (settlement.owner === "player") return { ...game, notice: `Marcellus entered ${settlement.name}. Open Cities to recruit its available troops.` };
+    if (settlement.blockedBy && game.sites[settlement.blockedBy]) return { ...game, notice: `You must defeat the bandits nearby before ${settlement.name} can be entered.` };
     return { ...game, pendingBattle: { type: "siege", settlementId: settlement.id, name: settlement.name, strength: settlement.garrison }, notice: `${settlement.name}'s garrison blocks the gates.` };
   }
   const producer = producerAt(game, game.hero);
@@ -617,6 +696,7 @@ export function collectAt(game) {
     return { ...game, pendingBattle: { type: "producer", producerId: producer.id, name: producer.name, strength: producer.garrison }, notice: `A guarding force holds ${producer.name}.` };
   }
   const site = game.sites[game.hero];
+  if (site === "freehaven-bandits") return { ...game, pendingBattle: { type: "city-blocker", settlementId: "freehaven", name: "Freehaven Bandits", strength: 26 }, notice: "The bandit company outside Freehaven prepares to fight." };
   if (site === "raiders") return { ...game, pendingBattle: { type: "field", name: "March Raiders", strength: 18 }, notice: "A raider company bars the road." };
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
@@ -657,6 +737,13 @@ export function resolveBattle(game) {
     const settlement = game.settlements[battle.settlementId];
     const settlements = { ...game.settlements, [battle.settlementId]: { ...settlement, owner: "player", garrison: 0 } };
     return { ...game, army, settlements, cities: game.cities + 1, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${settlement.name} has been conquered and added to your Cities list.`, log: [...game.log, `Captured ${settlement.name} after defeating its garrison.`] };
+  }
+  if (battle.type === "city-blocker") {
+    const settlement = game.settlements[battle.settlementId];
+    const sites = { ...game.sites };
+    delete sites[settlement.blockedBy];
+    const settlements = { ...game.settlements, [settlement.id]: { ...settlement, blockedBy: null, owner: "player", garrison: 0 } };
+    return { ...game, army, sites, settlements, cities: game.cities + 1, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${settlement.name} is free of the bandits and has joined your civilization.`, log: [...game.log, `Defeated the bandits outside ${settlement.name}.`] };
   }
   if (battle.type === "producer") {
     const producer = game.producers[battle.producerId];
@@ -746,7 +833,7 @@ export function buildInCity(game, cityId, buildingId) {
 
 export function recruitFromCity(game, cityId, unitId, amount = 1) {
   const city = game.settlements[cityId];
-  const unit = UNITS.find((item) => item.id === unitId);
+  const unit = unitForEra(unitId, game.era);
   const cityBuildings = game.buildings[cityId] ?? [];
   const quantity = Number(amount);
   const totalCost = unit ? unit.cost * quantity : Infinity;

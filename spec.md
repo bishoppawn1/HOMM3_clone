@@ -36,10 +36,12 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 ### 4.1 Movement — Prototype
 
-- The Western Marches use a larger, scrollable 32-by-20 logical map. Its central field is one region within a broader landscape of woodland, hills, roads, and water, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
+- The Western Marches use a larger, scrollable 48-by-30 logical map. Its central field is one region within a broader landscape of woodland, hills, roads, water, forests, and mountain ranges, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
 - A commander spends one movement point to enter an orthogonally adjacent passable tile.
-- Water is impassable without an appropriate transport capability.
-- Forest and hill artwork is currently decorative and does not impose a movement penalty.
+- Water, mountains, and dense forest are impassable. Sparse woodland and hills remain passable and decorative.
+- Modular painted mountain and dense-forest assets overlap adjacent blocker cells so the landscape reads as continuous ranges and woods rather than isolated symbols.
+- Continuous natural barriers divide the map into defensible regions. Their deliberate road passes and forest gaps create strategic chokepoints; the shortest approach to Freehaven crosses a guarded mountain pass, while a much longer southern passage remains available.
+- Every settlement and persistent producer entrance remains connected to the capital by passable terrain and roads. Barriers constrain approach directions without isolating interactive locations.
 - The first right-click on any passable destination previews the shortest available route. A second right-click on that same destination executes travel; right-clicking elsewhere replaces the preview.
 - A route may extend beyond the commander's remaining movement. The portion traversable this month is yellow and the future portion is gray. Confirming a long route moves only across the yellow portion and spends the available movement; the destination can be plotted again after movement refreshes.
 - Travel stops early if it encounters a battle or a Knowledge Hut choice.
@@ -49,7 +51,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
-- **Neutral city:** is a persistent settlement, never a pickup. Entering its tile begins a fight against its garrison; only victory transfers control.
+- **Neutral city:** is a persistent settlement, never a pickup. Freehaven is protected by a separate nearby bandit force: entering the city before defeating that force is refused, and victory over the defenders transfers the city to the player.
 - **Hostile army:** opens the tactical hex battlefield. Victory removes the hostile site and awards its listed spoils; retreat or defeat leaves it in place.
 
 Consumed sites do not reappear merely because a month or year passes.
@@ -116,7 +118,7 @@ Ancient, Classical, and later prototype transitions currently require only compl
 
 The working progression is Ancient, Classical, Medieval, Gunpowder, Industrial, and Modern. Names and boundaries may change as the technology tree is researched and balanced.
 
-Cities belong to the civilization but must construct local infrastructure before using every new-age capability. Old units remain usable, allowing technological transitions to reshape armies gradually.
+Cities belong to the civilization but must construct local infrastructure before using every new-age capability. Existing troop pools remain intact when an age changes, but each military line adopts the new age's historical identity, recruitment cost, and improved combat statistics.
 
 ## 8. Cities and construction
 
@@ -126,23 +128,23 @@ The Cities tab first lists every settlement currently controlled by the player. 
 
 The prototype contains a five-tier construction tree with more than twenty-five structures across economy, civic, military, and defense branches. The visible tree includes foundational buildings, city-tier upgrades, production buildings, research institutions, recruitment buildings, walls, and late-city capstones.
 
-Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit and provides minus, plus, direct numeric entry, and maximum controls so the player can choose an exact quantity before paying the combined cost. A commander must physically occupy that city's adventure-map entrance to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment.
+Each military recruitment building generates its own stock of available troops over time. The city screen identifies the source building for every unit and provides minus, plus, direct numeric entry, and maximum controls so the player can choose an exact quantity before paying the combined cost. Left-clicking or keyboard-activating a unit row expands an inspector showing its battlefield role, attack, defense, damage, health, speed, initiative, ranged status, ammunition, and individual gold cost. A commander must physically occupy that city's adventure-map entrance to recruit from those buildings and transfer troops into their field army. Merely owning or opening a distant city's screen does not permit recruitment.
 
 ### 8.2 Building tree — Prototype
 
 Construction is presented as a branching, spatial prerequisite tree in the style of a classic adventure-strategy city screen. A building can be purchased only when all parent nodes are complete and the city has every listed resource. Built, available, unaffordable, and prerequisite-locked nodes must be visually distinct. Routed arrow connectors run from every prerequisite building to the building it unlocks, completed dependency paths use a distinct color, and every dependent node names all of its requirements.
 
-Each city may complete at most one building per turn. Constructing in one city does not consume another owned city's construction opportunity. The construction limit resets for every city when the player ends the month, and the city screen must clearly show whether that city's construction opportunity is available or already used.
+Each city may complete at most one building per turn. Constructing in one city does not consume another owned city's construction opportunity. The construction limit resets for every city when the player ends the month, and the city screen must clearly show whether that city's construction opportunity is available or already used. When construction has already been used, every unbuilt node remains disabled but continues to display its complete gold, timber, and stone cost for planning the next turn.
 
 The economy branch runs from Market, Mason's Yard, Warehouse, and Bank toward Trade Guild, Foundry, and Treasury. The civic branch runs from Town Hall through Archive and City Hall toward Workshop, Academy, Monument, Great Library, and Civic Forum. Research-producing buildings—Scribes' Archive, Academy, and Great Library—occupy one consistent vertical line, while the City Hall, Civic Workshop, Monument, and Civic Forum form the parallel civic-development line. The City Hall explicitly upgrades a settlement to city tier II and gates advanced development. The Mason's Yard costs gold and timber, never the stone it is intended to produce.
 
-The military branch contains separate recruitment sources: Militia Yard for Spearmen, Archery Range for Slingers, Scout Camp for Scouts, Tier II Barracks for Swordsmen, and Stable for Horsemen. It continues through Training Grounds, Siege Workshop, War College, and Cavalry School. Constructing a recruitment building seeds its first recruit pool; later months add more troops. Units remain visible but locked until their source building exists.
+The military branch contains five persistent recruitment lines. In the Ancient Age these are Spearmen from the Militia Yard, Slingers from the Archery Range, Scouts from the Scout Camp, Swordsmen from the Tier II Barracks, and Horsemen from the Stable. Each line receives a distinct grounded historical name in every later age—for example, the ranged line advances through Archers, Longbowmen, Arquebusiers, Riflemen, and Machine Gunners. Its accumulated troops and city stock remain in the same line while its displayed identity and combat profile upgrade. The branch continues through Training Grounds, Siege Workshop, War College, and Cavalry School. Constructing a recruitment building seeds its first recruit pool; later months add more troops. Units remain visible but locked until their source building exists.
 
 The defense branch includes Palisade, Garrison, Stone Walls, and Citadel. A Garrison creates a small permanent city guard. Those defenders contribute only when an enemy attacks the city: they never appear as a recruitable field unit and cannot be transferred into a hero's army. The guard grows slowly and remains intentionally small; fortifications add separate defense strength.
 
 ## 9. Armies and tactical combat — Prototype
 
-Adventure-map encounters deploy both armies onto a 15-by-9 odd-row-offset hex battlefield. Each troop type forms one stack, and each stack tracks its troop count through total health. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
+Adventure-map encounters deploy both armies onto a 15-by-9 odd-row-offset hex battlefield. Each troop type forms one stack, and each stack tracks its troop count through total health. A stack records the age profile with which it entered combat, ensuring the names and statistics shown in the city inspector match the values used in battle. A unit definition provides health per troop, attack, defense, minimum and maximum damage, speed, initiative, ranged capability, and ammunition. Damage uses the deterministic midpoint of the unit's damage range so identical battle states always produce identical results.
 
 ### 9.1 Turn order and orders — Prototype
 
@@ -172,13 +174,16 @@ Morale, formations, elevation, destructible siege defenses, commander abilities,
 
 ### 9.4 Settlement placement
 
-Every settlement occupies a multi-cell visual footprint with one passable entrance and must be reachable using an appropriate movement mode. The capital must be visibly represented on the adventure map as an actual city rather than a castle symbol. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a guarded neutral city on traversable land and remains visible after conquest.
+Every settlement occupies a multi-cell visual footprint with one passable entrance and must be reachable using an appropriate movement mode. Each city has a subtle outlined territory around its local region. The capital must be visibly represented on the adventure map as an actual city rather than a castle symbol. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a neutral city on traversable land and remains visible after joining the player.
+
+Freehaven's bandit force stands outside the city as its own encounter. Attempting to enter while that force remains does not open the city or begin an internal siege; it reports that the nearby bandits must be defeated. Victory over the outside bandits removes their map site, clears the city's lock, and brings Freehaven into the player's civilization.
 
 ## 10. Interface and controls — Prototype
 
 - Right-click a passable location once to preview its route and right-click the same destination again to travel. Right-clicking another location replots the route. Yellow route segments are available now; gray segments exceed current movement.
 - Left-clicking the map does not move the commander. Keyboard users can focus a map position and press Enter or Space twice for the same preview-and-confirm behavior.
-- Adventure-map objects use recognizable artwork without permanent nameplates. Their names and state remain available through hover text and accessible labels.
+- Adventure-map objects use recognizable artwork without permanent nameplates. Timber is shown as cut logs, stone as a dressed-stone cache, gold as a pay chest, and magical dust as a luminous mineral supply. Their names and state remain available through hover text and accessible labels.
+- Cities and all three producer types use distinct, purpose-made artwork for every age: Ancient, Classical, Medieval, Gunpowder, Industrial, and Modern. Ancient construction avoids Roman or Classical architecture; Greco-Roman forms belong only to the Classical set.
 - Use Research and Cities tabs to switch the side panel.
 - Select an owned city from the Cities list to enter its management view.
 - Move a commander onto an owned city before recruiting its available troops.

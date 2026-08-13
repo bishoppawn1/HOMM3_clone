@@ -28,11 +28,33 @@ test("branch-based GitHub Pages serves the game instead of the README", async ()
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("scripts/sync-pages-root.mjs", root), "utf8"),
     access(new URL(".nojekyll", root)),
-    access(new URL("public/assets/map/city-preindustrial.webp", root)),
+    access(new URL("public/assets/map-v2/city-ancient.webp", root)),
   ]);
   assert.match(html, /Through the Ages/);
   assert.match(html, /HOMM3_clone\/_next/);
   assert.match(syncScript, /exportDirectory}\/assets/);
+});
+
+test("every age has distinct city and producer artwork", async () => {
+  const ages = ["ancient", "classical", "medieval", "gunpowder", "industrial", "modern"];
+  const producers = ["sawmill", "quarry", "dustworks"];
+  await Promise.all(ages.flatMap((age) => [
+    access(new URL(`public/assets/map-v2/city-${age}.webp`, root)),
+    ...producers.map((producer) => access(new URL(`public/assets/map-v2/${producer}-${age}.webp`, root))),
+  ]));
+});
+
+test("the map uses illustrated terrain, enemies, pickups, and territory borders", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+    ...["terrain-forest", "terrain-mountain", "enemy-bandits", "pickup-timber", "pickup-stone", "pickup-gold", "pickup-dust"]
+      .map((asset) => access(new URL(`public/assets/map-v2/${asset}.webp`, root))),
+  ]);
+  assert.match(page, /className="territory-layer"/);
+  assert.match(page, /pickup-\$\{pickup\}/);
+  assert.match(page, /enemy-bandits\.webp/);
+  assert.match(styles, /\.territory-layer/);
 });
 
 test("entering a city uses a dedicated full-screen management surface", async () => {
@@ -46,6 +68,11 @@ test("entering a city uses a dedicated full-screen management surface", async ()
   assert.match(page, /construction-connectors/);
   assert.match(page, /buildingConnectorPath/);
   assert.match(page, /Requires:/);
+  assert.match(page, /className=\{`recruit-unit/);
+  assert.match(page, /unit-inspector/);
+  assert.match(page, /Attack<\/span>/);
+  assert.match(page, /Available next turn/);
+  assert.match(page, /construction-cost/);
 });
 
 test("the age advancement control changes game state", async () => {
