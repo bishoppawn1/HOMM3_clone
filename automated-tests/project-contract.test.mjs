@@ -44,21 +44,23 @@ test("every age has distinct city and producer artwork", async () => {
   ]));
 });
 
-test("the map uses illustrated terrain, enemies, pickups, and territory borders", async () => {
+test("the map uses proportioned terrain, winding roads, enemies, pickups, and subtle territory tint", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
     ...["terrain-forest", "terrain-mountain", "enemy-bandits", "pickup-timber", "pickup-stone", "pickup-gold", "pickup-dust"]
       .map((asset) => access(new URL(`public/assets/map-v2/${asset}.webp`, root))),
   ]);
-  assert.match(page, /className="territory-layer"/);
+  assert.match(page, /className={`territory-fill/);
   assert.match(page, /pickup-\$\{pickup\}/);
   assert.match(page, /enemy-bandits\.webp/);
-  assert.match(page, /\["north", "middle", "south"\]/);
-  assert.match(page, /west-wall west-side/);
-  assert.match(page, /east-wall east-side/);
-  assert.match(styles, /\.territory-layer/);
-  assert.match(styles, /\.terrain-patch\.middle-segment/);
+  assert.match(page, /const adventureRoads/);
+  assert.match(page, /const terrainArtwork/);
+  assert.match(page, /C 14 11 22 14\.5/);
+  assert.match(page, /terrainPatchBounds/);
+  assert.doesNotMatch(page, /className="territory-layer"/);
+  assert.match(styles, /\.terrain-patch\{[^}]*height:auto/);
+  assert.doesNotMatch(styles, /object-fit:fill/);
 });
 
 test("entering a city uses a dedicated full-screen management surface", async () => {

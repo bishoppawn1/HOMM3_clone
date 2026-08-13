@@ -43,6 +43,40 @@ import {
 
 const tileGlyph: Record<string, string> = { hill: "▲" };
 
+const adventureRoads = [
+  "M 6 13 C 14 11 22 14.5 31 13 S 48 11.5 64 13",
+  "M 4 34 C 14 35.5 23 31 34 33 S 52 35.5 64 33",
+  "M 18 8 C 20 15 16.5 24 18.5 34",
+  "M 8 8 C 10 9 13 10.5 18 11.5",
+  "M 8 8 C 7.5 10 9 12 10 13",
+  "M 41 13 C 39.5 20 43 29 41 38",
+  "M 61 10 C 59.5 17 63 25 61 35",
+];
+
+const terrainArtwork = [
+  { kind: "forest", col: -2, row: -2, size: 10, turn: -8 },
+  { kind: "forest", col: 5, row: -1, size: 10, turn: 5 },
+  { kind: "forest", col: 11, row: 2, size: 9, turn: -4 },
+  { kind: "forest", col: -3, row: 6, size: 10, turn: 4 },
+  { kind: "forest", col: 4, row: 7, size: 9, turn: -7 },
+  { kind: "forest", col: -3, row: 19, size: 10, turn: -5 },
+  { kind: "forest", col: 5, row: 20, size: 10, turn: 6 },
+  { kind: "forest", col: 13, row: 19, size: 9, turn: -4 },
+  { kind: "forest", col: 20, row: 20, size: 9, turn: 7 },
+  { kind: "forest", col: -2, row: 35, size: 11, turn: 4 },
+  { kind: "forest", col: 7, row: 37, size: 10, turn: -7 },
+  { kind: "forest", col: 16, row: 36, size: 10, turn: 5 },
+  { kind: "forest", col: 52, row: 18, size: 9, turn: -6 },
+  { kind: "forest", col: 58, row: 20, size: 9, turn: 5 },
+  { kind: "forest", col: 62, row: 17, size: 6, turn: -5 },
+  { kind: "forest", col: 53, row: 34, size: 10, turn: 6 },
+  { kind: "forest", col: 59, row: 36, size: 8, turn: -7 },
+  ...[-2, 3, 8, 16, 21, 26, 35, 40].flatMap((row, index) => [
+    { kind: "mountain", col: 26 + [1, 2, 3, 1, -1, 0, 2, 1][index], row, size: 5, turn: [-8, -3, 5, 8, 3, -5, -8, 4][index] },
+    { kind: "mountain", col: 50 + [2, 0, -1, -2, 0, 2, 1, -1][index], row, size: 5, turn: [6, 2, -6, -9, -3, 5, 8, -4][index] },
+  ]),
+];
+
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
 type Settlement = { id: string; name: string; tile: number; footprint?: number[]; territory?: number[][]; blockedBy?: number | null; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
 type Producer = { id: string; name: string; kind: string; resource: string; amount: number; footprint: number[]; entrance: number; owner: string; garrison: number };
@@ -162,31 +196,16 @@ export default function Home() {
           <div className="map-viewport" ref={mapViewport}>
           <div className={`map-grid era-${visualEra}`} style={{gridTemplateColumns: `repeat(${MAP_WIDTH}, 1fr)`, gridTemplateRows: `repeat(${MAP_HEIGHT}, 1fr)`}} onContextMenu={(event) => event.preventDefault()}>
             <svg className="terrain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
-              <path className="river-bank" d="M 46.4 0 C 47.2 6 46.2 12 46.6 17 C 47 22 46.4 26 46.8 30 L 48 30 L 48 0 Z" />
-              <path className="river-shine" d="M 47.1 0 C 47.4 7 46.7 12 47.2 18 C 47.5 23 47 27 47.3 30" />
-              {[
-                "M 4.5 8.5 L 44.5 8.5", "M 3.5 22.5 L 45.5 22.5", "M 12.5 5.5 L 12.5 22.5",
-                "M 5.5 5.5 L 12.5 5.5", "M 5.5 5.5 L 5.5 8.5", "M 27.5 8.5 L 27.5 25.5", "M 42.5 6.5 L 42.5 24.5",
-              ].map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
-              {[
-                "M 4.5 8.5 L 44.5 8.5", "M 3.5 22.5 L 45.5 22.5", "M 12.5 5.5 L 12.5 22.5",
-                "M 5.5 5.5 L 12.5 5.5", "M 5.5 5.5 L 5.5 8.5", "M 27.5 8.5 L 27.5 25.5", "M 42.5 6.5 L 42.5 24.5",
-              ].map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
+              <path className="river-bank" d="M 67 0 C 69 6 65 11 67 17 C 69 23 64.5 28 66.5 34 C 68.5 39 65 42 67 45 L 72 45 L 72 0 Z" />
+              <path className="river-shine" d="M 68.2 0 C 70 6 66.4 12 68 18 C 69.5 24 66 29 67.7 35 C 69 40 66.5 42 68 45" />
+              {adventureRoads.map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
+              {adventureRoads.map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
               {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-fill-${city.id}`} className={`territory-fill ${city.owner}`} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
             </svg>
             <div className="terrain-patches" aria-hidden="true">
-              <img className="terrain-patch forest north-west" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest west-wall west-side" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest west-wall east-side" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest south-west" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest east-wall west-side" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest east-wall east-side" src="assets/map-v2/terrain-forest.webp" alt="" />
-              <img className="terrain-patch forest south-east" src="assets/map-v2/terrain-forest.webp" alt="" />
-              {(["north", "middle", "south"] as const).flatMap(segment => ["west", "east"].map(side => <img key={`${side}-${segment}`} className={`terrain-patch mountain ${side}-range ${segment}-segment`} src="assets/map-v2/terrain-mountain.webp" alt="" />))}
+              {terrainArtwork.map((patch, index) => <img key={`${patch.kind}-${index}`} className={`terrain-patch ${patch.kind}`} style={terrainPatchBounds(patch)} src={`assets/map-v2/terrain-${patch.kind}.webp`} alt="" />)}
             </div>
             {BOARD.map((tile, index) => {
-              const row = Math.floor(index / MAP_WIDTH);
-              const col = index % MAP_WIDTH;
               const pickup = game.pickups[index];
               const guardedPickup = pickup && game.pickupGuards[index] !== undefined && game.sites[game.pickupGuards[index]] !== undefined;
               const site = game.sites[index];
@@ -220,9 +239,6 @@ export default function Home() {
               {routeSegment(game.hero, plannedPath.slice(0, game.moves), "route-now")}
               {routeSegment(plannedPath[Math.min(game.moves, plannedPath.length) - 1] ?? game.hero, plannedPath.slice(game.moves), "route-later")}
             </svg>}
-            <svg className="territory-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
-              {Object.values(game.settlements).map((city) => city.territory && <polygon key={`territory-${city.id}`} className={city.owner} points={city.territory.map(([x, y]) => `${x},${y}`).join(" ")} />)}
-            </svg>
             {Object.values(game.settlements).map((city) => <div key={city.id} className={`map-city ${city.owner} ${city.id}`} style={producerBounds(city.footprint ?? [city.tile])} aria-hidden="true">
               <img src={`assets/map-v2/city-${visualEra}.webp`} alt="" />
             </div>)}
@@ -480,6 +496,15 @@ function producerBounds(footprint: number[]) {
     top: `${top / MAP_HEIGHT * 100}%`,
     width: `${(Math.max(...columns) - left + 1) / MAP_WIDTH * 100}%`,
     height: `${(Math.max(...rows) - top + 1) / MAP_HEIGHT * 100}%`,
+  };
+}
+
+function terrainPatchBounds(patch: { col: number; row: number; size: number; turn: number }) {
+  return {
+    left: `${patch.col / MAP_WIDTH * 100}%`,
+    top: `${patch.row / MAP_HEIGHT * 100}%`,
+    width: `${patch.size / MAP_WIDTH * 100}%`,
+    transform: `rotate(${patch.turn}deg)`,
   };
 }
 

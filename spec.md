@@ -36,10 +36,10 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 ### 4.1 Movement — Prototype
 
-- The Western Marches use a larger, scrollable 48-by-30 logical map. Its central field is one region within a broader landscape of woodland, hills, roads, water, forests, and mountain ranges, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
+- The Western Marches use a large, scrollable 72-by-45 logical map. Its central field is one region within a broader landscape of woodland, hills, winding roads, a curved eastern coast, irregular forests, and serpentine mountain ranges, all rendered as continuous terrain without visible grid lines or per-cell texture seams.
 - A commander spends one movement point to enter an orthogonally adjacent passable tile.
 - Water, mountains, and dense forest are impassable. Sparse woodland and hills remain passable and decorative.
-- Modular painted mountain and dense-forest assets overlap adjacent blocker cells so the landscape reads as continuous ranges and woods rather than isolated symbols.
+- Modular painted mountain and dense-forest assets retain their native proportions and overlap only nearby blocker cells, so their visible footprint tracks the underlying impassable area while still reading as continuous ranges and woods.
 - Continuous natural barriers divide the map into defensible regions. Their deliberate road passes and forest gaps create strategic chokepoints; the shortest approach to Freehaven crosses a guarded mountain pass, while a much longer southern passage remains available.
 - Every settlement and persistent producer entrance remains connected to the capital by passable terrain and roads. Barriers constrain approach directions without isolating interactive locations.
 - The first right-click on any passable destination previews the shortest available route. A second right-click on that same destination executes travel; right-clicking elsewhere replaces the preview.
@@ -176,7 +176,7 @@ Morale, formations, elevation, destructible siege defenses, commander abilities,
 
 ### 9.4 Settlement placement
 
-Every settlement occupies a multi-cell visual footprint with one passable entrance and must be reachable using an appropriate movement mode. Each city has a subtle outlined territory around its local region. The capital must be visibly represented on the adventure map as an actual city rather than a castle symbol. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a neutral city on traversable land and remains visible after joining the player.
+Every settlement occupies a multi-cell visual footprint with one passable entrance and must be reachable using an appropriate movement mode. Each city has a faint, irregular regional tint without a geometric territory outline. The capital must be visibly represented on the adventure map as an actual city rather than a castle symbol. The prototype capital, Aurum, is a prominent central landmark. Freehaven is a neutral city on traversable land and remains visible after joining the player.
 
 Freehaven's bandit force stands outside the city as its own encounter. Attempting to enter while that force remains does not open the city or begin an internal siege; it reports that the nearby bandits must be defeated. Victory over the outside bandits removes their map site, clears the city's lock, and brings Freehaven into the player's civilization.
 

@@ -96,36 +96,41 @@ test("a Bank adds monthly gold income", () => {
   assert.equal(next.gold, game.gold + 175);
 });
 
-test("the adventure map uses a forty-eight-by-thirty hidden movement grid", () => {
-  assert.equal(MAP_WIDTH, 48);
-  assert.equal(MAP_HEIGHT, 30);
-  assert.equal(BOARD.length, 1440);
+test("the adventure map uses a seventy-two-by-forty-five hidden movement grid", () => {
+  assert.equal(MAP_WIDTH, 72);
+  assert.equal(MAP_HEIGHT, 45);
+  assert.equal(BOARD.length, 3240);
   assert.equal(BOARD.includes("mountain"), true);
   assert.equal(BOARD.includes("dense-forest"), true);
+  const coastStarts = Array.from({ length: MAP_HEIGHT }, (_, row) => BOARD.findIndex((terrain, tile) => Math.floor(tile / MAP_WIDTH) === row && terrain === "water") % MAP_WIDTH);
+  assert.equal(new Set(coastStarts).size >= 4, true);
 });
 
 test("movement permits adjacent land and blocks water, mountains, dense forest, distance, and exhausted armies", () => {
   const game = createGame();
-  assert.equal(canMoveTo(game, adventureTile(12, 12)), true);
-  assert.equal(canMoveTo({ ...game, hero: adventureTile(17, 4) }, adventureTile(18, 4)), false);
-  assert.equal(canMoveTo({ ...game, hero: adventureTile(7, 14) }, adventureTile(7, 15)), false);
-  assert.equal(canMoveTo({ ...game, hero: adventureTile(45, 10) }, adventureTile(46, 10)), false);
-  assert.equal(canMoveTo({ ...game, hero: adventureTile(14, 10) }, adventureTile(16, 10)), false);
-  assert.equal(canMoveTo({ ...game, moves: 0 }, adventureTile(12, 12)), false);
+  assert.equal(canMoveTo(game, adventureTile(18, 18)), true);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(28, 1) }, adventureTile(29, 1)), false);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(19, 1) }, adventureTile(18, 1)), false);
+  assert.equal(canMoveTo({ ...game, hero: adventureTile(66, 1) }, adventureTile(67, 1)), false);
+  assert.equal(canMoveTo(game, adventureTile(20, 17)), false);
+  assert.equal(canMoveTo({ ...game, moves: 0 }, adventureTile(18, 18)), false);
 });
 
-test("continuous blockers create two mountain passes and routes detour around living raiders", () => {
+test("continuous winding blockers create mountain passes and routes detour around living raiders", () => {
   const game = createGame();
+  const westernCenters = [];
   for (let row = 0; row < MAP_HEIGHT; row += 1) {
-    const spine = [17, 18, 19, 20, 21].map((col) => BOARD[adventureTile(col, row)]);
-    if (row === 8 || row === 22) assert.equal(spine.includes("road"), true);
-    else assert.equal(spine.includes("mountain"), true);
+    const spine = Array.from({ length: 13 }, (_, offset) => BOARD[adventureTile(23 + offset, row)]);
+    assert.equal(spine.includes("road") || spine.includes("mountain"), true);
+    const mountainColumns = Array.from({ length: 13 }, (_, offset) => 23 + offset).filter((col) => BOARD[adventureTile(col, row)] === "mountain");
+    if (mountainColumns.length) westernCenters.push(Math.round(mountainColumns.reduce((sum, col) => sum + col, 0) / mountainColumns.length));
   }
+  assert.equal(new Set(westernCenters).size >= 6, true);
   const freehavenRoute = findPath(game, game.settlements.freehaven.tile);
   assert.equal(freehavenRoute.some((tile) => game.sites[tile]), false);
   const unguardedRoute = findPath({ ...game, sites: {} }, game.settlements.freehaven.tile);
   assert.equal(unguardedRoute.length < freehavenRoute.length, true);
-  assert.equal(unguardedRoute.includes(siteTile(game, "raiders")), true);
+  assert.equal(unguardedRoute.includes(game.settlements.freehaven.blockedBy), true);
 });
 
 test("deliberately targeting a raider site still plots a route into battle", () => {
@@ -150,12 +155,12 @@ test("every settlement and producer entrance remains connected to the capital", 
 
 test("the first route command previews a path and the second command travels it", () => {
   const game = createGame();
-  const destination = adventureTile(12, 14);
+  const destination = adventureTile(18, 20);
   const preview = routeCommand(game, null, destination);
   assert.equal(preview.type, "preview");
   assert.equal(preview.target, destination);
   assert.equal(preview.path.length, 3);
-  assert.equal(routeCommand(game, preview.target, adventureTile(13, 14)).type, "preview");
+  assert.equal(routeCommand(game, preview.target, adventureTile(19, 20)).type, "preview");
   const confirmed = routeCommand(game, preview.target, destination);
   assert.equal(confirmed.type, "travel");
   const moved = moveAlongPath(game, confirmed.path);
@@ -165,9 +170,9 @@ test("the first route command previews a path and the second command travels it"
 
 test("pathfinding rejects natural barriers but uses the guarded mountain passes", () => {
   const game = createGame();
-  assert.equal(findPath(game, adventureTile(47, 10)), null);
-  assert.equal(findPath(game, adventureTile(19, 4)), null);
-  assert.equal(findPath(game, adventureTile(7, 16)), null);
+  assert.equal(findPath(game, adventureTile(68, 10)), null);
+  assert.equal(findPath(game, adventureTile(29, 1)), null);
+  assert.equal(findPath(game, adventureTile(18, 1)), null);
   const command = routeCommand({ ...game, moves: 2 }, null, adventureTile(12, 19));
   assert.equal(command.path.length, 8);
   assert.equal(command.reachablePath.length, 2);
@@ -212,7 +217,7 @@ test("most resource pickups form guarded clusters around raider camps", () => {
     const tile = Number(tileText);
     assert.equal(game.sites[guard] === "raiders" || game.sites[guard] === "freehaven-bandits", true);
     const distance = Math.abs(tile % MAP_WIDTH - guard % MAP_WIDTH) + Math.abs(Math.floor(tile / MAP_WIDTH) - Math.floor(guard / MAP_WIDTH));
-    assert.equal(distance <= 4, true);
+    assert.equal(distance <= 9, true);
     perCamp.set(guard, (perCamp.get(guard) ?? 0) + 1);
   }
   assert.deepEqual([...perCamp.values()].sort(), [4, 4, 4, 4]);
@@ -272,13 +277,13 @@ test("completed research keeps excess points in storage", () => {
 
 test("capital and neutral city occupy separate traversable map tiles", () => {
   const game = createGame();
-  assert.equal(game.settlements.aurum.tile, adventureTile(12, 10));
+  assert.equal(game.settlements.aurum.tile, adventureTile(18, 16));
   assert.equal(isTerrainPassable(game.settlements.aurum.tile), true);
   assert.equal(isTerrainPassable(game.settlements.freehaven.tile), true);
   assert.equal(Object.values(game.pickups).includes("city"), false);
 });
 
-test("settlements expose visible territory boundaries around their map footprints", () => {
+test("settlements expose irregular regional tint areas around their map footprints", () => {
   const game = createGame();
   for (const settlement of Object.values(game.settlements)) {
     assert.equal(Array.isArray(settlement.territory), true);

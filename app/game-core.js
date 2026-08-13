@@ -1,6 +1,6 @@
 export const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-export const MAP_WIDTH = 48;
-export const MAP_HEIGHT = 30;
+export const MAP_WIDTH = 72;
+export const MAP_HEIGHT = 45;
 export const MAX_MOVEMENT = 16;
 export const COMBAT_WIDTH = 15;
 export const COMBAT_HEIGHT = 9;
@@ -13,42 +13,67 @@ export function adventureTile(col, row) {
   return row * MAP_WIDTH + col;
 }
 
+function northernRoadRow(col) {
+  return 13 + Math.round(Math.sin((col - 7) / 7) * 1.35 + Math.sin(col / 3.7) * .55);
+}
+
+function southernRoadRow(col) {
+  return 33 + Math.round(Math.sin((col + 4) / 8) * 1.45 - Math.sin(col / 4.5) * .5);
+}
+
+function windingColumn(row, base, phase) {
+  return base + Math.round(Math.sin((row + phase) / 4.1) * 2.2 + Math.sin((row + phase) / 1.9));
+}
+
+function coastColumn(row) {
+  return 67 + Math.round(Math.sin((row - 2) / 5.2) * 1.6 + Math.sin(row / 2.8) * .7);
+}
+
 function isRoadCoordinate(col, row) {
-  return (row === 8 && col >= 4 && col <= 44)
-    || (row === 22 && col >= 3 && col <= 45)
-    || (col === 12 && row >= 5 && row <= 22)
-    || (row === 5 && col >= 5 && col <= 12)
-    || (col === 5 && row >= 5 && row <= 8)
-    || (col === 27 && row >= 8 && row <= 25)
-    || (col === 42 && row >= 6 && row <= 24);
+  const capitalBranch = 18 + Math.round(Math.sin((row - 3) / 5) * 1.1);
+  const quarryBranch = 41 + Math.round(Math.sin((row + 1) / 5.5));
+  const easternBranch = 61 + Math.round(Math.sin((row - 2) / 4.7));
+  const pinewaterBranch = 8 + Math.round(Math.sin(row / 3.2));
+  return (col >= 6 && col <= 64 && Math.abs(row - northernRoadRow(col)) <= 1)
+    || (col >= 4 && col <= 64 && Math.abs(row - southernRoadRow(col)) <= 1)
+    || (row >= 8 && row <= 34 && Math.abs(col - capitalBranch) <= 1)
+    || (row >= 7 && row <= 13 && col >= pinewaterBranch - 1 && col <= 19)
+    || (row >= 7 && row <= 13 && Math.abs(col - pinewaterBranch) <= 1)
+    || (row >= 13 && row <= 38 && Math.abs(col - quarryBranch) <= 1)
+    || (row >= 10 && row <= 35 && Math.abs(col - easternBranch) <= 1);
 }
 
 function isMountainCoordinate(col, row) {
-  if (row === 8 || row === 22) return false;
-  const westernShift = [0, 0, 1, 1, 0, -1][row % 6];
-  const easternShift = [0, -1, -1, 0, 1, 1][row % 6];
-  const westernEdge = 18 + westernShift;
-  const easternEdge = 35 + easternShift;
-  return (col >= westernEdge && col <= westernEdge + 2)
-    || (col >= easternEdge && col <= easternEdge + 2);
+  const westernCenter = windingColumn(row, 29, 0);
+  const easternCenter = windingColumn(row, 53, 6);
+  const westernWidth = row % 5 === 0 ? 2 : 1;
+  const easternWidth = row % 6 === 2 ? 2 : 1;
+  return Math.abs(col - westernCenter) <= westernWidth
+    || Math.abs(col - easternCenter) <= easternWidth;
 }
 
 function isDenseForestCoordinate(col, row) {
-  const westernWall = row >= 15 && row <= 17 && col <= 18 && (col < 11 || col > 13);
-  const easternWall = row >= 14 && row <= 16 && col >= 36 && (col < 41 || col > 43);
-  const northernWood = row <= 5 && col <= 9 && !(row >= 4 && col >= 4);
-  const southernWood = row >= 25 && col <= 14;
-  return westernWall || easternWall || northernWood || southernWood;
+  const northWestEdge = 10 + Math.round(Math.sin((col + 2) / 2.6) * 2 + col * .08);
+  const westernBelt = 24 + Math.round(Math.sin((col + 1) / 3.4) * 2.2);
+  const easternBelt = 23 + Math.round(Math.sin((col - 49) / 3.1) * 2.1);
+  const southWestEdge = 38 + Math.round(Math.sin((col + 3) / 3.5) * 2);
+  const southEastEdge = 37 + Math.round(Math.sin((col - 52) / 3.2) * 1.7);
+  const northernWood = col <= 18 && row <= northWestEdge;
+  const westernWood = col <= 27 && Math.abs(row - westernBelt) <= (col % 6 === 0 ? 2 : 1);
+  const easternWood = col >= 54 && col < coastColumn(row) && Math.abs(row - easternBelt) <= (col % 5 === 0 ? 2 : 1);
+  const southernWood = col <= 24 && row >= southWestEdge;
+  const southEasternWood = col >= 55 && col < coastColumn(row) && row >= southEastEdge;
+  return northernWood || westernWood || easternWood || southernWood || southEasternWood;
 }
 
 export const BOARD = Array.from({ length: MAP_WIDTH * MAP_HEIGHT }, (_, tile) => {
   const row = Math.floor(tile / MAP_WIDTH), col = tile % MAP_WIDTH;
   if (isRoadCoordinate(col, row)) return "road";
-  if (col === MAP_WIDTH - 1 || (col === MAP_WIDTH - 2 && row >= 6 && row <= 24)) return "water";
+  if (col >= coastColumn(row)) return "water";
   if (isMountainCoordinate(col, row)) return "mountain";
   if (isDenseForestCoordinate(col, row)) return "dense-forest";
-  if ((row < 8 && col < 15) || (row > 23 && col > 37)) return "forest";
-  if ((row < 7 && col > 21 && col < 34) || (row > 18 && col > 20 && col < 35)) return "hill";
+  if ((row < 12 && col < 23) || (row > 35 && col > 53)) return "forest";
+  if ((row < 10 && col > 31 && col < 50) || (row > 29 && col > 31 && col < 52)) return "hill";
   return "plains";
 });
 
@@ -554,33 +579,33 @@ export function retreatCombat(game) {
 }
 
 export function createGame() {
-  const aurum = adventureTile(12, 10);
-  const hero = adventureTile(12, 11);
-  const freehaven = adventureTile(42, 8);
-  const pinewater = adventureTile(5, 5);
-  const redcliff = adventureTile(27, 24);
-  const violetworks = adventureTile(42, 19);
-  const raiderPass = adventureTile(19, 8);
-  const freehavenBandits = adventureTile(39, 8);
-  const quarryRaiders = adventureTile(27, 18);
-  const southernRaiders = adventureTile(42, 22);
+  const aurum = adventureTile(18, 16);
+  const hero = adventureTile(18, 17);
+  const freehaven = adventureTile(61, 13);
+  const pinewater = adventureTile(8, 8);
+  const redcliff = adventureTile(41, 37);
+  const violetworks = adventureTile(61, 29);
+  const raiderPass = adventureTile(29, 13);
+  const freehavenBandits = adventureTile(57, 14);
+  const quarryRaiders = adventureTile(41, 27);
+  const southernRaiders = adventureTile(61, 34);
   const pickupGuards = {
-    [adventureTile(15, 8)]: raiderPass,
-    [adventureTile(16, 7)]: raiderPass,
-    [adventureTile(16, 8)]: raiderPass,
-    [adventureTile(16, 9)]: raiderPass,
-    [adventureTile(38, 7)]: freehavenBandits,
-    [adventureTile(38, 8)]: freehavenBandits,
-    [adventureTile(39, 7)]: freehavenBandits,
-    [adventureTile(40, 9)]: freehavenBandits,
-    [adventureTile(25, 17)]: quarryRaiders,
-    [adventureTile(26, 17)]: quarryRaiders,
-    [adventureTile(28, 17)]: quarryRaiders,
-    [adventureTile(29, 18)]: quarryRaiders,
-    [adventureTile(40, 21)]: southernRaiders,
-    [adventureTile(41, 21)]: southernRaiders,
-    [adventureTile(43, 21)]: southernRaiders,
-    [adventureTile(44, 23)]: southernRaiders,
+    [adventureTile(24, 11)]: raiderPass,
+    [adventureTile(26, 12)]: raiderPass,
+    [adventureTile(31, 14)]: raiderPass,
+    [adventureTile(34, 15)]: raiderPass,
+    [adventureTile(54, 11)]: freehavenBandits,
+    [adventureTile(56, 12)]: freehavenBandits,
+    [adventureTile(59, 15)]: freehavenBandits,
+    [adventureTile(63, 16)]: freehavenBandits,
+    [adventureTile(38, 24)]: quarryRaiders,
+    [adventureTile(40, 25)]: quarryRaiders,
+    [adventureTile(43, 29)]: quarryRaiders,
+    [adventureTile(45, 31)]: quarryRaiders,
+    [adventureTile(57, 31)]: southernRaiders,
+    [adventureTile(59, 32)]: southernRaiders,
+    [adventureTile(63, 35)]: southernRaiders,
+    [adventureTile(65, 37)]: southernRaiders,
   };
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
@@ -590,23 +615,23 @@ export function createGame() {
     constructionThisTurn: {},
     buildings: { aurum: ["town-hall", "militia-yard", "archery-range", "scout-camp"], freehaven: ["town-hall", "militia-yard"] },
     settlements: {
-      aurum: { id: "aurum", name: "Aurum", tile: aurum, footprint: [adventureTile(11, 9), adventureTile(12, 9), adventureTile(13, 9), adventureTile(11, 10), aurum, adventureTile(13, 10)], territory: [[7, 6], [16, 6], [18, 11], [15, 15], [8, 14], [6, 10]], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
-      freehaven: { id: "freehaven", name: "Freehaven", tile: freehaven, footprint: [adventureTile(41, 7), adventureTile(42, 7), adventureTile(43, 7), adventureTile(41, 8), freehaven, adventureTile(43, 8)], territory: [[38, 4], [46, 4], [47, 11], [41, 13], [37, 9]], blockedBy: freehavenBandits, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 0 },
+      aurum: { id: "aurum", name: "Aurum", tile: aurum, footprint: [adventureTile(17, 15), adventureTile(18, 15), adventureTile(19, 15), adventureTile(17, 16), aurum, adventureTile(19, 16)], territory: [[10, 13], [12, 10], [17, 9], [22, 10], [25, 13], [26, 18], [23, 22], [18, 24], [13, 22], [9, 18]], owner: "player", population: 1240, defenders: 0, recruits: { spearmen: 12, slingers: 8, scouts: 3, swordsmen: 0, horsemen: 0 } },
+      freehaven: { id: "freehaven", name: "Freehaven", tile: freehaven, footprint: [adventureTile(60, 12), adventureTile(61, 12), adventureTile(62, 12), adventureTile(60, 13), freehaven, adventureTile(62, 13)], territory: [[56, 8], [61, 7], [65, 9], [66, 13], [64, 17], [59, 19], [55, 16], [54, 12]], blockedBy: freehavenBandits, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0 }, garrison: 0 },
     },
     producers: {
-      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(4, 4), adventureTile(5, 4), adventureTile(4, 5), pinewater], entrance: pinewater, owner: "neutral", garrison: 24 },
-      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(26, 23), adventureTile(27, 23), adventureTile(28, 23), adventureTile(26, 24), redcliff, adventureTile(28, 24)], entrance: redcliff, owner: "neutral", garrison: 32 },
-      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(41, 18), adventureTile(42, 18), adventureTile(43, 18), adventureTile(41, 19), violetworks, adventureTile(43, 19)], entrance: violetworks, owner: "neutral", garrison: 38 },
+      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(7, 7), adventureTile(8, 7), adventureTile(7, 8), pinewater], entrance: pinewater, owner: "neutral", garrison: 24 },
+      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(40, 36), adventureTile(41, 36), adventureTile(42, 36), adventureTile(40, 37), redcliff, adventureTile(42, 37)], entrance: redcliff, owner: "neutral", garrison: 32 },
+      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(60, 28), adventureTile(61, 28), adventureTile(62, 28), adventureTile(60, 29), violetworks, adventureTile(62, 29)], entrance: violetworks, owner: "neutral", garrison: 38 },
     },
     sites: { [raiderPass]: "raiders", [freehavenBandits]: "freehaven-bandits", [quarryRaiders]: "raiders", [southernRaiders]: "raiders" },
     pickups: {
-      [adventureTile(8, 5)]: "dust",
-      [adventureTile(24, 8)]: "knowledge",
-      [adventureTile(12, 14)]: "timber",
-      [adventureTile(15, 8)]: "gold", [adventureTile(16, 7)]: "stone", [adventureTile(16, 8)]: "timber", [adventureTile(16, 9)]: "dust",
-      [adventureTile(38, 7)]: "gold", [adventureTile(38, 8)]: "timber", [adventureTile(39, 7)]: "stone", [adventureTile(40, 9)]: "dust",
-      [adventureTile(25, 17)]: "stone", [adventureTile(26, 17)]: "gold", [adventureTile(28, 17)]: "timber", [adventureTile(29, 18)]: "dust",
-      [adventureTile(40, 21)]: "gold", [adventureTile(41, 21)]: "stone", [adventureTile(43, 21)]: "timber", [adventureTile(44, 23)]: "dust",
+      [adventureTile(12, 10)]: "dust",
+      [adventureTile(36, 14)]: "knowledge",
+      [adventureTile(18, 21)]: "timber",
+      [adventureTile(24, 11)]: "gold", [adventureTile(26, 12)]: "stone", [adventureTile(31, 14)]: "timber", [adventureTile(34, 15)]: "dust",
+      [adventureTile(54, 11)]: "gold", [adventureTile(56, 12)]: "timber", [adventureTile(59, 15)]: "stone", [adventureTile(63, 16)]: "dust",
+      [adventureTile(38, 24)]: "stone", [adventureTile(40, 25)]: "gold", [adventureTile(43, 29)]: "timber", [adventureTile(45, 31)]: "dust",
+      [adventureTile(57, 31)]: "gold", [adventureTile(59, 32)]: "stone", [adventureTile(63, 35)]: "timber", [adventureTile(65, 37)]: "dust",
     },
     pickupGuards,
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
