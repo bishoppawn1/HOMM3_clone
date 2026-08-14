@@ -258,7 +258,7 @@ export default function Home() {
                 >
                   {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
                   {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={`assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
-                  {(site === "raiders" || site === "freehaven-bandits") && <span className="site enemy" aria-hidden="true"><img src="assets/map-v2/enemy-bandits.webp" alt="" /></span>}
+                  {(site === "raiders" || site === "freehaven-bandits") && <span className="site enemy" aria-hidden="true"><img src="assets/map-v2/enemy-bandit-unit.png" alt="" /></span>}
                   {game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
                 </button>
               );

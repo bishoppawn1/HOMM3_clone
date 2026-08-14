@@ -70,9 +70,7 @@ h2 { font-size:20px; }
 .map-tile.water { background:#294e581f; }
 .map-tile.mountain { background:#5f5b4717; }
 .map-tile.dense-forest { background:#29462f17; }
-.site,.hero { position:absolute; inset:-35%; display:flex; align-items:center; justify-content:center; text-shadow:0 2px 3px #000; z-index:4; pointer-events:none; }.site b,.hero b { font-size:clamp(15px,1.65vw,26px);color:#e2c66f;line-height:1; }.site.pickup{inset:-75%;z-index:5}.site.pickup img{width:115%;height:115%;object-fit:contain;filter:drop-shadow(0 3px 2px #17190fbb)}.site.enemy{inset:-135%;z-index:5}.site.enemy img{width:130%;height:130%;object-fit:contain;filter:drop-shadow(0 5px 3px #17130fbb)}.hero { z-index:7; transform:translateY(-8%); }.hero b { font-size:clamp(22px,2.5vw,38px); color:#f0e0a6; filter:drop-shadow(0 3px 2px #000); }
-.site.enemy:before{content:"";position:absolute;inset:19% 12% 13%;border-radius:46% 54% 43% 57%;background:radial-gradient(ellipse,#76603c99 0 42%,#3a302087 65%,transparent 72%);box-shadow:inset 0 0 0 1px #b79a654f;transform:rotate(-4deg);filter:blur(.2px)}
-.site.enemy img{position:relative;z-index:1}
+.site,.hero { position:absolute; inset:-35%; display:flex; align-items:center; justify-content:center; text-shadow:0 2px 3px #000; z-index:4; pointer-events:none; }.site b,.hero b { font-size:clamp(15px,1.65vw,26px);color:#e2c66f;line-height:1; }.site.pickup{inset:-75%;z-index:5}.site.pickup img{width:115%;height:115%;object-fit:contain;filter:drop-shadow(0 3px 2px #17190fbb)}.site.enemy{inset:-50% -10%;z-index:5;align-items:flex-end}.site.enemy img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 2px #17130fdd)}.hero { z-index:7; transform:translateY(-8%); }.hero b { font-size:clamp(22px,2.5vw,38px); color:#f0e0a6; filter:drop-shadow(0 3px 2px #000); }
 .route-layer { z-index:6; overflow:visible; }
 .route-layer polyline { fill:none; stroke:#f7d66e; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:8 7; vector-effect:non-scaling-stroke; filter:drop-shadow(0 2px 2px #352817); }
 .route-layer circle { fill:#fff0ad; stroke:#6d4b22; stroke-width:1.5; vector-effect:non-scaling-stroke; }

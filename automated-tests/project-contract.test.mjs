@@ -66,12 +66,13 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
-    ...["terrain-forest", "terrain-mountain", "enemy-bandits", "pickup-timber", "pickup-stone", "pickup-gold", "pickup-dust"]
+    ...["terrain-forest", "terrain-mountain", "pickup-timber", "pickup-stone", "pickup-gold", "pickup-dust"]
       .map((asset) => access(new URL(`public/assets/map-v2/${asset}.webp`, root))),
+    access(new URL("public/assets/map-v2/enemy-bandit-unit.png", root)),
   ]);
   assert.match(page, /className={`territory-fill/);
   assert.match(page, /pickup-\$\{pickup\}/);
-  assert.match(page, /enemy-bandits\.webp/);
+  assert.match(page, /enemy-bandit-unit\.png/);
   assert.doesNotMatch(page, /map-bandit-camp/);
   assert.doesNotMatch(page, /Bandit camp spoils/);
   assert.match(page, /const adventureRoads/);
@@ -82,7 +83,8 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.match(page, /terrainPatchBounds/);
   assert.doesNotMatch(page, /className="territory-layer"/);
   assert.match(styles, /\.terrain-patch\{[^}]*height:auto/);
-  assert.match(styles, /\.site\.enemy:before/);
+  assert.match(styles, /\.site\.enemy\{inset:-50% -10%;z-index:5/);
+  assert.doesNotMatch(styles, /\.site\.enemy:before/);
   assert.match(styles, /\.hill-ground/);
   assert.doesNotMatch(styles, /\.terrain-glyph/);
   assert.doesNotMatch(styles, /object-fit:fill/);

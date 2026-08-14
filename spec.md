@@ -53,7 +53,7 @@ Year-end processing will handle population growth, demographic pressure, large d
 
 - **Knowledge Hut:** consumed on visit and presents two eligible research bonuses.
 - **Resource pickup:** consumed on visit and grants a small immediate resource amount.
-- **Bandit-camp spoils:** most resource pickups are scattered in a compact ring around a visibly distinct bandit camp, without an artificial enclosure or label. Selecting any nearby supplies while the camp is occupied routes the commander to its bandits first and reports that the bandits must be defeated; the supplies can only be collected after victory. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
+- **Bandit-camp spoils:** most resource pickups are scattered in a compact ring around a bandit encounter. Each encounter occupies exactly one logical map tile and is represented by one example bandit unit, never by oversized camp scenery, a multi-tile footprint, an artificial enclosure, or a label. Selecting any nearby supplies while the encounter is occupied routes the commander to its bandits first and reports that the bandits must be defeated; the supplies can only be collected after victory. Only two unguarded resource pickups are scattered independently across the map, in addition to the Knowledge Hut.
 - **Neutral city:** is a persistent settlement, never a pickup. Freehaven is protected by a separate nearby bandit force: entering the city before defeating that force is refused, and victory over the defenders transfers the city to the player.
 - **Hostile army:** opens the tactical hex battlefield. Victory removes the hostile site and awards its listed spoils; retreat or defeat leaves it in place.
 

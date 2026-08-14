@@ -228,6 +228,17 @@ test("magical dust is a distinct collectible special resource", () => {
   assert.equal(collected.pickups[tile], undefined);
 });
 
+test("each bandit encounter occupies one unique map tile", () => {
+  const game = createGame();
+  const banditTiles = Object.entries(game.sites)
+    .filter(([, site]) => site === "raiders" || site === "freehaven-bandits")
+    .map(([tile]) => Number(tile));
+
+  assert.equal(banditTiles.length, 4);
+  assert.equal(new Set(banditTiles).size, 4);
+  assert.equal(Object.values(game.pickupGuards).every((guard) => banditTiles.includes(guard)), true);
+});
+
 test("most resource pickups sit in compact rings around visible raider camps", () => {
   const game = createGame();
   const resourceTiles = Object.entries(game.pickups).filter(([, pickup]) => pickup !== "knowledge");
