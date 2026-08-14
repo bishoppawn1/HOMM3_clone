@@ -492,7 +492,7 @@ test("advanced lines progress into long-range artillery, tanks, and age-specific
   assert.equal(unitForEra("aircraft", "Medieval").name, "Observation Balloons");
   assert.equal(unitForEra("aircraft", "Gunpowder").name, "Early Dirigibles");
   assert.equal(unitForEra("aircraft", "Gunpowder").flying, true);
-  assert.equal(unitForEra("aircraft", "Industrial").name, "Military Airships");
+  assert.equal(unitForEra("aircraft", "Industrial").name, "Fighter Planes");
   assert.equal(unitForEra("aircraft", "Modern").name, "Utility Helicopters");
   assert.equal(unitForEra("aircraft", "Modern").ranged, true);
 });

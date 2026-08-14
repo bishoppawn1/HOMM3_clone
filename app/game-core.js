@@ -152,7 +152,7 @@ export const UNITS = [
   { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false, role: "Mobile shock troops with high speed and strong charge damage." },
   { id: "artillery", name: "Stone Throwers", icon: "☄", tier: 3, cost: 180, requires: "siege-workshop", attack: 10, defense: 3, damage: [10, 16], health: 24, speed: 2, initiative: 2, ranged: true, range: 12, shots: 5, longRange: true, role: "Slow long-range engines that bombard formations from well behind the battle line." },
   { id: "armor", name: "War Chariots", icon: "▣", tier: 3, cost: 220, requires: "war-college", attack: 10, defense: 11, damage: [8, 12], health: 42, speed: 5, initiative: 5, ranged: false, rangedFromEra: 3, range: 4, shots: 5, armored: true, role: "Durable mobile formations that reduce incoming damage and develop ranged weapons in the Gunpowder Age." },
-  { id: "aircraft", name: "Falcon Scouts", icon: "⌁", tier: 3, cost: 195, requires: "cavalry-school", attack: 7, defense: 5, damage: [5, 8], health: 20, speed: 8, initiative: 9, ranged: false, rangedFromEra: 3, range: 6, shots: 4, flyingFromEra: 0, role: "Fast flying formations that develop from trained falcons into observation balloons, military airships, and helicopters." },
+  { id: "aircraft", name: "Falcon Scouts", icon: "⌁", tier: 3, cost: 195, requires: "cavalry-school", attack: 7, defense: 5, damage: [5, 8], health: 20, speed: 8, initiative: 9, ranged: false, rangedFromEra: 3, range: 6, shots: 4, flyingFromEra: 0, role: "Fast flying formations that develop from trained falcons into observation balloons, fighter planes, and helicopters." },
 ];
 
 const UNIT_ERA_NAMES = {
@@ -163,7 +163,7 @@ const UNIT_ERA_NAMES = {
   horsemen: ["Horsemen", "Companion Cavalry", "Knights", "Cuirassiers", "Lancers", "Armored Cars"],
   artillery: ["Stone Throwers", "Ballistae", "Trebuchets", "Field Cannons", "Heavy Howitzers", "Rocket Artillery"],
   armor: ["War Chariots", "Cataphracts", "War Wagons", "Armored Gun Wagons", "Early Tanks", "Main Battle Tanks"],
-  aircraft: ["Falcon Scouts", "Armored Falcons", "Observation Balloons", "Early Dirigibles", "Military Airships", "Utility Helicopters"],
+  aircraft: ["Falcon Scouts", "Armored Falcons", "Observation Balloons", "Early Dirigibles", "Fighter Planes", "Utility Helicopters"],
 };
 
 export function unitForEra(unitId, era = "Ancient") {
