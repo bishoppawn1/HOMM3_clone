@@ -471,7 +471,7 @@ test("every age upgrades each persistent recruitment line with a distinct histor
   assert.ok(unitForEra("slingers", "Modern").health > unitForEra("slingers", "Ancient").health);
 });
 
-test("advanced lines progress into long-range artillery, tanks, and flying aircraft", () => {
+test("advanced lines progress into long-range artillery, tanks, and age-specific flying units", () => {
   const ancientArtillery = unitForEra("artillery", "Ancient");
   const modernArtillery = unitForEra("artillery", "Modern");
   assert.equal(ancientArtillery.name, "Stone Throwers");
@@ -486,9 +486,13 @@ test("advanced lines progress into long-range artillery, tanks, and flying aircr
   assert.equal(unitForEra("armor", "Modern").name, "Main Battle Tanks");
   assert.equal(unitForEra("armor", "Modern").ranged, true);
 
-  assert.equal(unitForEra("aircraft", "Medieval").flying, false);
-  assert.equal(unitForEra("aircraft", "Gunpowder").name, "Balloon Observers");
+  assert.equal(unitForEra("aircraft", "Ancient").name, "Falcon Scouts");
+  assert.equal(unitForEra("aircraft", "Ancient").flying, true);
+  assert.equal(unitForEra("aircraft", "Classical").name, "Armored Falcons");
+  assert.equal(unitForEra("aircraft", "Medieval").name, "Observation Balloons");
+  assert.equal(unitForEra("aircraft", "Gunpowder").name, "Early Dirigibles");
   assert.equal(unitForEra("aircraft", "Gunpowder").flying, true);
+  assert.equal(unitForEra("aircraft", "Industrial").name, "Military Airships");
   assert.equal(unitForEra("aircraft", "Modern").name, "Utility Helicopters");
   assert.equal(unitForEra("aircraft", "Modern").ranged, true);
 });
