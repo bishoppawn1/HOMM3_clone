@@ -35,6 +35,7 @@ import {
   finishCombatTurn,
   eraReadiness,
   eraVisualFamily,
+  estimateTroopRange,
   findPath,
   isTerrainPassable,
   maxRecruitableIntoArmy,
@@ -46,6 +47,7 @@ import {
   retreatCombat,
   resolveBattle,
   routeCommand,
+  scoutEnemyForce,
   startCombat,
   startResearch,
   unitForEra,
@@ -173,6 +175,31 @@ test("the first route command previews a path and the second command travels it"
   const moved = moveAlongPath(game, confirmed.path);
   assert.equal(moved.hero, destination);
   assert.equal(moved.moves, game.moves - 3);
+});
+
+test("scouting reports approximate numerical ranges for hostile forces", () => {
+  assert.deepEqual(estimateTroopRange(13), { minimum: 12, maximum: 25 });
+  assert.deepEqual(estimateTroopRange(75), { minimum: 51, maximum: 100 });
+
+  const game = createGame();
+  const raiders = siteTile(game, "raiders");
+  const preview = routeCommand(game, null, raiders);
+  assert.equal(preview.type, "preview");
+  assert.equal(preview.scouting.name, "March Raiders");
+  assert.deepEqual(preview.scouting.units.map((unit) => unit.name), ["Spearmen", "Slingers", "Scouts"]);
+  assert.match(preview.notice, /Scouts estimate/);
+  assert.equal(routeCommand(game, preview.target, raiders).scouting, null);
+});
+
+test("neutral resource producers are guarded by scoutable bandits", () => {
+  const game = createGame();
+  for (const producer of Object.values(game.producers)) {
+    const force = scoutEnemyForce(game, producer.entrance);
+    assert.equal(force.name, producer.name);
+    assert.equal(force.units.length, 3);
+    assert.match(routeCommand(game, null, producer.entrance).notice, /Scouts estimate/);
+    assert.match(collectAt({ ...game, hero: producer.entrance }).notice, /Bandits are holding/);
+  }
 });
 
 test("pathfinding rejects natural barriers but uses the guarded mountain passes", () => {

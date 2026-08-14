@@ -73,6 +73,9 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.match(page, /className={`territory-fill/);
   assert.match(page, /pickup-\$\{pickup\}/);
   assert.match(page, /enemy-bandit-unit\.png/);
+  assert.match(page, /className="producer-guard"/);
+  assert.match(page, /className="force-preview"/);
+  assert.match(page, /Scouting estimate/);
   assert.doesNotMatch(page, /map-bandit-camp/);
   assert.doesNotMatch(page, /Bandit camp spoils/);
   assert.match(page, /const adventureRoads/);
@@ -84,6 +87,8 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.doesNotMatch(page, /className="territory-layer"/);
   assert.match(styles, /\.terrain-patch\{[^}]*height:auto/);
   assert.match(styles, /\.site\.enemy\{inset:-50% -10%;z-index:5/);
+  assert.match(styles, /\.producer-guard\{/);
+  assert.match(styles, /\.force-preview\{/);
   assert.doesNotMatch(styles, /\.site\.enemy:before/);
   assert.match(styles, /\.hill-ground/);
   assert.doesNotMatch(styles, /\.terrain-glyph/);

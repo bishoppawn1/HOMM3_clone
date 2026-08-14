@@ -34,6 +34,7 @@ import {
   startCombat,
   waitCombatTurn,
   routeCommand,
+  scoutEnemyForce,
   moveAlongPath,
   producerAt,
   settlementAt,
@@ -96,6 +97,7 @@ type CombatState = {
   actionSerial: number;
   lastAction: {id: number; type: "move" | "melee" | "ranged"; stackId: string; from: number; to: number; target?: number; path?: number[]} | null;
 };
+type ForceEstimate = NonNullable<ReturnType<typeof scoutEnemyForce>>;
 type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
   gold: number; wood: number; stone: number; magicDust: number; research: number; cities: number; victories: number;
@@ -116,6 +118,7 @@ export default function Home() {
   const [logOpen, setLogOpen] = useState(false);
   const [plannedPath, setPlannedPath] = useState<number[]>([]);
   const [plannedTarget, setPlannedTarget] = useState<number | null>(null);
+  const [scoutedForce, setScoutedForce] = useState<ForceEstimate | null>(null);
   const mapViewport = useRef<HTMLDivElement>(null);
   const readiness = useMemo(() => eraReadiness(game), [game]);
   const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
@@ -152,11 +155,13 @@ export default function Home() {
     if (command.type === "invalid") {
       setPlannedPath([]);
       setPlannedTarget(null);
+      setScoutedForce(null);
       return;
     }
     if (command.type === "preview") {
       setPlannedPath(command.path);
       setPlannedTarget(command.target);
+      setScoutedForce(command.scouting as ForceEstimate | null);
       if (command.notice) setGame({...game, notice: command.notice});
       return;
     }
@@ -165,6 +170,7 @@ export default function Home() {
     setGame(moved);
     setPlannedPath([]);
     setPlannedTarget(null);
+    setScoutedForce(null);
     if (city?.owner === "player" && moved.hero === city.tile) { setPanel("cities"); setSelectedCity(city.id); }
   }
 
@@ -254,7 +260,7 @@ export default function Home() {
                   onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handleRoute(index); } }}
                   title={description}
                   aria-disabled={!passable}
-                  aria-label={`Map position ${index + 1}, ${description}. ${passable ? "Press Enter twice or right-click twice to travel here." : "Travel is blocked here."}`}
+                  aria-label={`Map position ${index + 1}, ${description}. ${passable ? "Press Enter or right-click once to preview the route and any hostile force; repeat to travel." : "Travel is blocked here."}`}
                 >
                   {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
                   {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={`assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
@@ -272,10 +278,18 @@ export default function Home() {
             </div>)}
             {Object.values(game.producers).map((producer) => <div key={producer.id} className={`map-producer ${producer.kind} ${producer.owner} visual-${visualEra}`} style={producerBounds(producer.footprint)} aria-hidden="true">
               <img src={`assets/map-v2/${producer.kind}-${visualEra}.webp`} alt="" />
-              {producer.owner === "neutral" && <i>⚑</i>}
+            </div>)}
+            {Object.values(game.producers).filter((producer) => producer.owner === "neutral").map((producer) => <div key={`guard-${producer.id}`} className="producer-guard" style={producerBounds([producer.entrance])} aria-hidden="true">
+              <img src="assets/map-v2/enemy-bandit-unit.png" alt="" />
             </div>)}
           </div>
           </div>
+          {scoutedForce && <aside className="force-preview" role="status" aria-live="polite">
+            <span className="section-kicker">Scouting estimate</span>
+            <b>{scoutedForce.name}</b>
+            <ul>{scoutedForce.units.map((unit) => <li key={unit.unitId}><span>{unit.minimum}{unit.maximum === null ? "+" : `–${unit.maximum}`}</span> {unit.name}</li>)}</ul>
+            <small>Approximate force · right-click again to advance</small>
+          </aside>}
           <div className="legend" aria-live="polite"><span><i className="route-swatch" />{plannedPath.length ? `${Math.min(plannedPath.length, game.moves)} now · ${Math.max(0, plannedPath.length - game.moves)} later` : "Right-click once to plot a route"}</span><span><i className="future-swatch" />Gray continues next month</span><span>Mountains and dense forest block travel</span></div>
         </section>
 
@@ -314,7 +328,7 @@ export default function Home() {
 
       {!game.combat && <footer className="turnbar">
         <div><span className="section-kicker">Month&apos;s report</span><p>{game.notice}</p></div>
-        <button onClick={() => { setGame(advanceMonth); setPlannedPath([]); setPlannedTarget(null); }}><span>End {game.monthName}</span><small>Begin the next month →</small></button>
+        <button onClick={() => { setGame(advanceMonth); setPlannedPath([]); setPlannedTarget(null); setScoutedForce(null); }}><span>End {game.monthName}</span><small>Begin the next month →</small></button>
       </footer>}
 
       {game.researchChoice && (

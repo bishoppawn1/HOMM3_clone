@@ -410,6 +410,16 @@ function enemyArmyFor(battle) {
   ];
 }
 
+const SCOUTING_RANGES = [
+  [1, 5], [6, 11], [12, 25], [26, 50], [51, 100],
+  [101, 250], [251, 500], [501, 1000], [1001, Infinity],
+];
+
+export function estimateTroopRange(count) {
+  const [minimum, maximum] = SCOUTING_RANGES.find(([, upper]) => count <= upper) ?? SCOUTING_RANGES.at(-1);
+  return { minimum, maximum: Number.isFinite(maximum) ? maximum : null };
+}
+
 function makeCombatStack(side, unitId, count, position, era, ordinal = 1) {
   const unit = unitById(unitId, era);
   return {
@@ -723,6 +733,45 @@ function destinationFor(game, tile) {
   return producer?.entrance ?? settlement?.tile ?? tile;
 }
 
+function enemyEncounterAt(game, tile) {
+  const producer = producerAt(game, tile);
+  if (producer?.owner === "neutral" && tile === producer.entrance) return {
+    battle: { type: "producer", producerId: producer.id, name: producer.name, strength: producer.garrison },
+    notice: `Bandits are holding ${producer.name}.`,
+  };
+  const site = game.sites[tile];
+  if (site === "freehaven-bandits") return {
+    battle: { type: "city-blocker", settlementId: "freehaven", name: "Freehaven Bandits", strength: 26 },
+    notice: "The bandit company outside Freehaven prepares to fight.",
+  };
+  if (site === "raiders") return {
+    battle: { type: "field", name: "March Raiders", strength: 18 },
+    notice: "A raider company bars the road.",
+  };
+  return null;
+}
+
+export function scoutEnemyForce(game, requestedTile) {
+  const target = destinationFor(game, requestedTile);
+  const encounter = enemyEncounterAt(game, target);
+  if (!encounter) return null;
+  return {
+    target,
+    name: encounter.battle.name,
+    units: enemyArmyFor(encounter.battle).map(([unitId, count]) => ({
+      unitId,
+      name: unitById(unitId, game.era).name,
+      ...estimateTroopRange(count),
+    })),
+  };
+}
+
+function scoutingNotice(force) {
+  if (!force) return null;
+  const estimates = force.units.map((unit) => `${unit.minimum}${unit.maximum === null ? "+" : `–${unit.maximum}`} ${unit.name}`).join(", ");
+  return `Scouts estimate ${estimates}. Right-click again to advance.`;
+}
+
 function isPassable(game, tile, routeTarget = null) {
   if (!isTerrainPassable(tile)) return false;
   const producer = producerAt(game, tile);
@@ -777,10 +826,13 @@ export function routeCommand(game, plannedTarget, requestedTile) {
   if (!path) return { type: "invalid", target: null, path: [] };
   const target = path[path.length - 1];
   const guardingCamp = game.pickupGuards?.[requestedTile];
-  const notice = guardingCamp !== undefined && game.sites[guardingCamp]
+  const type = plannedTarget === target ? "travel" : "preview";
+  const scouting = type === "preview" ? scoutEnemyForce(game, requestedTile) : null;
+  const guardedNotice = guardingCamp !== undefined && game.sites[guardingCamp]
     ? "You must defeat the bandits before claiming these supplies."
     : null;
-  return { type: plannedTarget === target ? "travel" : "preview", target, path, reachablePath: path.slice(0, game.moves), futurePath: path.slice(game.moves), notice };
+  const notice = [guardedNotice, scoutingNotice(scouting)].filter(Boolean).join(" ") || null;
+  return { type, target, path, reachablePath: path.slice(0, game.moves), futurePath: path.slice(game.moves), notice, scouting };
 }
 
 export function moveAlongPath(game, path) {
@@ -816,13 +868,9 @@ export function collectAt(game) {
     return { ...game, pendingBattle: { type: "siege", settlementId: settlement.id, name: settlement.name, strength: settlement.garrison }, notice: `${settlement.name}'s garrison blocks the gates.` };
   }
   const producer = producerAt(game, game.hero);
-  if (producer && game.hero === producer.entrance) {
-    if (producer.owner === "player") return { ...game, notice: `${producer.name} is under your control and produces ${producer.amount} ${resourceName(producer.resource)} each month.` };
-    return { ...game, pendingBattle: { type: "producer", producerId: producer.id, name: producer.name, strength: producer.garrison }, notice: `A guarding force holds ${producer.name}.` };
-  }
-  const site = game.sites[game.hero];
-  if (site === "freehaven-bandits") return { ...game, pendingBattle: { type: "city-blocker", settlementId: "freehaven", name: "Freehaven Bandits", strength: 26 }, notice: "The bandit company outside Freehaven prepares to fight." };
-  if (site === "raiders") return { ...game, pendingBattle: { type: "field", name: "March Raiders", strength: 18 }, notice: "A raider company bars the road." };
+  if (producer?.owner === "player" && game.hero === producer.entrance) return { ...game, notice: `${producer.name} is under your control and produces ${producer.amount} ${resourceName(producer.resource)} each month.` };
+  const encounter = enemyEncounterAt(game, game.hero);
+  if (encounter) return { ...game, pendingBattle: encounter.battle, notice: encounter.notice };
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
   const guardingCamp = game.pickupGuards?.[game.hero];
