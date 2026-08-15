@@ -200,7 +200,8 @@ test("adventure-map travel visibly advances the commander along the route", asyn
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
-  assert.match(page, /const traveledPath = lastTravelIndex >= 0 \? command\.path\.slice/);
+  assert.match(page, /const routePath = command\.path as number\[\]/);
+  assert.match(page, /const traveledPath = lastTravelIndex >= 0 \? routePath\.slice/);
   assert.match(page, /setTravelHero\(tile\)/);
   assert.match(page, /className="traveling-hero"/);
   assert.match(page, /prefers-reduced-motion: reduce/);

@@ -167,17 +167,18 @@ export default function Home() {
       setScoutedForce(null);
       return;
     }
+    const routePath = command.path as number[];
     if (command.type === "preview") {
-      setPlannedPath(command.path);
+      setPlannedPath(routePath);
       setPlannedTarget(command.target);
       setScoutedForce(command.scouting as ForceEstimate | null);
       if (command.notice) setGame({...game, notice: command.notice});
       return;
     }
     const city = settlementAt(game, command.target) as Settlement | null;
-    const moved = moveAlongPath(game, command.path);
-    const lastTravelIndex = command.path.indexOf(moved.hero);
-    const traveledPath = lastTravelIndex >= 0 ? command.path.slice(0, lastTravelIndex + 1) : [];
+    const moved = moveAlongPath(game, routePath);
+    const lastTravelIndex = routePath.indexOf(moved.hero);
+    const traveledPath = lastTravelIndex >= 0 ? routePath.slice(0, lastTravelIndex + 1) : [];
     setGame(moved);
     setPlannedPath([]);
     setPlannedTarget(null);
