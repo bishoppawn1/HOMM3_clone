@@ -92,6 +92,19 @@ export function eraVisualFamily(era) {
   return ERAS.includes(era) ? era.toLowerCase() : "ancient";
 }
 
+export const STRATEGIC_MATERIALS = [
+  { era: "Ancient", name: "Bronze", pickupName: "bronze ingots", producerName: "Blackridge Bronze Works", icon: "◈" },
+  { era: "Classical", name: "Iron", pickupName: "iron billets", producerName: "Blackridge Ironworks", icon: "◈" },
+  { era: "Medieval", name: "Steel", pickupName: "steel bars", producerName: "Blackridge Steelworks", icon: "◈" },
+  { era: "Gunpowder", name: "Saltpeter", pickupName: "saltpeter barrels", producerName: "Blackridge Powder Mill", icon: "✹" },
+  { era: "Industrial", name: "Oil", pickupName: "oil drums", producerName: "Blackridge Oil Works", icon: "●" },
+  { era: "Modern", name: "Fuel", pickupName: "fuel canisters", producerName: "Blackridge Fuel Refinery", icon: "⬢" },
+];
+
+export function strategicMaterialForEra(era = "Ancient") {
+  return STRATEGIC_MATERIALS.find((material) => material.era === era) ?? STRATEGIC_MATERIALS[0];
+}
+
 export const RESEARCH = [
   { id: "surveying", era: "Ancient", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, building: "scout-camp", improvement: "+1 Scout growth each month", effects: { recruits: { scouts: 1 } }, description: "Trains scouts with measured routes and reliable field maps." },
   { id: "bronze", era: "Ancient", name: "Bronze Working", icon: "⚒", cost: 220, bonus: 110, building: "militia-yard", improvement: "+2 Spearmen growth each month", effects: { recruits: { spearmen: 2 } }, description: "Equips militia formations with standardized bronze arms." },
@@ -140,17 +153,17 @@ export const BUILDINGS = [
   { id: "stable", name: "Stable", icon: "♞", tier: 3, branch: "military", x: 6, y: 3, gold: 600, wood: 24, stone: 14, requires: ["scout-camp", "city-hall"], description: "Recruits Horsemen." },
   { id: "garrison", name: "Garrison", icon: "⛨", tier: 3, branch: "defense", x: 7, y: 3, gold: 560, wood: 16, stone: 24, requires: ["palisade", "barracks-ii"], description: "Stations a small permanent defensive guard." },
   { id: "trade-guild", name: "Trade Guild", icon: "⚖", tier: 4, branch: "economy", x: 1, y: 4, gold: 720, wood: 20, stone: 18, requires: ["warehouse", "bank"], description: "+60 gold each month." },
-  { id: "foundry", name: "Foundry", icon: "⚙", tier: 4, branch: "economy", x: 2, y: 4, gold: 680, wood: 22, stone: 24, requires: ["workshop"], description: "+8 stone and +4 timber each month." },
+  { id: "foundry", name: "Foundry", icon: "⚙", tier: 4, branch: "economy", x: 2, y: 4, gold: 680, wood: 22, stone: 24, material: 2, requires: ["workshop"], description: "+8 stone and +4 timber each month." },
   { id: "monument", name: "Monument", icon: "▲", tier: 4, branch: "civic", x: 3, y: 4, gold: 760, wood: 10, stone: 36, requires: ["city-hall", "academy"], description: "Improves civic prestige." },
   { id: "great-library", name: "Great Library", icon: "▤", tier: 4, branch: "civic", x: 4, y: 4, gold: 900, wood: 24, stone: 28, requires: ["academy"], description: "+40 research each month." },
   { id: "training-grounds", name: "Training Grounds", icon: "◎", tier: 4, branch: "military", x: 5, y: 4, gold: 700, wood: 26, stone: 20, requires: ["barracks-ii", "academy"], description: "+1 monthly Swordsman growth." },
-  { id: "siege-workshop", name: "Siege Workshop", icon: "☷", tier: 4, branch: "military", x: 6, y: 4, gold: 820, wood: 32, stone: 26, requires: ["foundry", "barracks-ii"], description: "Recruits long-range Artillery." },
+  { id: "siege-workshop", name: "Siege Workshop", icon: "☷", tier: 4, branch: "military", x: 6, y: 4, gold: 820, wood: 32, stone: 26, material: 3, requires: ["foundry", "barracks-ii"], description: "Recruits long-range Artillery." },
   { id: "stone-walls", name: "Stone Walls", icon: "▦", tier: 4, branch: "defense", x: 7, y: 4, gold: 800, wood: 12, stone: 42, requires: ["garrison"], description: "+10 city defense." },
   { id: "treasury", name: "Treasury", icon: "◇", tier: 5, branch: "economy", x: 1, y: 5, gold: 1100, wood: 20, stone: 30, requires: ["trade-guild"], description: "+200 gold each month." },
   { id: "civic-forum", name: "Civic Forum", icon: "◫", tier: 5, branch: "civic", x: 3, y: 5, gold: 1050, wood: 26, stone: 40, requires: ["monument", "great-library"], description: "Upgrades the city to civic tier III." },
-  { id: "war-college", name: "War College", icon: "✥", tier: 5, branch: "military", x: 5, y: 5, gold: 1120, wood: 30, stone: 36, requires: ["training-grounds", "siege-workshop"], description: "Recruits armored formations." },
-  { id: "cavalry-school", name: "Cavalry School", icon: "♘", tier: 5, branch: "military", x: 6, y: 5, gold: 1080, wood: 34, stone: 30, requires: ["stable", "training-grounds"], description: "Recruits aerial reconnaissance formations." },
-  { id: "citadel", name: "Citadel", icon: "♝", tier: 5, branch: "defense", x: 7, y: 5, gold: 1250, wood: 24, stone: 54, requires: ["stone-walls", "garrison"], description: "+20 city defense." },
+  { id: "war-college", name: "War College", icon: "✥", tier: 5, branch: "military", x: 5, y: 5, gold: 1120, wood: 30, stone: 36, material: 5, requires: ["training-grounds", "siege-workshop"], description: "Recruits armored formations." },
+  { id: "cavalry-school", name: "Cavalry School", icon: "♘", tier: 5, branch: "military", x: 6, y: 5, gold: 1080, wood: 34, stone: 30, material: 4, requires: ["stable", "training-grounds"], description: "Recruits aerial reconnaissance formations." },
+  { id: "citadel", name: "Citadel", icon: "♝", tier: 5, branch: "defense", x: 7, y: 5, gold: 1250, wood: 24, stone: 54, material: 3, requires: ["stone-walls", "garrison"], description: "+20 city defense." },
 ];
 
 export function buildingResearchBonus(game, buildingId) {
@@ -176,9 +189,9 @@ export const UNITS = [
   { id: "scouts", name: "Scouts", icon: "⌖", tier: 1, cost: 12, requires: "scout-camp", attack: 5, defense: 3, damage: [3, 4], health: 12, speed: 6, initiative: 7, ranged: false, role: "Very cheap light troops that move early and reach exposed enemies quickly." },
   { id: "swordsmen", name: "Swordsmen", icon: "⚔", tier: 2, cost: 68, requires: "barracks-ii", attack: 7, defense: 7, damage: [4, 6], health: 18, speed: 5, initiative: 6, ranged: false, role: "Heavy line infantry with balanced attack, defense, and staying power." },
   { id: "horsemen", name: "Horsemen", icon: "♞", tier: 2, cost: 115, requires: "stable", attack: 8, defense: 6, damage: [5, 8], health: 22, speed: 7, initiative: 8, ranged: false, role: "Mobile shock troops with high speed and strong charge damage." },
-  { id: "artillery", name: "Stone Throwers", icon: "☄", tier: 3, cost: 180, requires: "siege-workshop", attack: 10, defense: 3, damage: [10, 16], health: 24, speed: 2, initiative: 2, ranged: true, range: 12, shots: 5, longRange: true, role: "Slow long-range engines that bombard formations from well behind the battle line." },
-  { id: "armor", name: "War Chariots", icon: "▣", tier: 3, cost: 220, requires: "war-college", attack: 10, defense: 11, damage: [8, 12], health: 42, speed: 5, initiative: 5, ranged: false, rangedFromEra: 3, range: 4, shots: 5, armored: true, role: "Durable mobile formations that reduce incoming damage and develop ranged weapons in the Gunpowder Age." },
-  { id: "aircraft", name: "Falcon Scouts", icon: "⌁", tier: 3, cost: 195, requires: "cavalry-school", attack: 7, defense: 5, damage: [5, 8], health: 20, speed: 8, initiative: 9, ranged: false, rangedFromEra: 3, range: 6, shots: 4, flyingFromEra: 0, role: "Fast flying formations that develop from trained falcons into observation balloons, fighter planes, and helicopters." },
+  { id: "artillery", name: "Stone Throwers", icon: "☄", tier: 3, cost: 180, materialCost: 1, requires: "siege-workshop", attack: 10, defense: 3, damage: [10, 16], health: 24, speed: 2, initiative: 2, ranged: true, range: 12, shots: 5, longRange: true, role: "Slow long-range engines that bombard formations from well behind the battle line." },
+  { id: "armor", name: "War Chariots", icon: "▣", tier: 3, cost: 220, materialCost: 2, requires: "war-college", attack: 10, defense: 11, damage: [8, 12], health: 42, speed: 5, initiative: 5, ranged: false, rangedFromEra: 3, range: 4, shots: 5, armored: true, role: "Durable mobile formations that reduce incoming damage and develop ranged weapons in the Gunpowder Age." },
+  { id: "aircraft", name: "Falcon Scouts", icon: "⌁", tier: 3, cost: 195, materialCost: 2, requires: "cavalry-school", attack: 7, defense: 5, damage: [5, 8], health: 20, speed: 8, initiative: 9, ranged: false, rangedFromEra: 3, range: 6, shots: 4, flyingFromEra: 0, role: "Fast flying formations that develop from trained falcons into observation balloons, fighter planes, and helicopters." },
 ];
 
 const UNIT_ERA_NAMES = {
@@ -714,7 +727,7 @@ export function createGame() {
   const freehaven = adventureTile(61, 13);
   const pinewater = adventureTile(8, 8);
   const redcliff = adventureTile(41, 37);
-  const violetworks = adventureTile(61, 29);
+  const materialworks = adventureTile(61, 29);
   const raiderPass = adventureTile(29, 13);
   const freehavenBandits = adventureTile(57, 14);
   const quarryRaiders = adventureTile(41, 27);
@@ -739,7 +752,7 @@ export function createGame() {
   };
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
-    gold: 760, wood: 35, stone: 24, magicDust: 3, research: 70, cities: 1, victories: 0,
+    gold: 760, wood: 35, stone: 24, strategicMaterial: 3, research: 70, cities: 1, victories: 0,
     army: { spearmen: 24, slingers: 16, scouts: 7, swordsmen: 0, horsemen: 0, artillery: 0, armor: 0, aircraft: 0 },
     techs: [], activeResearch: null, techProgress: {}, researchChoice: null, pendingBattle: null, combat: null,
     constructionThisTurn: {},
@@ -751,17 +764,17 @@ export function createGame() {
     producers: {
       pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(7, 7), adventureTile(8, 7), adventureTile(7, 8), pinewater], entrance: adventureTile(8, 9), owner: "neutral", garrison: 24 },
       redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(40, 36), adventureTile(41, 36), adventureTile(42, 36), adventureTile(40, 37), redcliff, adventureTile(42, 37)], entrance: adventureTile(41, 38), owner: "neutral", garrison: 32 },
-      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(60, 28), adventureTile(61, 28), adventureTile(62, 28), adventureTile(60, 29), violetworks, adventureTile(62, 29)], entrance: adventureTile(61, 30), owner: "neutral", garrison: 38 },
+      materialworks: { id: "materialworks", name: strategicMaterialForEra("Ancient").producerName, kind: "materialworks", resource: "strategicMaterial", amount: 2, footprint: [adventureTile(60, 28), adventureTile(61, 28), adventureTile(62, 28), adventureTile(60, 29), materialworks, adventureTile(62, 29)], entrance: adventureTile(61, 30), owner: "neutral", garrison: 38 },
     },
     sites: { [raiderPass]: "raiders", [freehavenBandits]: "freehaven-bandits", [quarryRaiders]: "raiders", [southernRaiders]: "raiders" },
     pickups: {
-      [adventureTile(12, 10)]: "dust",
+      [adventureTile(12, 10)]: "strategic",
       [adventureTile(36, 14)]: "knowledge",
       [adventureTile(18, 21)]: "timber",
-      [adventureTile(28, 13)]: "gold", [adventureTile(30, 13)]: "stone", [adventureTile(29, 14)]: "timber", [adventureTile(28, 12)]: "dust",
-      [adventureTile(57, 13)]: "gold", [adventureTile(58, 14)]: "timber", [adventureTile(57, 15)]: "stone", [adventureTile(56, 14)]: "dust",
-      [adventureTile(41, 26)]: "stone", [adventureTile(42, 27)]: "gold", [adventureTile(41, 28)]: "timber", [adventureTile(40, 27)]: "dust",
-      [adventureTile(61, 33)]: "gold", [adventureTile(62, 34)]: "stone", [adventureTile(61, 35)]: "timber", [adventureTile(60, 34)]: "dust",
+      [adventureTile(28, 13)]: "gold", [adventureTile(30, 13)]: "stone", [adventureTile(29, 14)]: "timber", [adventureTile(28, 12)]: "strategic",
+      [adventureTile(57, 13)]: "gold", [adventureTile(58, 14)]: "timber", [adventureTile(57, 15)]: "stone", [adventureTile(56, 14)]: "strategic",
+      [adventureTile(41, 26)]: "stone", [adventureTile(42, 27)]: "gold", [adventureTile(41, 28)]: "timber", [adventureTile(40, 27)]: "strategic",
+      [adventureTile(61, 33)]: "gold", [adventureTile(62, 34)]: "stone", [adventureTile(61, 35)]: "timber", [adventureTile(60, 34)]: "strategic",
     },
     pickupGuards,
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
@@ -777,8 +790,12 @@ export function producerAt(game, tile) {
   return Object.values(game.producers ?? {}).find((producer) => producer.entrance === tile || producer.footprint.includes(tile)) ?? null;
 }
 
-function resourceName(resource) {
-  return resource === "wood" ? "timber" : resource === "magicDust" ? "magic dust" : resource;
+function resourceName(resource, era = "Ancient") {
+  return resource === "wood" ? "timber" : resource === "strategicMaterial" ? strategicMaterialForEra(era).name.toLowerCase() : resource;
+}
+
+function producerNameForEra(producer, era = "Ancient") {
+  return producer.resource === "strategicMaterial" ? strategicMaterialForEra(era).producerName : producer.name;
 }
 
 export function banditGuardZone(centerTile) {
@@ -811,10 +828,13 @@ function destinationFor(game, tile) {
 
 function enemyEncounterAt(game, tile) {
   const producer = producerAt(game, tile);
-  if (producer?.owner === "neutral" && tile === producer.entrance) return {
-    battle: { type: "producer", producerId: producer.id, name: producer.name, strength: producer.garrison },
-    notice: `Bandits are holding ${producer.name}.`,
-  };
+  if (producer?.owner === "neutral" && tile === producer.entrance) {
+    const producerName = producerNameForEra(producer, game.era);
+    return {
+      battle: { type: "producer", producerId: producer.id, name: producerName, strength: producer.garrison },
+      notice: `Bandits are holding ${producerName}.`,
+    };
+  }
   const siteTile = banditGuardAt(game, tile);
   const site = siteTile === null ? null : game.sites[siteTile];
   if (site === "freehaven-bandits") return {
@@ -950,7 +970,7 @@ export function collectAt(game) {
     return { ...game, pendingBattle: { type: "siege", settlementId: settlement.id, name: settlement.name, strength: settlement.garrison }, notice: `${settlement.name}'s garrison blocks the gates.` };
   }
   const producer = producerAt(game, game.hero);
-  if (producer?.owner === "player" && game.hero === producer.entrance) return { ...game, notice: `${producer.name} is under your control and produces ${producer.amount} ${resourceName(producer.resource)} each month.` };
+  if (producer?.owner === "player" && game.hero === producer.entrance) return { ...game, notice: `${producerNameForEra(producer, game.era)} is under your control and produces ${producer.amount} ${resourceName(producer.resource, game.era)} each month.` };
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
   const guardingCamp = game.pickupGuards?.[game.hero];
@@ -963,7 +983,10 @@ export function collectAt(game) {
   }
   if (pickup === "timber") return { ...game, pickups, wood: game.wood + 20, notice: "The army secured 20 timber.", log: [...game.log, "Collected timber from an old logging camp."] };
   if (pickup === "stone") return { ...game, pickups, stone: game.stone + 18, notice: "The army recovered 18 dressed stone.", log: [...game.log, "Recovered a cache of dressed stone."] };
-  if (pickup === "dust") return { ...game, pickups, magicDust: game.magicDust + 4, notice: "The army found 4 measures of magical dust.", log: [...game.log, "Recovered rare magical dust."] };
+  if (pickup === "strategic") {
+    const material = strategicMaterialForEra(game.era);
+    return { ...game, pickups, strategicMaterial: game.strategicMaterial + 4, notice: `The army secured 4 measures of ${material.pickupName}.`, log: [...game.log, `Recovered ${material.name.toLowerCase()} supplies.`] };
+  }
   return { ...game, pickups, gold: game.gold + 100, notice: "The army recovered 100 gold.", log: [...game.log, "Recovered an abandoned pay chest."] };
 }
 
@@ -1004,7 +1027,8 @@ export function resolveBattle(game) {
   if (battle.type === "producer") {
     const producer = game.producers[battle.producerId];
     const producers = { ...game.producers, [producer.id]: { ...producer, owner: "player", garrison: 0 } };
-    return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${producer.name} is secured. It will produce ${producer.amount} ${resourceName(producer.resource)} each month.`, log: [...game.log, `Defeated the guards and took control of ${producer.name}.`] };
+    const producerName = producerNameForEra(producer, game.era);
+    return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${producerName} is secured. It will produce ${producer.amount} ${resourceName(producer.resource, game.era)} each month.`, log: [...game.log, `Defeated the guards and took control of ${producerName}.`] };
   }
   const sites = { ...game.sites };
   delete sites[battle.siteTile ?? game.hero];
@@ -1056,7 +1080,7 @@ export function advanceMonth(game) {
   const controlledProducers = Object.values(game.producers ?? {}).filter((producer) => producer.owner === "player");
   const timberIncome = controlledProducers.filter((producer) => producer.resource === "wood").reduce((total, producer) => total + producer.amount, 0);
   const quarryIncome = controlledProducers.filter((producer) => producer.resource === "stone").reduce((total, producer) => total + producer.amount, 0);
-  const dustIncome = controlledProducers.filter((producer) => producer.resource === "magicDust").reduce((total, producer) => total + producer.amount, 0);
+  const strategicIncome = controlledProducers.filter((producer) => producer.resource === "strategicMaterial").reduce((total, producer) => total + producer.amount, 0);
   const settlements = Object.fromEntries(Object.entries(game.settlements).map(([id, city]) => {
     if (city.owner !== "player") return [id, city];
     const built = game.buildings[id] ?? [];
@@ -1080,8 +1104,8 @@ export function advanceMonth(game) {
   const yearMessage = nextYear > game.year ? `Year ${nextYear} begins. Annual growth has been assessed.` : `${MONTHS[nextMonth - 1]} begins.`;
   const produced = applyResearch(game, researchIncome);
   const goldIncome = 75 * owned.length + bankIncome;
-  const siteProduction = timberIncome || quarryIncome || dustIncome ? ` Controlled sites produced ${timberIncome} timber, ${quarryIncome} stone, and ${dustIncome} magic dust.` : "";
-  return { ...produced, settlements, constructionThisTurn: {}, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: MAX_MOVEMENT, gold: game.gold + goldIncome, wood: game.wood + timberIncome + cityTimberIncome, stone: game.stone + stoneIncome + quarryIncome, magicDust: game.magicDust + dustIncome, notice: `${yearMessage} Cities produced ${goldIncome} gold and ${researchIncome} research.${siteProduction}`, log: [...produced.log, yearMessage] };
+  const siteProduction = timberIncome || quarryIncome || strategicIncome ? ` Controlled sites produced ${timberIncome} timber, ${quarryIncome} stone, and ${strategicIncome} ${resourceName("strategicMaterial", game.era)}.` : "";
+  return { ...produced, settlements, constructionThisTurn: {}, month: nextMonth, monthName: MONTHS[nextMonth - 1], year: nextYear, moves: MAX_MOVEMENT, gold: game.gold + goldIncome, wood: game.wood + timberIncome + cityTimberIncome, stone: game.stone + stoneIncome + quarryIncome, strategicMaterial: game.strategicMaterial + strategicIncome, notice: `${yearMessage} Cities produced ${goldIncome} gold and ${researchIncome} research.${siteProduction}`, log: [...produced.log, yearMessage] };
 }
 
 export function buildInCity(game, cityId, buildingId) {
@@ -1089,12 +1113,13 @@ export function buildInCity(game, cityId, buildingId) {
   const building = BUILDINGS.find((item) => item.id === buildingId);
   const cityBuildings = game.buildings[cityId] ?? [];
   const prerequisitesMet = building?.requires.every((required) => cityBuildings.includes(required));
-  if (!city || city.owner !== "player" || !building || game.constructionThisTurn?.[cityId] || cityBuildings.includes(buildingId) || !prerequisitesMet || game.gold < building.gold || game.wood < building.wood || game.stone < building.stone) return game;
+  const materialCost = building?.material ?? 0;
+  if (!city || city.owner !== "player" || !building || game.constructionThisTurn?.[cityId] || cityBuildings.includes(buildingId) || !prerequisitesMet || game.gold < building.gold || game.wood < building.wood || game.stone < building.stone || game.strategicMaterial < materialCost) return game;
   const recruitSeeds = { "archery-range": ["slingers", 3], "scout-camp": ["scouts", 1], "barracks-ii": ["swordsmen", 2], stable: ["horsemen", 1], "siege-workshop": ["artillery", 1], "war-college": ["armor", 1], "cavalry-school": ["aircraft", 1] };
   const seed = recruitSeeds[buildingId];
   const defenders = buildingId === "garrison" ? 8 : (city.defenders ?? 0);
   const settlements = seed || buildingId === "garrison" ? { ...game.settlements, [cityId]: { ...city, defenders, recruits: seed ? { ...city.recruits, [seed[0]]: city.recruits[seed[0]] + seed[1] } : city.recruits } } : game.settlements;
-  return { ...game, gold: game.gold - building.gold, wood: game.wood - building.wood, stone: game.stone - building.stone, settlements, constructionThisTurn: { ...(game.constructionThisTurn ?? {}), [cityId]: true }, buildings: { ...game.buildings, [cityId]: [...cityBuildings, buildingId] }, notice: `${building.name} completed in ${city.name}. That city's construction is finished for this turn.`, log: [...game.log, `${city.name} completed its ${building.name}.`] };
+  return { ...game, gold: game.gold - building.gold, wood: game.wood - building.wood, stone: game.stone - building.stone, strategicMaterial: game.strategicMaterial - materialCost, settlements, constructionThisTurn: { ...(game.constructionThisTurn ?? {}), [cityId]: true }, buildings: { ...game.buildings, [cityId]: [...cityBuildings, buildingId] }, notice: `${building.name} completed in ${city.name}. That city's construction is finished for this turn.`, log: [...game.log, `${city.name} completed its ${building.name}.`] };
 }
 
 export function recruitFromCity(game, cityId, unitId, amount = 1) {
@@ -1103,8 +1128,9 @@ export function recruitFromCity(game, cityId, unitId, amount = 1) {
   const cityBuildings = game.buildings[cityId] ?? [];
   const quantity = Number(amount);
   const totalCost = unit ? unit.cost * quantity : Infinity;
-  if (!city || city.owner !== "player" || game.hero !== city.tile || !unit || !Number.isInteger(quantity) || quantity < 1 || !cityBuildings.includes(unit.requires) || city.recruits[unitId] < quantity || game.gold < totalCost || quantity > maxRecruitableIntoArmy(game.army, unitId)) return game;
-  return { ...game, gold: game.gold - totalCost, army: { ...game.army, [unitId]: game.army[unitId] + quantity }, settlements: { ...game.settlements, [cityId]: { ...city, recruits: { ...city.recruits, [unitId]: city.recruits[unitId] - quantity } } }, notice: `${quantity} ${unit.name} joined Marcellus in ${city.name}.` };
+  const materialCost = unit ? (unit.materialCost ?? 0) * quantity : Infinity;
+  if (!city || city.owner !== "player" || game.hero !== city.tile || !unit || !Number.isInteger(quantity) || quantity < 1 || !cityBuildings.includes(unit.requires) || city.recruits[unitId] < quantity || game.gold < totalCost || game.strategicMaterial < materialCost || quantity > maxRecruitableIntoArmy(game.army, unitId)) return game;
+  return { ...game, gold: game.gold - totalCost, strategicMaterial: game.strategicMaterial - materialCost, army: { ...game.army, [unitId]: game.army[unitId] + quantity }, settlements: { ...game.settlements, [cityId]: { ...city, recruits: { ...city.recruits, [unitId]: city.recruits[unitId] - quantity } } }, notice: `${quantity} ${unit.name} joined Marcellus in ${city.name}.` };
 }
 
 export function cityDefense(game, cityId) {

@@ -49,6 +49,7 @@ import {
   banditGuardAt,
   banditGuardZone,
   maxRecruitableIntoArmy,
+  strategicMaterialForEra,
 } from "./game-core.js";
 
 const MAP_PAN_STEP = 210;
@@ -103,7 +104,7 @@ type CombatState = {
 type ForceEstimate = NonNullable<ReturnType<typeof scoutEnemyForce>>;
 type GameState = {
   year: number; month: number; monthName: string; era: string; hero: number; moves: number;
-  gold: number; wood: number; stone: number; magicDust: number; research: number; cities: number; victories: number;
+  gold: number; wood: number; stone: number; strategicMaterial: number; research: number; cities: number; victories: number;
   army: Record<string, number>; techs: string[]; buildings: Record<string, string[]>; activeResearch: string | null;
   constructionThisTurn: Record<string, boolean>;
   techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
@@ -128,6 +129,7 @@ export default function Home() {
   const currentUnits = useMemo(() => unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null), [game.era]);
   const battleThreat = useMemo(() => assessBattleThreat(game), [game]);
   const visualEra = eraVisualFamily(game.era);
+  const strategicMaterial = strategicMaterialForEra(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
   useEffect(() => {
@@ -194,7 +196,7 @@ export default function Home() {
           <Resource icon="◆" value={game.gold} label="Gold" />
           <Resource icon="▰" value={game.wood} label="Timber" />
           <Resource icon="⬟" value={game.stone} label="Stone" />
-          <Resource icon="✧" value={game.magicDust} label="Magical dust" />
+          <Resource icon={strategicMaterial.icon} value={game.strategicMaterial} label={strategicMaterial.name} />
           <Resource icon="✦" value={game.research} label="Research" />
         </div>
       </header>
@@ -264,7 +266,9 @@ export default function Home() {
               const onPath = plannedPath.includes(index);
               const passable = isTerrainPassable(index);
               const terrainName = tile.replace("dense-forest", "dense forest");
-              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", guarded by nearby bandits" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : controllingBandit !== null ? ", bandit-controlled ground" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
+              const pickupName = pickup === "strategic" ? strategicMaterial.pickupName : pickup;
+              const producerName = producer?.resource === "strategicMaterial" ? strategicMaterial.producerName : producer?.name;
+              const description = `${terrainName}${passable ? "" : ", impassable"}${pickupName ? `, ${pickupName}${guardedPickup ? ", guarded by nearby bandits" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : controllingBandit !== null ? ", bandit-controlled ground" : ""}${producerName ? `, ${producerName}, ${producer?.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}
@@ -278,7 +282,7 @@ export default function Home() {
                   aria-label={`Map position ${index + 1}, ${description}. ${passable ? "Press Enter or right-click once to preview the route and any hostile force; repeat to travel." : "Travel is blocked here."}`}
                 >
                   {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
-                  {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={`assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
+                  {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={pickup === "strategic" ? `assets/map-v2/pickup-strategic-${visualEra}.webp` : `assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
                   {(site === "raiders" || site === "freehaven-bandits") && <span className="site enemy" aria-hidden="true"><img src="assets/map-v2/enemy-bandit-unit.png" alt="" /></span>}
                   {game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
                 </button>
@@ -606,6 +610,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
   const [recruitAmounts, setRecruitAmounts] = useState<Record<string, number>>(() => Object.fromEntries(UNITS.map((unit) => [unit.id, 1])));
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const recruitableUnits = unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null);
+  const strategicMaterial = strategicMaterialForEra(game.era);
   const cityBuildings = game.buildings[city.id] ?? [];
   const present = game.hero === city.tile;
   const defense = cityDefense(game, city.id);
@@ -627,7 +632,9 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
           const source = BUILDINGS.find(building => building.id === unit.requires);
           const unlocked = cityBuildings.includes(unit.requires);
           const stackCapacity = maxRecruitableIntoArmy(game.army, unit.id);
-          const maximum = Math.min(city.recruits[unit.id], Math.floor(game.gold / unit.cost), stackCapacity);
+          const materialCost = unit.materialCost ?? 0;
+          const materialCapacity = materialCost > 0 ? Math.floor(game.strategicMaterial / materialCost) : Infinity;
+          const maximum = Math.min(city.recruits[unit.id], Math.floor(game.gold / unit.cost), materialCapacity, stackCapacity);
           const amount = Math.min(Math.max(1, recruitAmounts[unit.id] ?? 1), Math.max(1, maximum));
           const chooseAmount = (value: number) => setRecruitAmounts((current) => ({...current, [unit.id]: Math.min(Math.max(1, value), Math.max(1, maximum))}));
           return <article key={unit.id} className={!unlocked ? "locked" : ""}>
@@ -636,10 +643,10 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
             {selectedUnitId === unit.id && <div className="unit-inspector" role="region" aria-label={`${unit.name} statistics`}>
               <p>{unit.role}</p>
               <div><span><b>{unit.attack}</b>Attack</span><span><b>{unit.defense}</b>Defense</span><span><b>{unit.damage[0]}–{unit.damage[1]}</b>Damage</span><span><b>{unit.health}</b>Health</span><span><b>{unit.speed}</b>Speed</span><span><b>{unit.initiative}</b>Initiative</span></div>
-              <small>{unit.ranged ? `Ranged · Range ${unit.range} · ${unit.shots} shots per battle` : "Melee unit"}{unit.longRange ? " · Long range" : ""}{unit.armored ? " · Armored" : ""}{unit.flying ? " · Flying over obstacles" : ""} · {unit.cost} gold each</small>
+              <small>{unit.ranged ? `Ranged · Range ${unit.range} · ${unit.shots} shots per battle` : "Melee unit"}{unit.longRange ? " · Long range" : ""}{unit.armored ? " · Armored" : ""}{unit.flying ? " · Flying over obstacles" : ""} · {unit.cost} gold each{materialCost > 0 ? ` · ${materialCost} ${strategicMaterial.name} each` : ""}</small>
             </div>}
             {unlocked && <div className="recruit-quantity"><button type="button" aria-label={`Recruit one fewer ${unit.name}`} disabled={maximum < 1 || amount <= 1} onClick={() => chooseAmount(amount - 1)}>−</button><input aria-label={`${unit.name} recruitment quantity`} type="number" min="1" max={Math.max(1, maximum)} value={amount} disabled={maximum < 1} onChange={(event) => chooseAmount(Number(event.target.value) || 1)} /><button type="button" aria-label={`Recruit one more ${unit.name}`} disabled={maximum < 1 || amount >= maximum} onClick={() => chooseAmount(amount + 1)}>+</button><button type="button" disabled={maximum < 1} onClick={() => chooseAmount(maximum)}>Max</button></div>}
-            <button disabled={!unlocked || !present || maximum < 1} onClick={() => { updateGame(g => recruitFromCity(g, city.id, unit.id, amount)); chooseAmount(1); }}>{unlocked ? `Recruit ${amount} · ${amount * unit.cost} ◆` : "Building required"}</button>
+            <button disabled={!unlocked || !present || maximum < 1} onClick={() => { updateGame(g => recruitFromCity(g, city.id, unit.id, amount)); chooseAmount(1); }}>{unlocked ? `Recruit ${amount} · ${amount * unit.cost} ◆${materialCost > 0 ? ` · ${amount * materialCost} ${strategicMaterial.icon}` : ""}` : "Building required"}</button>
           </article>;
         })}</div>
         <div className="guard-card"><span>⛨</span><div><b>Permanent city guard</b><small>{city.defenders} troops · Cannot join a hero</small></div></div>
@@ -659,7 +666,8 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
           {BUILDINGS.map(building => {
           const built = cityBuildings.includes(building.id);
           const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
-          const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone;
+          const materialCost = building.material ?? 0;
+          const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone && game.strategicMaterial >= materialCost;
           const requirementNames = building.requires.map(required => BUILDINGS.find(item => item.id === required)?.name).join(" + ");
           const activeResearchUpgrades = RESEARCH.filter(technology => technology.building === building.id && game.techs.includes(technology.id));
           return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
@@ -667,7 +675,7 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
             <small>{recruitableUnits.find(unit => unit.requires === building.id) ? `Recruits ${recruitableUnits.find(unit => unit.requires === building.id)?.name}.` : building.description}</small>
             {activeResearchUpgrades.map(technology => <p className="research-upgrade" key={technology.id}>✓ {technology.name}: {technology.improvement}</p>)}
             {building.requires.length > 0 && <p className="requirement-label">Requires: {requirementNames}</p>}
-            {built ? <strong>✓ Built</strong> : <button className="construction-cost" disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn; the listed cost remains unchanged" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}><span>◆ {building.gold} gold{building.wood > 0 && ` · ▰ ${building.wood} timber`}{building.stone > 0 && ` · ⬟ ${building.stone} stone`}</span>{constructionUsed && <small>Available next turn</small>}</button>}
+            {built ? <strong>✓ Built</strong> : <button className="construction-cost" disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn; the listed cost remains unchanged" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}><span>◆ {building.gold} gold{building.wood > 0 && ` · ▰ ${building.wood} timber`}{building.stone > 0 && ` · ⬟ ${building.stone} stone`}{materialCost > 0 && ` · ${strategicMaterial.icon} ${materialCost} ${strategicMaterial.name}`}</span>{constructionUsed && <small>Available next turn</small>}</button>}
           </article>;
         })}</div>
       </section>

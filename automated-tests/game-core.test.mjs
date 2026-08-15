@@ -55,6 +55,7 @@ import {
   scoutEnemyForce,
   startCombat,
   startResearch,
+  strategicMaterialForEra,
   unitForEra,
   unitsForEra,
   waitCombatTurn,
@@ -296,12 +297,14 @@ test("resource pickups are consumed permanently and stone replaces food", () => 
   assert.equal(advanceMonth(collected).pickups[tile], undefined);
 });
 
-test("magical dust is a distinct collectible special resource", () => {
+test("strategic materials change identity by age and remain collectible", () => {
+  assert.deepEqual(["Ancient", "Classical", "Medieval", "Gunpowder", "Industrial", "Modern"].map((era) => strategicMaterialForEra(era).name), ["Bronze", "Iron", "Steel", "Saltpeter", "Oil", "Fuel"]);
   const initial = createGame();
-  const tile = pickupTile(initial, "dust");
+  const tile = pickupTile(initial, "strategic");
   const game = { ...initial, hero: tile };
   const collected = collectAt(game);
-  assert.equal(collected.magicDust, game.magicDust + 4);
+  assert.equal(collected.strategicMaterial, game.strategicMaterial + 4);
+  assert.match(collected.notice, /bronze ingots/);
   assert.equal(collected.pickups[tile], undefined);
 });
 
@@ -676,6 +679,39 @@ test("the construction catalog is a full five-tier tree", () => {
   assert.deepEqual(new Set(BUILDINGS.map((building) => building.branch)), new Set(["economy", "civic", "military", "defense"]));
 });
 
+test("advanced construction and recruitment consume the current strategic material", () => {
+  const initial = createGame();
+  const foundry = BUILDINGS.find((building) => building.id === "foundry");
+  const prepared = {
+    ...initial,
+    hero: initial.settlements.aurum.tile,
+    gold: 5000,
+    wood: 500,
+    stone: 500,
+    strategicMaterial: foundry.material,
+    buildings: { ...initial.buildings, aurum: [...initial.buildings.aurum, "workshop"] },
+  };
+  const built = buildInCity(prepared, "aurum", "foundry");
+  assert.equal(built.strategicMaterial, 0);
+  assert.equal(built.buildings.aurum.includes("foundry"), true);
+  assert.equal(buildInCity({ ...prepared, strategicMaterial: foundry.material - 1 }, "aurum", "foundry").buildings.aurum.includes("foundry"), false);
+
+  const artillery = unitForEra("artillery", "Ancient");
+  const recruitable = {
+    ...initial,
+    hero: initial.settlements.aurum.tile,
+    gold: 5000,
+    strategicMaterial: artillery.materialCost * 2,
+    buildings: { ...initial.buildings, aurum: [...initial.buildings.aurum, "siege-workshop"] },
+    settlements: { ...initial.settlements, aurum: { ...initial.settlements.aurum, recruits: { ...initial.settlements.aurum.recruits, artillery: 3 } } },
+  };
+  const recruited = recruitFromCity(recruitable, "aurum", "artillery", 2);
+  assert.equal(recruited.army.artillery, 2);
+  assert.equal(recruited.strategicMaterial, 0);
+  const materialPoor = { ...recruitable, strategicMaterial: 0 };
+  assert.equal(recruitFromCity(materialPoor, "aurum", "artillery"), materialPoor);
+});
+
 test("the Garrison creates a small permanent city guard rather than a recruitable unit", () => {
   let game = { ...createGame(), gold: 5000, wood: 500, stone: 500 };
   game = buildInCity(game, "aurum", "city-hall");
@@ -722,7 +758,7 @@ test("resource producers occupy multiple tiles and route visitors beside their a
   assert.equal(route.at(-1), quarry.entrance);
 });
 
-test("guarded producers require victory before generating timber, stone, and magic dust", () => {
+test("guarded producers require victory before generating timber, stone, and strategic materials", () => {
   const initial = createGame();
   const sawmillBattle = collectAt({ ...initial, hero: initial.producers.pinewater.entrance });
   assert.equal(sawmillBattle.pendingBattle.type, "producer");
@@ -732,12 +768,13 @@ test("guarded producers require victory before generating timber, stone, and mag
   assert.equal(sawmillCaptured.producers.pinewater.footprint.includes(sawmillCaptured.hero), false);
   const quarryBattle = collectAt({ ...sawmillCaptured, hero: initial.producers.redcliff.entrance });
   const bothCaptured = resolveBattle(markCombatVictory(quarryBattle));
-  const dustBattle = collectAt({ ...bothCaptured, hero: initial.producers.violetworks.entrance });
-  const allCaptured = resolveBattle(markCombatVictory(dustBattle));
+  const materialBattle = collectAt({ ...bothCaptured, hero: initial.producers.materialworks.entrance });
+  const allCaptured = resolveBattle(markCombatVictory(materialBattle));
   const produced = advanceMonth(allCaptured);
   assert.equal(produced.wood, allCaptured.wood + 10);
   assert.equal(produced.stone, allCaptured.stone + 8);
-  assert.equal(produced.magicDust, allCaptured.magicDust + 2);
+  assert.equal(produced.strategicMaterial, allCaptured.strategicMaterial + 2);
+  assert.match(produced.notice, /bronze/);
 });
 
 test("tactical combat uses a twenty-one-by-thirteen odd-row hex battlefield", () => {

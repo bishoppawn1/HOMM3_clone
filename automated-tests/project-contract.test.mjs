@@ -37,7 +37,7 @@ test("branch-based GitHub Pages serves the game instead of the README", async ()
 
 test("every age has distinct city and producer artwork", async () => {
   const ages = ["ancient", "classical", "medieval", "gunpowder", "industrial", "modern"];
-  const producers = ["sawmill", "quarry", "dustworks"];
+  const producers = ["sawmill", "quarry", "materialworks"];
   await Promise.all(ages.flatMap((age) => [
     access(new URL(`public/assets/map-v2/city-${age}.webp`, root)),
     ...producers.map((producer) => access(new URL(`public/assets/map-v2/${producer}-${age}.webp`, root))),
@@ -82,8 +82,10 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
-    ...["terrain-forest", "terrain-mountain", "pickup-timber", "pickup-stone", "pickup-gold", "pickup-dust"]
+    ...["terrain-forest", "terrain-mountain", "pickup-timber", "pickup-stone", "pickup-gold"]
       .map((asset) => access(new URL(`public/assets/map-v2/${asset}.webp`, root))),
+    ...["ancient", "classical", "medieval", "gunpowder", "industrial", "modern"]
+      .map((age) => access(new URL(`public/assets/map-v2/pickup-strategic-${age}.webp`, root))),
     access(new URL("public/assets/map-v2/enemy-bandit-unit.png", root)),
   ]);
   assert.match(page, /className={`territory-fill/);
