@@ -62,6 +62,17 @@ test("every troop line has an age-specific portrait and combat uses right-click 
   assert.match(styles, /\.unit-health>small/);
 });
 
+test("corrected industrial and modern vehicle portraits remain square RGBA sprites", async () => {
+  const vehicles = ["industrial-artillery", "industrial-armor", "modern-artillery", "modern-armor"];
+  const portraits = await Promise.all(vehicles.map((vehicle) => readFile(new URL(`public/assets/units/${vehicle}.png`, root))));
+  for (const portrait of portraits) {
+    assert.equal(portrait.subarray(1, 4).toString(), "PNG");
+    assert.equal(portrait.readUInt32BE(16), 256);
+    assert.equal(portrait.readUInt32BE(20), 256);
+    assert.equal(portrait[25], 6);
+  }
+});
+
 test("the map uses proportioned terrain, winding roads, enemies, pickups, and subtle territory tint", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
