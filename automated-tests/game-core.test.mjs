@@ -21,6 +21,7 @@ import {
   attackCombatStack,
   banditGuardAt,
   banditGuardZone,
+  buildingResearchBonus,
   buildInCity,
   canMoveTo,
   chooseResearch,
@@ -107,6 +108,40 @@ test("a Bank adds monthly gold income", () => {
   game.buildings.aurum.push("bank");
   const next = advanceMonth(game);
   assert.equal(next.gold, game.gold + 175);
+});
+
+test("every player technology names a valid building and a concrete improvement", () => {
+  const buildingIds = new Set(BUILDINGS.map((building) => building.id));
+  assert.equal(RESEARCH.length, 18);
+  for (const technology of RESEARCH) {
+    assert.equal(buildingIds.has(technology.building), true, `${technology.name} must improve a real building`);
+    assert.match(technology.improvement, /^\+/);
+    assert.equal(Object.keys(technology.effects).length > 0, true);
+  }
+});
+
+test("completed research improves constructed buildings in player cities only", () => {
+  const game = createGame();
+  game.techs = ["bronze", "records", "civic-law"];
+  game.activeResearch = null;
+  game.buildings.aurum = ["town-hall", "militia-yard", "archive"];
+  game.buildings.freehaven = ["town-hall", "militia-yard", "archive"];
+  const next = advanceMonth(game);
+  assert.equal(next.gold, game.gold + 100);
+  assert.equal(next.research, game.research + 70);
+  assert.equal(next.settlements.aurum.recruits.spearmen, game.settlements.aurum.recruits.spearmen + 6);
+  assert.equal(next.settlements.freehaven.recruits.spearmen, game.settlements.freehaven.recruits.spearmen);
+
+  const withoutArchive = { ...game, buildings: { ...game.buildings, aurum: ["town-hall", "militia-yard"] } };
+  assert.equal(advanceMonth(withoutArchive).research, game.research + 35);
+});
+
+test("research bonuses expose the completed player upgrade and strengthen city defense", () => {
+  const game = createGame();
+  assert.deepEqual(buildingResearchBonus(game, "garrison"), { gold: 0, wood: 0, stone: 0, research: 0, defense: 0, recruits: {} });
+  const upgraded = { ...game, techs: ["radio"], buildings: { ...game.buildings, aurum: [...game.buildings.aurum, "garrison"] } };
+  assert.equal(buildingResearchBonus(upgraded, "garrison").defense, 8);
+  assert.equal(cityDefense(upgraded, "aurum"), cityDefense(game, "aurum") + 8);
 });
 
 test("the adventure map uses a seventy-two-by-forty-five hidden movement grid", () => {

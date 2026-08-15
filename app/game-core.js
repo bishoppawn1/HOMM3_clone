@@ -93,24 +93,24 @@ export function eraVisualFamily(era) {
 }
 
 export const RESEARCH = [
-  { id: "surveying", era: "Ancient", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, description: "Improves travel and reveals nearby territory." },
-  { id: "bronze", era: "Ancient", name: "Bronze Working", icon: "⚒", cost: 220, bonus: 110, description: "Unlocks stronger arms and civic tools." },
-  { id: "records", era: "Ancient", name: "Written Records", icon: "≡", cost: 260, bonus: 130, description: "Improves administration and research." },
-  { id: "irrigation", era: "Classical", name: "Irrigation", icon: "≈", cost: 300, bonus: 150, description: "Coordinates waterworks and steadier harvests." },
-  { id: "iron-working", era: "Classical", name: "Iron Working", icon: "⚒", cost: 340, bonus: 170, description: "Develops stronger tools, weapons, and fittings." },
-  { id: "civic-law", era: "Classical", name: "Civic Law", icon: "⚖", cost: 380, bonus: 190, description: "Formalizes administration across growing communities." },
-  { id: "crop-rotation", era: "Medieval", name: "Crop Rotation", icon: "◌", cost: 430, bonus: 215, description: "Improves agricultural output without territorial expansion." },
-  { id: "guilds", era: "Medieval", name: "Craft Guilds", icon: "◇", cost: 470, bonus: 235, description: "Organizes skilled labor and specialist production." },
-  { id: "steel-working", era: "Medieval", name: "Steel Working", icon: "⚔", cost: 510, bonus: 255, description: "Refines dependable steel arms and tools." },
-  { id: "printing", era: "Gunpowder", name: "Printing Press", icon: "▤", cost: 570, bonus: 285, description: "Accelerates the circulation of technical knowledge." },
-  { id: "black-powder", era: "Gunpowder", name: "Black Powder", icon: "✹", cost: 620, bonus: 310, description: "Introduces grounded gunpowder weapons and engineering." },
-  { id: "navigation", era: "Gunpowder", name: "Oceanic Navigation", icon: "⌖", cost: 670, bonus: 335, description: "Improves long-distance navigation and mapping." },
-  { id: "steam-power", era: "Industrial", name: "Steam Power", icon: "⚙", cost: 740, bonus: 370, description: "Provides mechanical power for transport and industry." },
-  { id: "mechanization", era: "Industrial", name: "Mechanization", icon: "⌘", cost: 800, bonus: 400, description: "Standardizes machine-assisted production." },
-  { id: "public-schooling", era: "Industrial", name: "Public Schooling", icon: "≡", cost: 860, bonus: 430, description: "Broadens literacy and technical education." },
-  { id: "electricity", era: "Modern", name: "Electricity", icon: "ϟ", cost: 940, bonus: 470, description: "Builds reliable electrical generation and distribution." },
-  { id: "combustion", era: "Modern", name: "Combustion Engines", icon: "⚙", cost: 1000, bonus: 500, description: "Powers mobile machines with compact engines." },
-  { id: "radio", era: "Modern", name: "Radio Communication", icon: "⌁", cost: 1060, bonus: 530, description: "Coordinates distant forces and cities rapidly." },
+  { id: "surveying", era: "Ancient", name: "Surveying", icon: "⌖", cost: 180, bonus: 90, building: "scout-camp", improvement: "+1 Scout growth each month", effects: { recruits: { scouts: 1 } }, description: "Trains scouts with measured routes and reliable field maps." },
+  { id: "bronze", era: "Ancient", name: "Bronze Working", icon: "⚒", cost: 220, bonus: 110, building: "militia-yard", improvement: "+2 Spearmen growth each month", effects: { recruits: { spearmen: 2 } }, description: "Equips militia formations with standardized bronze arms." },
+  { id: "records", era: "Ancient", name: "Written Records", icon: "≡", cost: 260, bonus: 130, building: "archive", improvement: "+10 research each month", effects: { research: 10 }, description: "Lets scribes preserve and circulate accumulated knowledge." },
+  { id: "irrigation", era: "Classical", name: "Irrigation", icon: "≈", cost: 300, bonus: 150, building: "warehouse", improvement: "+3 timber each month", effects: { wood: 3 }, description: "Improves managed water and material storage around workshops." },
+  { id: "iron-working", era: "Classical", name: "Iron Working", icon: "⚒", cost: 340, bonus: 170, building: "mason-yard", improvement: "+4 stone each month", effects: { stone: 4 }, description: "Provides harder tools for cutting and dressing stone." },
+  { id: "civic-law", era: "Classical", name: "Civic Law", icon: "⚖", cost: 380, bonus: 190, building: "town-hall", improvement: "+25 gold each month", effects: { gold: 25 }, description: "Improves taxation and recordkeeping in every town hall." },
+  { id: "crop-rotation", era: "Medieval", name: "Crop Rotation", icon: "◌", cost: 430, bonus: 215, building: "market", improvement: "+25 gold each month", effects: { gold: 25 }, description: "Creates steadier surpluses for the city's market." },
+  { id: "guilds", era: "Medieval", name: "Craft Guilds", icon: "◇", cost: 470, bonus: 235, building: "workshop", improvement: "+4 timber each month", effects: { wood: 4 }, description: "Organizes civic workshops into reliable production guilds." },
+  { id: "steel-working", era: "Medieval", name: "Steel Working", icon: "⚔", cost: 510, bonus: 255, building: "barracks-ii", improvement: "+1 Swordsman growth each month", effects: { recruits: { swordsmen: 1 } }, description: "Supplies trained infantry with dependable steel arms." },
+  { id: "printing", era: "Gunpowder", name: "Printing Press", icon: "▤", cost: 570, bonus: 285, building: "great-library", improvement: "+20 research each month", effects: { research: 20 }, description: "Lets great libraries distribute technical texts at scale." },
+  { id: "black-powder", era: "Gunpowder", name: "Black Powder", icon: "✹", cost: 620, bonus: 310, building: "siege-workshop", improvement: "+1 Artillery growth each month", effects: { recruits: { artillery: 1 } }, description: "Expands siege workshops into gunpowder artillery works." },
+  { id: "navigation", era: "Gunpowder", name: "Oceanic Navigation", icon: "⌖", cost: 670, bonus: 335, building: "trade-guild", improvement: "+40 gold each month", effects: { gold: 40 }, description: "Opens longer and more dependable routes for trade guilds." },
+  { id: "steam-power", era: "Industrial", name: "Steam Power", icon: "⚙", cost: 740, bonus: 370, building: "foundry", improvement: "+6 stone each month", effects: { stone: 6 }, description: "Mechanizes heavy work inside city foundries." },
+  { id: "mechanization", era: "Industrial", name: "Mechanization", icon: "⌘", cost: 800, bonus: 400, building: "war-college", improvement: "+1 Armor growth each month", effects: { recruits: { armor: 1 } }, description: "Standardizes armored equipment and its trained crews." },
+  { id: "public-schooling", era: "Industrial", name: "Public Schooling", icon: "≡", cost: 860, bonus: 430, building: "academy", improvement: "+15 research each month", effects: { research: 15 }, description: "Broadens the academy's pool of educated researchers." },
+  { id: "electricity", era: "Modern", name: "Electricity", icon: "ϟ", cost: 940, bonus: 470, building: "bank", improvement: "+75 gold each month", effects: { gold: 75 }, description: "Connects banks with faster accounting and communications." },
+  { id: "combustion", era: "Modern", name: "Combustion Engines", icon: "⚙", cost: 1000, bonus: 500, building: "stable", improvement: "+1 Armored Car growth each month", effects: { recruits: { horsemen: 1 } }, description: "Converts the stable's mobile arm into motorized formations." },
+  { id: "radio", era: "Modern", name: "Radio Communication", icon: "⌁", cost: 1060, bonus: 530, building: "garrison", improvement: "+8 city defense", effects: { defense: 8 }, description: "Coordinates garrison defenders across the entire city." },
 ];
 
 export const ERA_ADVANCEMENT_TECHS = Object.freeze({
@@ -152,6 +152,23 @@ export const BUILDINGS = [
   { id: "cavalry-school", name: "Cavalry School", icon: "♘", tier: 5, branch: "military", x: 6, y: 5, gold: 1080, wood: 34, stone: 30, requires: ["stable", "training-grounds"], description: "Recruits aerial reconnaissance formations." },
   { id: "citadel", name: "Citadel", icon: "♝", tier: 5, branch: "defense", x: 7, y: 5, gold: 1250, wood: 24, stone: 54, requires: ["stone-walls", "garrison"], description: "+20 city defense." },
 ];
+
+export function buildingResearchBonus(game, buildingId) {
+  return RESEARCH.filter((technology) => technology.building === buildingId && game.techs.includes(technology.id))
+    .reduce((bonus, technology) => {
+      const effects = technology.effects ?? {};
+      const recruits = { ...bonus.recruits };
+      for (const [unitId, amount] of Object.entries(effects.recruits ?? {})) recruits[unitId] = (recruits[unitId] ?? 0) + amount;
+      return {
+        gold: bonus.gold + (effects.gold ?? 0),
+        wood: bonus.wood + (effects.wood ?? 0),
+        stone: bonus.stone + (effects.stone ?? 0),
+        research: bonus.research + (effects.research ?? 0),
+        defense: bonus.defense + (effects.defense ?? 0),
+        recruits,
+      };
+    }, { gold: 0, wood: 0, stone: 0, research: 0, defense: 0, recruits: {} });
+}
 
 export const UNITS = [
   { id: "spearmen", name: "Spearmen", icon: "♙", tier: 1, cost: 24, requires: "militia-yard", attack: 4, defense: 5, damage: [2, 3], health: 10, speed: 4, initiative: 4, ranged: false, role: "Defensive infantry that holds ground and protects more fragile formations." },
@@ -1030,10 +1047,12 @@ export function advanceMonth(game) {
   const nextYear = game.month === 12 ? game.year + 1 : game.year;
   const owned = Object.values(game.settlements).filter((city) => city.owner === "player");
   const allBuildings = owned.flatMap((city) => game.buildings[city.id] ?? []);
-  const researchIncome = 35 + allBuildings.filter((id) => id === "archive").length * 25 + allBuildings.filter((id) => id === "academy").length * 15 + allBuildings.filter((id) => id === "great-library").length * 40;
-  const stoneIncome = allBuildings.filter((id) => id === "mason-yard").length * 8 + allBuildings.filter((id) => id === "foundry").length * 8;
-  const cityTimberIncome = allBuildings.filter((id) => id === "warehouse").length * 5 + allBuildings.filter((id) => id === "foundry").length * 4;
-  const bankIncome = allBuildings.filter((id) => id === "bank").length * 100 + allBuildings.filter((id) => id === "market").length * 25 + allBuildings.filter((id) => id === "trade-guild").length * 60 + allBuildings.filter((id) => id === "treasury").length * 200;
+  const researchBonuses = allBuildings.map((buildingId) => buildingResearchBonus(game, buildingId));
+  const researchedIncome = (resource) => researchBonuses.reduce((total, bonus) => total + bonus[resource], 0);
+  const researchIncome = 35 + allBuildings.filter((id) => id === "archive").length * 25 + allBuildings.filter((id) => id === "academy").length * 15 + allBuildings.filter((id) => id === "great-library").length * 40 + researchedIncome("research");
+  const stoneIncome = allBuildings.filter((id) => id === "mason-yard").length * 8 + allBuildings.filter((id) => id === "foundry").length * 8 + researchedIncome("stone");
+  const cityTimberIncome = allBuildings.filter((id) => id === "warehouse").length * 5 + allBuildings.filter((id) => id === "foundry").length * 4 + researchedIncome("wood");
+  const bankIncome = allBuildings.filter((id) => id === "bank").length * 100 + allBuildings.filter((id) => id === "market").length * 25 + allBuildings.filter((id) => id === "trade-guild").length * 60 + allBuildings.filter((id) => id === "treasury").length * 200 + researchedIncome("gold");
   const controlledProducers = Object.values(game.producers ?? {}).filter((producer) => producer.owner === "player");
   const timberIncome = controlledProducers.filter((producer) => producer.resource === "wood").reduce((total, producer) => total + producer.amount, 0);
   const quarryIncome = controlledProducers.filter((producer) => producer.resource === "stone").reduce((total, producer) => total + producer.amount, 0);
@@ -1041,16 +1060,21 @@ export function advanceMonth(game) {
   const settlements = Object.fromEntries(Object.entries(game.settlements).map(([id, city]) => {
     if (city.owner !== "player") return [id, city];
     const built = game.buildings[id] ?? [];
+    const researchedGrowth = built.map((buildingId) => buildingResearchBonus(game, buildingId))
+      .reduce((growth, bonus) => {
+        for (const [unitId, amount] of Object.entries(bonus.recruits)) growth[unitId] = (growth[unitId] ?? 0) + amount;
+        return growth;
+      }, {});
     return [id, { ...city, recruits: {
       ...city.recruits,
-      spearmen: city.recruits.spearmen + (built.includes("militia-yard") ? 4 : 0),
-      slingers: city.recruits.slingers + (built.includes("archery-range") ? 3 : 0),
-      scouts: city.recruits.scouts + (built.includes("scout-camp") ? 1 : 0),
-      swordsmen: city.recruits.swordsmen + (built.includes("barracks-ii") ? 2 : 0) + (built.includes("training-grounds") ? 1 : 0),
-      horsemen: city.recruits.horsemen + (built.includes("stable") ? 1 : 0) + (built.includes("cavalry-school") ? 1 : 0),
-      artillery: (city.recruits.artillery ?? 0) + (built.includes("siege-workshop") ? 1 : 0),
-      armor: (city.recruits.armor ?? 0) + (built.includes("war-college") ? 1 : 0),
-      aircraft: (city.recruits.aircraft ?? 0) + (built.includes("cavalry-school") ? 1 : 0),
+      spearmen: city.recruits.spearmen + (built.includes("militia-yard") ? 4 : 0) + (researchedGrowth.spearmen ?? 0),
+      slingers: city.recruits.slingers + (built.includes("archery-range") ? 3 : 0) + (researchedGrowth.slingers ?? 0),
+      scouts: city.recruits.scouts + (built.includes("scout-camp") ? 1 : 0) + (researchedGrowth.scouts ?? 0),
+      swordsmen: city.recruits.swordsmen + (built.includes("barracks-ii") ? 2 : 0) + (built.includes("training-grounds") ? 1 : 0) + (researchedGrowth.swordsmen ?? 0),
+      horsemen: city.recruits.horsemen + (built.includes("stable") ? 1 : 0) + (built.includes("cavalry-school") ? 1 : 0) + (researchedGrowth.horsemen ?? 0),
+      artillery: (city.recruits.artillery ?? 0) + (built.includes("siege-workshop") ? 1 : 0) + (researchedGrowth.artillery ?? 0),
+      armor: (city.recruits.armor ?? 0) + (built.includes("war-college") ? 1 : 0) + (researchedGrowth.armor ?? 0),
+      aircraft: (city.recruits.aircraft ?? 0) + (built.includes("cavalry-school") ? 1 : 0) + (researchedGrowth.aircraft ?? 0),
     }, defenders: built.includes("garrison") ? Math.min(12, (city.defenders ?? 0) + 2) : (city.defenders ?? 0) }];
   }));
   const yearMessage = nextYear > game.year ? `Year ${nextYear} begins. Annual growth has been assessed.` : `${MONTHS[nextMonth - 1]} begins.`;
@@ -1087,7 +1111,8 @@ export function cityDefense(game, cityId) {
   const city = game.settlements[cityId];
   if (!city) return 0;
   const built = game.buildings[cityId] ?? [];
-  return (city.defenders ?? 0) + (built.includes("palisade") ? 4 : 0) + (built.includes("stone-walls") ? 10 : 0) + (built.includes("citadel") ? 20 : 0);
+  const researchedDefense = built.reduce((total, buildingId) => total + buildingResearchBonus(game, buildingId).defense, 0);
+  return (city.defenders ?? 0) + (built.includes("palisade") ? 4 : 0) + (built.includes("stone-walls") ? 10 : 0) + (built.includes("citadel") ? 20 : 0) + researchedDefense;
 }
 
 export function eraReadiness(game) {

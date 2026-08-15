@@ -317,8 +317,8 @@ export default function Home() {
             <>
               <p className="section-kicker">Current age</p>
               <h2>{game.era} Age</h2>
-              <p className="muted">Research the marked age technologies to advance. Cities, buildings, territory, and battles are not requirements.</p>
-              <div className="research-guidance"><b>{game.research} stored · +35 base each month</b><span>{game.activeResearch ? "New points go to the selected study." : "No active study. Points are being saved."}</span></div>
+              <p className="muted">Spend your civilization&apos;s research points on technologies that improve your buildings. Research the marked technologies to advance.</p>
+              <div className="research-guidance"><b>Player research · {game.research} stored · +35 base each month</b><span>{game.activeResearch ? "Your new points go to the selected technology." : "No active technology. Your points are being saved."}</span></div>
               <div className="tech-list">
                 {currentResearch.map((tech) => {
                   const completed = game.techs.includes(tech.id);
@@ -327,7 +327,7 @@ export default function Home() {
                   const required = readiness.requiredTechIds.includes(tech.id);
                   return <button key={tech.id} disabled={completed} onClick={() => setGame(g => startResearch(g, tech.id))} className={`tech ${completed ? "done" : ""} ${active ? "active-tech" : ""}`}>
                     <span>{completed ? "✓" : tech.icon}</span>
-                    <div><b>{tech.name}</b><small className={required ? "tech-requirement required" : "tech-requirement"}>{required ? `Required for ${readiness.nextEra} Age` : "Optional discovery"}</small><small>{tech.description}</small><i><u style={{width: `${Math.min(100, progress / tech.cost * 100)}%`}} /></i><em>{completed ? "Completed" : active ? `${progress}/${tech.cost} · Researching` : `${progress}/${tech.cost} · Select`}</em></div>
+                    <div><b>{tech.name}</b><small className={required ? "tech-requirement required" : "tech-requirement"}>{required ? `Required for ${readiness.nextEra} Age` : "Optional discovery"}</small><small>{tech.description}</small><small className="technology-improvement">Improves {BUILDINGS.find(building => building.id === tech.building)?.name}: {tech.improvement}</small><i><u style={{width: `${Math.min(100, progress / tech.cost * 100)}%`}} /></i><em>{completed ? "Completed · Building upgrade active" : active ? `${progress}/${tech.cost} · Researching` : `${progress}/${tech.cost} · Select`}</em></div>
                   </button>;
                 })}
               </div>
@@ -661,9 +661,11 @@ function CityScreen({game, city, updateGame, exitCity}: {game: GameState; city: 
           const prerequisitesMet = building.requires.every(required => cityBuildings.includes(required));
           const affordable = game.gold >= building.gold && game.wood >= building.wood && game.stone >= building.stone;
           const requirementNames = building.requires.map(required => BUILDINGS.find(item => item.id === required)?.name).join(" + ");
+          const activeResearchUpgrades = RESEARCH.filter(technology => technology.building === building.id && game.techs.includes(technology.id));
           return <article className={`build-node ${building.branch} ${built ? "built" : ""} ${!prerequisitesMet ? "locked" : ""}`} style={{gridColumn: building.x, gridRow: building.y}} key={building.id}>
             <header><span>{building.icon}</span><div><b>{building.name}</b><em>Tier {building.tier}</em></div></header>
             <small>{recruitableUnits.find(unit => unit.requires === building.id) ? `Recruits ${recruitableUnits.find(unit => unit.requires === building.id)?.name}.` : building.description}</small>
+            {activeResearchUpgrades.map(technology => <p className="research-upgrade" key={technology.id}>✓ {technology.name}: {technology.improvement}</p>)}
             {building.requires.length > 0 && <p className="requirement-label">Requires: {requirementNames}</p>}
             {built ? <strong>✓ Built</strong> : <button className="construction-cost" disabled={constructionUsed || !prerequisitesMet || !affordable} title={constructionUsed ? "This city has already completed a building this turn; the listed cost remains unchanged" : undefined} onClick={() => updateGame(g => buildInCity(g, city.id, building.id))}><span>◆ {building.gold} gold{building.wood > 0 && ` · ▰ ${building.wood} timber`}{building.stone > 0 && ` · ⬟ ${building.stone} stone`}</span>{constructionUsed && <small>Available next turn</small>}</button>}
           </article>;

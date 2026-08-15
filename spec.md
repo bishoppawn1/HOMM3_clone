@@ -82,9 +82,9 @@ Food is not a player-managed resource. Additional strategic materials may appear
 
 ### 6.1 Research projects — Prototype
 
-Each age has technologies with economic, civic, military, and logistical branches. Technologies unlock buildings, units, capabilities, or passive improvements.
+Research belongs exclusively to the player civilization. Neutral settlements and hostile forces neither accumulate research points nor complete technologies. Each age has economic, civic, military, and logistical technologies, and every technology permanently improves one named city building in every player-owned city where that building has been constructed. Improvements add gold, timber, stone, research, troop growth, or city defense. A completed technology has no effect in a city that lacks its named building and never improves neutral or enemy structures.
 
-The player selects one technology as the active research project. Monthly research points are automatically applied to that project's individual cost. If no technology is selected, new points remain in an unspent pool and never expire. Selecting a project immediately applies any stored points to it, up to its remaining cost. There is no combined age-wide progress meter; progress is displayed separately on each technology.
+The player selects one technology as the active research project. Monthly research points are automatically applied to that project's individual cost. If no technology is selected, new points remain in the player's unspent pool and never expire. Selecting a project immediately applies the player's stored points to it, up to its remaining cost. There is no combined age-wide progress meter; progress is displayed separately on each technology. The research panel identifies the affected building and exact benefit before points are committed, and the city construction tree marks every completed improvement on its building.
 
 The prototype provides three research projects for every age. Only projects belonging to the current age are shown or selectable. Two projects in each pre-Modern age are visibly marked as required age technologies; the third is an optional discovery. Surveying, Bronze Working, and Written Records form the Ancient track; advancing reveals the Classical track while completed earlier research remains recorded.
 

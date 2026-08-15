@@ -161,6 +161,21 @@ test("the age advancement control changes game state", async () => {
   assert.match(styles, /\.world\s*\{height:calc\(100vh - 162px\);min-height:0\}/);
 });
 
+test("player research shows each technology's building improvement", async () => {
+  const [page, core, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/game-core.js", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /Player research/);
+  assert.match(page, /technology-improvement/);
+  assert.match(page, /activeResearchUpgrades/);
+  assert.match(page, /research-upgrade/);
+  assert.match(core, /export function buildingResearchBonus/);
+  assert.match(styles, /\.tech small\.technology-improvement/);
+  assert.match(styles, /\.build-node>p\.research-upgrade/);
+});
+
 test("tactical combat exposes active-unit and movement feedback for both sides", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
