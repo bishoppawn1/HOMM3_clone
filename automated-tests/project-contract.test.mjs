@@ -108,6 +108,8 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.match(styles, /\.mountain-footprint \{ fill:url\(#mountain-art\); stroke:url\(#mountain-art\)/);
   assert.match(styles, /\.site\.enemy\{inset:-50% -10%;z-index:5/);
   assert.match(styles, /\.producer-guard\{/);
+  assert.match(styles, /\.map-producer>img,\.map-city>img \{ width:118%; height:118%;[^}]*align-self:end; transform:scale\(1\.65\); transform-origin:center bottom/);
+  assert.match(styles, /\.map-city>img \{ width:145%; height:145%; transform:scale\(1\.9\)/);
   assert.match(styles, /\.force-preview\{/);
   assert.doesNotMatch(styles, /\.site\.enemy:before/);
   assert.match(styles, /\.hill-ground/);

@@ -81,8 +81,8 @@ h2 { font-size:20px; }
 .route-layer .route-later circle { fill:#c4c6bf; stroke:#555b55; }
 .map-tile.path-target:before { content:""; position:absolute; inset:16%; border:2px solid #ffe58a; border-radius:50%; box-shadow:0 0 12px #f8dc77; z-index:7; }
 .map-producer,.map-city { position:absolute; z-index:5; pointer-events:none; display:grid; place-items:center; filter:drop-shadow(0 5px 3px #1a2017aa); }
-.map-producer>img,.map-city>img { width:118%; height:118%; object-fit:contain; position:relative; z-index:1; }
-.map-city>img { width:145%; height:145%; transform:translateY(-8%); }
+.map-producer>img,.map-city>img { width:118%; height:118%; object-fit:contain; position:relative; z-index:1; align-self:end; transform:scale(1.65); transform-origin:center bottom; }
+.map-city>img { width:145%; height:145%; transform:scale(1.9); }
 .map-city.aurum>img { filter:drop-shadow(0 0 8px #efd77b88); }
 .map-producer>i { position:absolute; z-index:2; right:8%; top:3%; color:#a82e27; font-size:clamp(18px,2.2vw,32px); font-style:normal; filter:drop-shadow(0 2px 1px #251715); }
 .map-producer.player:after { content:"✓"; position:absolute; z-index:2; right:8%; top:8%; width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#3e613c;color:#f1e3b5;border:1px solid #c5b36e;font:bold 11px sans-serif; }
