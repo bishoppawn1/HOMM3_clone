@@ -99,7 +99,7 @@ type CombatState = {
   battle: {type: string; settlementId?: string; producerId?: string; siteTile?: number; name: string; strength: number; returnTile?: number};
   stacks: CombatStack[]; obstacles: {tile: number; kind: string}[]; log: string[];
   actionSerial: number;
-  lastAction: {id: number; type: "move" | "melee" | "ranged"; stackId: string; from: number; to: number; target?: number; path?: number[]} | null;
+  lastAction: {id: number; type: "move" | "melee" | "ranged"; stackId: string; from: number; to: number; target?: number; path?: number[]; retaliation?: boolean; attackerHealthAtStrike?: number; defenderHealthAfterStrike?: number} | null;
 };
 type ForceEstimate = NonNullable<ReturnType<typeof scoutEnemyForce>>;
 type GameState = {
@@ -406,7 +406,8 @@ export default function Home() {
 
 function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Dispatch<React.SetStateAction<GameState>>}) {
   const combat = game.combat!;
-  const [animatingActionId, setAnimatingActionId] = useState<number | null>(null);
+  const [combatAnimation, setCombatAnimation] = useState<{actionId: number; phase: "move" | "approach" | "strike" | "retaliation"} | null>(null);
+  const [completedAnimationId, setCompletedAnimationId] = useState<number | null>(null);
   const active = combat.stacks.find(stack => stack.id === combat.activeStackId) ?? null;
   const activeUnit = active ? unitForEra(active.unitId, active.era ?? game.era) : null;
   const reachable = new Set(active?.side === "player" ? combatReachable(combat, active.id) : []);
@@ -423,26 +424,52 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
   const playerAlive = combat.stacks.filter(stack => stack.side === "player" && stackCount(stack) > 0);
   const enemyAlive = combat.stacks.filter(stack => stack.side === "enemy" && stackCount(stack) > 0);
   const obstacleGlyph: Record<string, string> = { tree: "♣", boulder: "⬟", timber: "▰", cart: "▥", barricade: "╫", rubble: "▦" };
-  const movementAction = combat.lastAction && combat.lastAction.from !== combat.lastAction.to ? combat.lastAction : null;
-  const movingStack = movementAction ? combat.stacks.find(stack => stack.id === movementAction.stackId) ?? null : null;
+  const animatedAction = combat.lastAction?.type === "move" || combat.lastAction?.type === "melee" ? combat.lastAction : null;
+  const animationPending = Boolean(animatedAction && completedAnimationId !== animatedAction.id);
+  const interactionLocked = animationPending || Boolean(combatAnimation);
+  const movementAction = animatedAction && animatedAction.from !== animatedAction.to ? animatedAction : null;
+  const movingStack = animatedAction ? combat.stacks.find(stack => stack.id === animatedAction.stackId) ?? null : null;
   const movingUnit = movingStack ? unitForEra(movingStack.unitId, movingStack.era ?? game.era) : null;
-  const showMovement = Boolean(movementAction && movingStack && movingUnit && animatingActionId === movementAction.id);
+  const targetStack = animatedAction?.target !== undefined ? combat.stacks.find(stack => stack.position === animatedAction.target) ?? null : null;
+  const showMovement = Boolean(movementAction && movingStack && movingUnit && combatAnimation?.actionId === movementAction.id && (combatAnimation.phase === "move" || combatAnimation.phase === "approach"));
+  const showStrike = Boolean(animatedAction?.type === "melee" && animatedAction.target !== undefined && movingStack && combatAnimation?.actionId === animatedAction.id && combatAnimation.phase === "strike");
+  const showRetaliation = Boolean(showStrike === false && animatedAction?.type === "melee" && animatedAction.retaliation && animatedAction.target !== undefined && movingStack && targetStack && combatAnimation?.actionId === animatedAction.id && combatAnimation.phase === "retaliation");
 
   useEffect(() => {
-    if (!movementAction) return;
-    setAnimatingActionId(movementAction.id);
-    const timer = window.setTimeout(() => setAnimatingActionId(null), 650);
-    return () => window.clearTimeout(timer);
-  }, [movementAction?.id]);
+    if (!animatedAction || completedAnimationId === animatedAction.id) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const moveDuration = reducedMotion ? 30 : 620;
+    const strikeDuration = reducedMotion ? 30 : 540;
+    const timers: number[] = [];
+    const finish = (delay: number) => timers.push(window.setTimeout(() => {
+      setCombatAnimation(null);
+      setCompletedAnimationId(animatedAction.id);
+    }, delay));
+
+    if (animatedAction.type === "move") {
+      setCombatAnimation({actionId: animatedAction.id, phase: "move"});
+      finish(moveDuration);
+    } else {
+      const hasApproach = animatedAction.from !== animatedAction.to;
+      setCombatAnimation({actionId: animatedAction.id, phase: hasApproach ? "approach" : "strike"});
+      const strikeStarts = hasApproach ? moveDuration : 0;
+      if (hasApproach) timers.push(window.setTimeout(() => setCombatAnimation({actionId: animatedAction.id, phase: "strike"}), strikeStarts));
+      if (animatedAction.retaliation) {
+        timers.push(window.setTimeout(() => setCombatAnimation({actionId: animatedAction.id, phase: "retaliation"}), strikeStarts + strikeDuration));
+        finish(strikeStarts + strikeDuration * 2);
+      } else finish(strikeStarts + strikeDuration);
+    }
+    return () => timers.forEach(timer => window.clearTimeout(timer));
+  }, [animatedAction?.id, completedAnimationId]);
 
   useEffect(() => {
-    if (combat.result || active?.side !== "enemy") return;
+    if (combat.result || active?.side !== "enemy" || interactionLocked) return;
     const timer = window.setTimeout(() => updateGame(current => performEnemyCombatTurn(current)), 800);
     return () => window.clearTimeout(timer);
-  }, [active?.id, combat.result, updateGame]);
+  }, [active?.id, combat.result, interactionLocked, updateGame]);
 
   function handleHex(tile: number, stack: CombatStack | undefined) {
-    if (combat.result || !active || active.side !== "player") return;
+    if (combat.result || interactionLocked || !active || active.side !== "player") return;
     if (stack && attackable.has(stack.id)) updateGame(current => attackCombatStack(current, stack.id));
     else if (!stack && reachable.has(tile)) updateGame(current => moveCombatStack(current, tile));
   }
@@ -468,10 +495,12 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
 
       <section className="battlefield-wrap">
         <div className="battlefield-instructions" aria-live="polite">
-          {combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> {combatMovementRemaining(combat, active.id)} movement left. Right-click a yellow hex to move, right-click a red target{activeUnit.ranged ? ` within ${activeUnit.range} hexes` : ""} to attack, or finish the turn.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
+          {combatAnimation?.phase === "retaliation" ? <><b>Counterattack!</b> The defender strikes back.</> : combatAnimation?.phase === "strike" ? <><b>Attack!</b> The active formation strikes its target.</> : combatAnimation ? <><b>Advancing.</b> The formation moves into position.</> : combat.result ? "The engagement is over." : active && activeUnit ? active.side === "player" ? <><b>Selected: {activeUnit.name}.</b> {combatMovementRemaining(combat, active.id)} movement left. Right-click a yellow hex to move, right-click a red target{activeUnit.ranged ? ` within ${activeUnit.range} hexes` : ""} to attack, or finish the turn.</> : <><b>Enemy selected: {activeUnit.name}.</b> Watch its action.</> : "Selecting the next stack…"}
         </div>
         <div className="hex-battlefield" onContextMenu={(event) => event.preventDefault()}>
-          {showMovement && movementAction && movingStack && movingUnit && <span key={movementAction.id} className="combat-moving-token" style={combatMovementStyle(movementAction.from, movementAction.to)} aria-hidden="true"><CombatUnitToken stack={movingStack} selected /></span>}
+          {showMovement && movementAction && movingStack && movingUnit && <span key={movementAction.id} className="combat-moving-token" style={combatMovementStyle(movementAction.from, movementAction.to)} aria-hidden="true"><CombatUnitToken stack={{...movingStack, totalHealth: movementAction.attackerHealthAtStrike ?? movingStack.totalHealth}} selected /></span>}
+          {showStrike && animatedAction?.target !== undefined && movingStack && <><span key={`strike-${animatedAction.id}`} className="combat-strike-token" style={combatStrikeStyle(animatedAction.to, animatedAction.target)} aria-hidden="true"><CombatUnitToken stack={{...movingStack, totalHealth: animatedAction.attackerHealthAtStrike ?? movingStack.totalHealth}} selected /></span><span className="combat-impact" style={combatPointStyle(animatedAction.target)} aria-hidden="true">✦</span></>}
+          {showRetaliation && animatedAction?.target !== undefined && targetStack && movingStack && <><span key={`retaliation-${animatedAction.id}`} className="combat-strike-token retaliation" style={combatStrikeStyle(animatedAction.target, animatedAction.to)} aria-hidden="true"><CombatUnitToken stack={{...targetStack, totalHealth: animatedAction.defenderHealthAfterStrike ?? targetStack.totalHealth}} selected /></span><span className="combat-impact retaliation" style={combatPointStyle(animatedAction.to)} aria-hidden="true">✦</span>{stackCount(movingStack) === 0 && <span className="combat-falling-target" style={combatPointStyle(animatedAction.to)} aria-hidden="true"><CombatUnitToken stack={{...movingStack, totalHealth: animatedAction.attackerHealthAtStrike ?? 1}} /></span>}</>}
           {Array.from({length: COMBAT_WIDTH * COMBAT_HEIGHT}, (_, tile) => {
             const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
             const stack = stackAt.get(tile);
@@ -492,7 +521,7 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
               title={label}
             >
               {obstacle && <span className={`combat-obstacle ${obstacle}`} aria-hidden="true">{obstacleGlyph[obstacle]}</span>}
-              {stack && unit && <CombatUnitToken stack={stack} selected={stack.id === combat.activeStackId} hidden={showMovement && stack.id === movingStack?.id} />}
+              {stack && unit && <CombatUnitToken stack={stack} selected={stack.id === combat.activeStackId} hidden={(showMovement || showStrike) && stack.id === movingStack?.id || showRetaliation && stack.id === targetStack?.id} />}
             </button>;
           })}
         </div>
@@ -509,13 +538,13 @@ function CombatScreen({game, updateGame}: {game: GameState; updateGame: React.Di
 
     <footer className="combat-controls">
       <div>{active && activeUnit && !combat.result ? <><span><img src={unitPortrait(active.unitId, active.era ?? game.era)} alt="" /></span><b>{activeUnit.name}</b><small>Movement {combatMovementRemaining(combat, active.id)}/{activeUnit.speed} · Attack {activeUnit.attack} · Defense {activeUnit.defense}{activeUnit.ranged ? ` · Range ${activeUnit.range} · ${active.shots} shots` : ""}{activeUnit.longRange ? " · Long range" : ""}{activeUnit.armored ? " · Armored" : ""}{activeUnit.flying ? " · Flying" : ""}</small></> : <><span>⚔</span><b>Battle resolved</b><small>Review the result before returning to the campaign.</small></>}</div>
-      <button disabled={!active || active.side !== "player" || active.waited || (active.movementUsed ?? 0) > 0 || Boolean(combat.result)} onClick={() => updateGame(waitCombatTurn)}>⌛ Wait</button>
-      <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(finishCombatTurn)}>✓ Finish Turn</button>
-      <button disabled={!active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(defendCombatTurn)}>⛨ Defend</button>
-      <button className="retreat-button" disabled={Boolean(combat.result)} onClick={() => updateGame(retreatCombat)}>⚑ Retreat</button>
+      <button disabled={interactionLocked || !active || active.side !== "player" || active.waited || (active.movementUsed ?? 0) > 0 || Boolean(combat.result)} onClick={() => updateGame(waitCombatTurn)}>⌛ Wait</button>
+      <button disabled={interactionLocked || !active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(finishCombatTurn)}>✓ Finish Turn</button>
+      <button disabled={interactionLocked || !active || active.side !== "player" || Boolean(combat.result)} onClick={() => updateGame(defendCombatTurn)}>⛨ Defend</button>
+      <button className="retreat-button" disabled={interactionLocked || Boolean(combat.result)} onClick={() => updateGame(retreatCombat)}>⚑ Retreat</button>
     </footer>
 
-    {combat.result && <div className="combat-result" role="dialog" aria-modal="true" aria-labelledby="combat-result-title">
+    {combat.result && !interactionLocked && <div className="combat-result" role="dialog" aria-modal="true" aria-labelledby="combat-result-title">
       <section>
         <span>{combat.result === "victory" ? "⚔" : "⚑"}</span>
         <p className="section-kicker">Battle concluded</p>
@@ -570,6 +599,24 @@ function combatMovementStyle(from: number, to: number): React.CSSProperties {
   };
   const start = point(from), end = point(to);
   return { "--from-x": `${start.x}%`, "--from-y": `${start.y}%`, "--to-x": `${end.x}%`, "--to-y": `${end.y}%` } as React.CSSProperties;
+}
+
+function combatPoint(tile: number) {
+  const row = Math.floor(tile / COMBAT_WIDTH), col = tile % COMBAT_WIDTH;
+  const horizontalSpan = COMBAT_WIDTH + .5;
+  const verticalSpan = 1 + (COMBAT_HEIGHT - 1) * .75;
+  return { x: (col + (row % 2) * .5 + .5) / horizontalSpan * 100, y: (row * .75 + .5) / verticalSpan * 100 };
+}
+
+function combatPointStyle(tile: number): React.CSSProperties {
+  const point = combatPoint(tile);
+  return { "--impact-x": `${point.x}%`, "--impact-y": `${point.y}%` } as React.CSSProperties;
+}
+
+function combatStrikeStyle(from: number, target: number): React.CSSProperties {
+  const start = combatPoint(from), end = combatPoint(target);
+  const lunge = { x: start.x + (end.x - start.x) * .62, y: start.y + (end.y - start.y) * .62 };
+  return { "--from-x": `${start.x}%`, "--from-y": `${start.y}%`, "--lunge-x": `${lunge.x}%`, "--lunge-y": `${lunge.y}%` } as React.CSSProperties;
 }
 
 function CombatStackCard({stack, active}: {stack: CombatStack; active: boolean}) {

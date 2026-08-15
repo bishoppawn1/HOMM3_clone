@@ -916,8 +916,19 @@ test("melee defenders retaliate once and wait or defend changes the current roun
   });
   const arranged = { ...deployed, combat: { ...deployed.combat, activeStackId: "player-scouts", stacks: arrangedStacks } };
   const attacked = attackCombatStack(arranged, "enemy-scouts");
+  const finalAttacker = attacked.combat.stacks.find((stack) => stack.id === "player-scouts");
   assert.equal(attacked.combat.stacks.find((stack) => stack.id === "enemy-scouts").retaliated, true);
   assert.equal(attacked.combat.log.filter((entry) => entry.includes("retaliated against")).length, 1);
+  assert.equal(attacked.combat.lastAction.type, "melee");
+  assert.equal(attacked.combat.lastAction.stackId, "player-scouts");
+  assert.equal(attacked.combat.lastAction.target, 61);
+  assert.equal(attacked.combat.lastAction.retaliation, true);
+  assert.ok(attacked.combat.lastAction.attackerHealthAtStrike > finalAttacker.totalHealth);
+
+  const fragileStacks = arranged.combat.stacks.map((stack) => stack.id === "enemy-scouts" ? { ...stack, totalHealth: 1, retaliated: false } : stack);
+  const oneSided = attackCombatStack({ ...arranged, combat: { ...arranged.combat, stacks: fragileStacks } }, "enemy-scouts");
+  assert.equal(oneSided.combat.lastAction.retaliation, false);
+  assert.equal(oneSided.combat.log.some((entry) => entry.includes("retaliated against")), false);
 
   const waited = waitCombatTurn(deployed);
   assert.equal(waited.combat.stacks.find((stack) => stack.id === "player-scouts").waited, true);

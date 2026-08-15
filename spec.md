@@ -164,7 +164,7 @@ Adventure-map encounters deploy both armies onto a 21-by-13 odd-row-offset hex b
 
 Field, producer, and settlement encounters use distinct fixed obstacle arrangements. Trees, boulders, stored timber, carts, rubble, and barricades mark impassable hexes. Living stacks also occupy and block their own hex. Reachable player movement is highlighted in gold, eligible enemy targets are highlighted in red, and every hex exposes an accessible description.
 
-Melee stacks may move up to their full speed into a free hex adjacent to a target and attack in the same action. A surviving melee defender retaliates immediately, but only once per round. A stack killed by the initial strike cannot retaliate.
+Melee stacks may move up to their full speed into a free hex adjacent to a target and attack in the same action. The battlefield presents this as a paced approach, attacker lunge and impact, followed by a separate defender counter-lunge and impact when retaliation is available; commands and subsequent enemy actions wait until the sequence finishes. A surviving melee defender retaliates immediately, but only once per round. A stack killed by the initial strike cannot retaliate. Reduced-motion preferences shorten every phase.
 
 Ranged stacks begin with a limited number of shots and may fire in any direction without straight-line targeting. A target must be within the unit's explicit hex range: Ancient Slingers reach 6 hexes, and later ranged identities improve gradually to a maximum of 9. An engaged ranged stack may make a melee attack at half damage.
 

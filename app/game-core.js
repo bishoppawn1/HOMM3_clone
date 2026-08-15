@@ -591,13 +591,17 @@ function performCombatAttack(combat, attackerId, defenderId) {
   combat = strikeCombatStack(combat, attackerId, defenderId, plan.ranged);
   const survivingDefender = combat.stacks.find((stack) => stack.id === defenderId);
   const survivingAttacker = combat.stacks.find((stack) => stack.id === attackerId);
+  const attackerHealthAtStrike = survivingAttacker.totalHealth;
+  const defenderHealthAfterStrike = survivingDefender.totalHealth;
+  let retaliation = false;
   if (!plan.ranged && combatStackCount(survivingDefender) > 0 && !survivingDefender.retaliated && combatStackCount(survivingAttacker) > 0) {
+    retaliation = true;
     combat = replaceCombatStack(combat, { ...survivingDefender, retaliated: true });
     combat = strikeCombatStack(combat, defenderId, attackerId, false, true);
   }
   const finalAttacker = combat.stacks.find((stack) => stack.id === attackerId);
   combat = replaceCombatStack(combat, { ...finalAttacker, done: true, defending: false });
-  return recordCombatAction(combat, { type: plan.ranged ? "ranged" : "melee", stackId: attackerId, from: origin, to: finalAttacker.position, target });
+  return recordCombatAction(combat, { type: plan.ranged ? "ranged" : "melee", stackId: attackerId, from: origin, to: finalAttacker.position, target, retaliation, attackerHealthAtStrike, defenderHealthAfterStrike });
 }
 
 function nearestEnemyStacks(combat, stack) {
