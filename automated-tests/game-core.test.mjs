@@ -10,6 +10,7 @@ import {
   MAX_COMMANDER_STACKS,
   MAX_MOVEMENT,
   MAX_TROOPS_PER_STACK,
+  ERA_ADVANCEMENT_TECHS,
   RESEARCH,
   UNITS,
   adventureTile,
@@ -866,14 +867,16 @@ test("retreat preserves survivors, returns the commander to Aurum, and leaves th
   assert.deepEqual(retreated.army, initial.army);
 });
 
-test("early era advancement requires research but not settlements, buildings, or victories", () => {
-  const ancientResearch = RESEARCH.filter((technology) => technology.era === "Ancient");
-  const incomplete = { ...createGame(), cities: 20, victories: 20, buildings: { aurum: ["workshop"], freehaven: [] }, techs: ancientResearch.slice(0, 2).map((technology) => technology.id) };
+test("era advancement requires only the designated technologies", () => {
+  const incomplete = { ...createGame(), cities: 20, victories: 20, buildings: { aurum: ["workshop"], freehaven: [] }, techs: ["surveying", "bronze"] };
   assert.equal(eraReadiness(incomplete).ready, false);
 
-  const ready = { ...createGame(), cities: 1, victories: 0, buildings: { aurum: [], freehaven: [] }, techs: ancientResearch.map((technology) => technology.id), activeResearch: "surveying" };
-  assert.equal(eraReadiness(ready).ready, true);
-  assert.equal(eraReadiness(ready).nextEra, "Classical");
+  const ready = { ...createGame(), cities: 0, victories: 0, buildings: { aurum: [], freehaven: [] }, techs: ["bronze", "records"], activeResearch: "surveying" };
+  const readiness = eraReadiness(ready);
+  assert.equal(readiness.ready, true);
+  assert.equal(readiness.nextEra, "Classical");
+  assert.deepEqual(readiness.requiredTechIds, ["bronze", "records"]);
+  assert.deepEqual(readiness.checks.map((check) => check.technologyId), ["bronze", "records"]);
   const advanced = advanceEra(ready);
   assert.equal(advanced.era, "Classical");
   assert.equal(advanced.activeResearch, null);
@@ -881,10 +884,24 @@ test("early era advancement requires research but not settlements, buildings, or
   assert.equal(advanceEra(advanced), advanced);
 });
 
+test("every pre-Modern age has two valid key technologies and one optional project", () => {
+  for (const [era, requiredTechIds] of Object.entries(ERA_ADVANCEMENT_TECHS)) {
+    const eraResearch = RESEARCH.filter((technology) => technology.era === era);
+    if (era === "Modern") {
+      assert.deepEqual(requiredTechIds, []);
+      continue;
+    }
+    assert.equal(requiredTechIds.length, 2);
+    assert.equal(new Set(requiredTechIds).size, 2);
+    assert.ok(requiredTechIds.every((technologyId) => eraResearch.some((technology) => technology.id === technologyId)));
+    assert.equal(eraResearch.filter((technology) => !requiredTechIds.includes(technology.id)).length, 1);
+  }
+});
+
 test("research selection is limited to the current age", () => {
   const ancient = createGame();
   assert.equal(startResearch(ancient, "irrigation"), ancient);
-  const ready = { ...ancient, techs: RESEARCH.filter((technology) => technology.era === "Ancient").map((technology) => technology.id) };
+  const ready = { ...ancient, techs: [...ERA_ADVANCEMENT_TECHS.Ancient] };
   const classical = advanceEra(ready);
   assert.equal(startResearch(classical, "surveying"), classical);
   assert.notEqual(startResearch(classical, "irrigation"), classical);

@@ -317,21 +317,22 @@ export default function Home() {
             <>
               <p className="section-kicker">Current age</p>
               <h2>{game.era} Age</h2>
-              <p className="muted">Complete the age&apos;s knowledge and prove your civilization is ready to advance.</p>
+              <p className="muted">Research the marked age technologies to advance. Cities, buildings, territory, and battles are not requirements.</p>
               <div className="research-guidance"><b>{game.research} stored · +35 base each month</b><span>{game.activeResearch ? "New points go to the selected study." : "No active study. Points are being saved."}</span></div>
               <div className="tech-list">
                 {currentResearch.map((tech) => {
                   const completed = game.techs.includes(tech.id);
                   const active = game.activeResearch === tech.id;
                   const progress = game.techProgress[tech.id] ?? 0;
+                  const required = readiness.requiredTechIds.includes(tech.id);
                   return <button key={tech.id} disabled={completed} onClick={() => setGame(g => startResearch(g, tech.id))} className={`tech ${completed ? "done" : ""} ${active ? "active-tech" : ""}`}>
                     <span>{completed ? "✓" : tech.icon}</span>
-                    <div><b>{tech.name}</b><small>{tech.description}</small><i><u style={{width: `${Math.min(100, progress / tech.cost * 100)}%`}} /></i><em>{completed ? "Completed" : active ? `${progress}/${tech.cost} · Researching` : `${progress}/${tech.cost} · Select`}</em></div>
+                    <div><b>{tech.name}</b><small className={required ? "tech-requirement required" : "tech-requirement"}>{required ? `Required for ${readiness.nextEra} Age` : "Optional discovery"}</small><small>{tech.description}</small><i><u style={{width: `${Math.min(100, progress / tech.cost * 100)}%`}} /></i><em>{completed ? "Completed" : active ? `${progress}/${tech.cost} · Researching` : `${progress}/${tech.cost} · Select`}</em></div>
                   </button>;
                 })}
               </div>
-              <p className="section-kicker readiness-title">Era readiness</p>
-              <ul className="checklist">{readiness.checks.map((item) => <li key={item.label} className={item.met ? "met" : ""}><span>{item.met ? "✓" : "○"}</span>{item.label}</li>)}</ul>
+              <p className="section-kicker readiness-title">Technologies required to advance</p>
+              <ul className="checklist">{readiness.checks.map((item: {technologyId: string; label: string; met: boolean}) => <li key={item.technologyId} className={item.met ? "met" : ""}><span>{item.met ? "✓" : "○"}</span>{item.label}</li>)}</ul>
               <button className="advance-button" disabled={!readiness.ready} onClick={() => setGame(advanceEra)}>{readiness.nextEra ? `Advance to the ${readiness.nextEra} Age` : "Modern Age reached"}</button>
             </>
           ) : (

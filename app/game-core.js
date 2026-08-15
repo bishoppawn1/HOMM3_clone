@@ -113,6 +113,15 @@ export const RESEARCH = [
   { id: "radio", era: "Modern", name: "Radio Communication", icon: "⌁", cost: 1060, bonus: 530, description: "Coordinates distant forces and cities rapidly." },
 ];
 
+export const ERA_ADVANCEMENT_TECHS = Object.freeze({
+  Ancient: Object.freeze(["bronze", "records"]),
+  Classical: Object.freeze(["iron-working", "civic-law"]),
+  Medieval: Object.freeze(["guilds", "steel-working"]),
+  Gunpowder: Object.freeze(["printing", "black-powder"]),
+  Industrial: Object.freeze(["steam-power", "mechanization"]),
+  Modern: Object.freeze([]),
+});
+
 export const BUILDINGS = [
   { id: "town-hall", name: "Town Hall", icon: "♜", tier: 1, branch: "civic", x: 3, y: 1, gold: 0, wood: 0, stone: 0, requires: [], description: "+75 gold each month." },
   { id: "militia-yard", name: "Militia Yard", icon: "⚑", tier: 1, branch: "military", x: 6, y: 1, gold: 0, wood: 0, stone: 0, requires: [], description: "Recruits Spearmen." },
@@ -1084,9 +1093,12 @@ export function cityDefense(game, cityId) {
 export function eraReadiness(game) {
   const eraIndex = ERAS.indexOf(game.era);
   const nextEra = eraIndex >= 0 && eraIndex < ERAS.length - 1 ? ERAS[eraIndex + 1] : null;
-  const eraResearch = RESEARCH.filter((technology) => technology.era === game.era);
-  const checks = eraResearch.map((technology) => ({ label: `Research ${technology.name}`, met: game.techs.includes(technology.id) }));
-  return { checks, nextEra, ready: Boolean(nextEra) && checks.length > 0 && checks.every((check) => check.met) };
+  const requiredTechIds = ERA_ADVANCEMENT_TECHS[game.era] ?? [];
+  const checks = requiredTechIds.map((technologyId) => {
+    const technology = RESEARCH.find((candidate) => candidate.id === technologyId && candidate.era === game.era);
+    return { technologyId, label: `Research ${technology?.name ?? technologyId}`, met: game.techs.includes(technologyId) };
+  });
+  return { checks, requiredTechIds, nextEra, ready: Boolean(nextEra) && checks.length > 0 && checks.every((check) => check.met) };
 }
 
 export function advanceEra(game) {

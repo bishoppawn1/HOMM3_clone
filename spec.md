@@ -86,7 +86,7 @@ Each age has technologies with economic, civic, military, and logistical branche
 
 The player selects one technology as the active research project. Monthly research points are automatically applied to that project's individual cost. If no technology is selected, new points remain in an unspent pool and never expire. Selecting a project immediately applies any stored points to it, up to its remaining cost. There is no combined age-wide progress meter; progress is displayed separately on each technology.
 
-The prototype provides three research projects for every age. Only projects belonging to the current age are shown or selectable. Surveying, Bronze Working, and Written Records form the Ancient track; advancing reveals the Classical track while completed earlier research remains recorded.
+The prototype provides three research projects for every age. Only projects belonging to the current age are shown or selectable. Two projects in each pre-Modern age are visibly marked as required age technologies; the third is an optional discovery. Surveying, Bronze Working, and Written Records form the Ancient track; advancing reveals the Classical track while completed earlier research remains recorded.
 
 ### 6.2 Knowledge Huts — Prototype
 
@@ -104,19 +104,17 @@ A hut cannot award an advancement waiver, readiness token, city, building, milit
 
 ### 7.1 General rule
 
-In the prototype, advancement requires completion of the current age's research track. The Advance button changes the civilization to the next age, reveals that age's research projects, changes age-based map visuals, and records the transition in the campaign log.
+In the prototype, advancement requires only completion of the current age's two designated age technologies. The Advance button changes the civilization to the next age, reveals that age's research projects, changes age-based map visuals, and records the transition in the campaign log. The remaining project is optional and is not an advancement gate.
 
 Early transitions deliberately do not require another settlement, a particular building, or a military victory. A player must not be locked out of later ages because an opponent captured a limited settlement first.
 
 ### 7.2 Requirement categories
 
-Possible later requirement categories include economic capacity, population, military experience, and cultural or scientific development. Any future non-research requirement must scale to the map and remain attainable independently by every player.
-
-Requirements must never identify a particular AI player, scripted opponent, mandatory named target, or fixed number of scarce settlements. Rapid territorial expansion by one player must not prevent another player from progressing through research.
+Age advancement has no economic-capacity, population, city, building, military-victory, territorial, named-target, or opponent-specific requirements. Rapid territorial expansion by one player cannot prevent another player from progressing through research.
 
 ### 7.3 Prototype readiness
 
-Ancient, Classical, and later prototype transitions currently require only completion of the three research projects shown for the current age. Each project appears as its own checklist item; there is no city, building, settlement-count, or combat gate.
+Each pre-Modern transition requires these technologies and no other actions: Ancient requires Bronze Working and Written Records; Classical requires Iron Working and Civic Law; Medieval requires Craft Guilds and Steel Working; Gunpowder requires Printing Press and Black Powder; Industrial requires Steam Power and Mechanization. Each required project appears as its own checklist item; the third project remains optional.
 
 ### 7.4 Planned ages
 
