@@ -60,6 +60,11 @@ test("every troop line has an age-specific portrait and combat uses right-click 
   assert.doesNotMatch(page, /disabled=\{Boolean\(combat\.result\) \|\| Boolean\(obstacle\)/);
   assert.match(styles, /\.combat-unit>img/);
   assert.match(styles, /\.unit-health>small/);
+  assert.match(styles, /\.combat-unit\{width:92%;height:92%;[^}]*background:none/);
+  assert.match(styles, /\.combat-unit>\.unit-health\{left:8%;right:8%;bottom:7%/);
+  assert.match(styles, /\.combat-moving-token\{[^}]*width:4\.66%;height:10%/);
+  assert.match(styles, /\.combat-unit\.selected:after\{content:none\}/);
+  assert.doesNotMatch(page, /className="active-marker"/);
 });
 
 test("corrected industrial and modern vehicle portraits remain square RGBA sprites", async () => {
@@ -158,11 +163,11 @@ test("tactical combat exposes active-unit and movement feedback for both sides",
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
   assert.match(page, /Enemy selected:/);
-  assert.match(page, /active-marker/);
+  assert.match(page, /active-stack/);
   assert.match(page, /combat-moving-token/);
   assert.match(page, /Finish Turn/);
   assert.match(styles, /@keyframes combat-stack-move/);
-  assert.match(styles, /selected-stack-pulse/);
+  assert.match(styles, /\.combat-hex\.active-stack\{/);
 });
 
 test("a prompted encounter offers deployment or holding position", async () => {

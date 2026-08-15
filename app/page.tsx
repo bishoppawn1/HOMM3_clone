@@ -521,7 +521,7 @@ function CombatUnitToken({stack, selected = false, hidden = false}: {stack: Comb
     <img src={unitPortrait(stack.unitId, stack.era ?? "Ancient")} alt="" />
     <b>{stackCount(stack)}</b>
     <span className="unit-health"><i><u style={{width: `${stackHealthPercent(stack)}%`}} /></i><small>{stack.totalHealth}/{maximum}</small></span>
-    {stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}{selected && <strong className="active-marker">ACTING</strong>}
+    {stack.defending && <em>⛨</em>}{stack.waited && !stack.done && <em>⌛</em>}
   </span>;
 }
 
