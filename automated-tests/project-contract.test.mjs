@@ -216,4 +216,12 @@ test("the tactical battlefield renders an interlocking point-top honeycomb", asy
   assert.match(page, /Range \$\{unit\.range\}/);
   assert.match(styles, /clip-path:polygon\(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%\)/);
   assert.match(styles, /aspect-ratio:1\.86\/1/);
+  assert.match(styles, /\.combat-hex\{[^}]*clip-path:none;background:transparent;pointer-events:none/);
+  assert.match(styles, /\.combat-hex:before\{[^}]*clip-path:polygon\(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%\)[^}]*pointer-events:auto/);
+  assert.match(styles, /\.hex-battlefield\{[^}]*perspective\(920px\) rotateX\(42deg\)/);
+  assert.match(styles, /\.combat-unit\{[^}]*rotateX\(-42deg\)[^}]*transform-origin:50% 82%/);
+  assert.match(styles, /\.combat-unit>img\{[^}]*top:-112%;width:128%;height:188%/);
+  assert.match(styles, /\.combat-unit>img\{[^}]*transform:scale\(1\.45\);transform-origin:50% 78%/);
+  assert.match(styles, /\.combat-obstacle\{transform:rotateX\(-42deg\)/);
+  assert.doesNotMatch(page, /battlefield-camera|camera-rotate|camera-zoom/);
 });
