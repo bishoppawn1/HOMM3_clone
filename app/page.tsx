@@ -123,6 +123,8 @@ export default function Home() {
   const [plannedPath, setPlannedPath] = useState<number[]>([]);
   const [plannedTarget, setPlannedTarget] = useState<number | null>(null);
   const [scoutedForce, setScoutedForce] = useState<ForceEstimate | null>(null);
+  const [traveling, setTraveling] = useState(false);
+  const [travelHero, setTravelHero] = useState<number | null>(null);
   const mapViewport = useRef<HTMLDivElement>(null);
   const readiness = useMemo(() => eraReadiness(game), [game]);
   const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
@@ -156,7 +158,8 @@ export default function Home() {
     return () => window.removeEventListener("keydown", panMap);
   }, []);
 
-  function handleRoute(index: number) {
+  async function handleRoute(index: number) {
+    if (traveling) return;
     const command = routeCommand(game, plannedTarget, index);
     if (command.type === "invalid") {
       setPlannedPath([]);
@@ -173,15 +176,29 @@ export default function Home() {
     }
     const city = settlementAt(game, command.target) as Settlement | null;
     const moved = moveAlongPath(game, command.path);
+    const lastTravelIndex = command.path.indexOf(moved.hero);
+    const traveledPath = lastTravelIndex >= 0 ? command.path.slice(0, lastTravelIndex + 1) : [];
     setGame(moved);
     setPlannedPath([]);
     setPlannedTarget(null);
     setScoutedForce(null);
+    if (traveledPath.length) {
+      const stepDuration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 35 : 125;
+      setTravelHero(game.hero);
+      setTraveling(true);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+      for (const tile of traveledPath) {
+        setTravelHero(tile);
+        await new Promise<void>((resolve) => window.setTimeout(resolve, stepDuration));
+      }
+      setTraveling(false);
+      setTravelHero(null);
+    }
     if (city?.owner === "player" && moved.hero === city.tile) { setPanel("cities"); setSelectedCity(city.id); }
   }
 
   return (
-    <main className="game-shell">
+    <main className={`game-shell ${traveling ? "map-traveling" : ""}`} aria-busy={traveling}>
       <header className="topbar">
         <div className="brand-block">
           <div className="seal">TA</div>
@@ -273,7 +290,7 @@ export default function Home() {
                 <button
                   key={index}
                   data-tile={index}
-                  className={`map-tile ${tile} ${onPath ? "path-step" : ""} ${plannedTarget === index ? "path-target" : ""} ${game.hero === index ? "hero-tile" : ""}`}
+                  className={`map-tile ${tile} ${onPath ? "path-step" : ""} ${plannedTarget === index ? "path-target" : ""} ${!traveling && game.hero === index ? "hero-tile" : ""}`}
                   onClick={(event) => event.preventDefault()}
                   onContextMenu={(event) => { event.preventDefault(); handleRoute(index); }}
                   onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handleRoute(index); } }}
@@ -284,10 +301,11 @@ export default function Home() {
                   {pickup === "knowledge" && <span className="site knowledge" aria-hidden="true"><b>⌂</b></span>}
                   {pickup && pickup !== "knowledge" && <span className={`site pickup ${pickup}`} aria-hidden="true"><img src={pickup === "strategic" ? `assets/map-v2/pickup-strategic-${visualEra}.webp` : `assets/map-v2/pickup-${pickup}.webp`} alt="" /></span>}
                   {(site === "raiders" || site === "freehaven-bandits") && <span className="site enemy" aria-hidden="true"><img src="assets/map-v2/enemy-bandit-unit.png" alt="" /></span>}
-                  {game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
+                  {!traveling && game.hero === index && <span className="hero" aria-hidden="true"><b>♞</b></span>}
                 </button>
               );
             })}
+            {traveling && travelHero !== null && <span className="traveling-hero" style={adventureHeroPosition(travelHero)} aria-hidden="true"><b>♞</b></span>}
             {plannedPath.length > 0 && <svg className="route-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
               {routeSegment(game.hero, plannedPath.slice(0, game.moves), "route-now")}
               {routeSegment(plannedPath[Math.min(game.moves, plannedPath.length) - 1] ?? game.hero, plannedPath.slice(game.moves), "route-later")}
@@ -348,10 +366,10 @@ export default function Home() {
 
       {!game.combat && <footer className="turnbar">
         <div><span className="section-kicker">Month&apos;s report</span><p>{game.notice}</p></div>
-        <button onClick={() => { setGame(advanceMonth); setPlannedPath([]); setPlannedTarget(null); setScoutedForce(null); }}><span>End {game.monthName}</span><small>Begin the next month →</small></button>
+        <button disabled={traveling} onClick={() => { setGame(advanceMonth); setPlannedPath([]); setPlannedTarget(null); setScoutedForce(null); }}><span>End {game.monthName}</span><small>{traveling ? "Commander is traveling…" : "Begin the next month →"}</small></button>
       </footer>}
 
-      {game.researchChoice && (
+      {!traveling && game.researchChoice && (
         <div className="modal-backdrop" role="presentation">
           <section className="choice-modal" role="dialog" aria-modal="true" aria-labelledby="discovery-title">
             <span className="discovery-mark">⌂</span><p className="section-kicker">Knowledge hut discovered</p>
@@ -363,7 +381,7 @@ export default function Home() {
           </section>
         </div>
       )}
-      {game.pendingBattle && !game.combat && (
+      {!traveling && game.pendingBattle && !game.combat && (
         <div className="modal-backdrop" role="presentation">
           <section className="choice-modal battle-modal" role="dialog" aria-modal="true" aria-labelledby="battle-title">
             <span className="discovery-mark">⚔</span><p className="section-kicker">Battle required</p>
@@ -574,6 +592,15 @@ function routeSegment(start: number, path: number[], className: string) {
   if (!path.length) return null;
   const points = [start, ...path].map((tile) => `${tile % MAP_WIDTH + .5},${Math.floor(tile / MAP_WIDTH) + .5}`).join(" ");
   return <g className={className}><polyline points={points} />{path.map((tile) => <circle key={`${className}-${tile}`} cx={tile % MAP_WIDTH + .5} cy={Math.floor(tile / MAP_WIDTH) + .5} r=".09" />)}</g>;
+}
+
+function adventureHeroPosition(tile: number): React.CSSProperties {
+  return {
+    left: `${tile % MAP_WIDTH / MAP_WIDTH * 100}%`,
+    top: `${Math.floor(tile / MAP_WIDTH) / MAP_HEIGHT * 100}%`,
+    width: `${100 / MAP_WIDTH}%`,
+    height: `${100 / MAP_HEIGHT}%`,
+  };
 }
 
 function producerBounds(footprint: number[]) {

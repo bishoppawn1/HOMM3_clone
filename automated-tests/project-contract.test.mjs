@@ -193,6 +193,20 @@ test("tactical combat exposes active-unit and movement feedback for both sides",
   assert.match(styles, /\.combat-hex\.active-stack\{/);
 });
 
+test("adventure-map travel visibly advances the commander along the route", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /const traveledPath = lastTravelIndex >= 0 \? command\.path\.slice/);
+  assert.match(page, /setTravelHero\(tile\)/);
+  assert.match(page, /className="traveling-hero"/);
+  assert.match(page, /prefers-reduced-motion: reduce/);
+  assert.match(styles, /\.traveling-hero\{[^}]*transition:left 125ms linear,top 125ms linear/);
+  assert.match(styles, /@keyframes adventure-hero-march/);
+  assert.match(styles, /@media \(prefers-reduced-motion:reduce\)/);
+});
+
 test("a prompted encounter offers deployment or holding position", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
