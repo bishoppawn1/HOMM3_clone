@@ -113,12 +113,25 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.match(styles, /\.site\.enemy\{inset:-50% -10%;z-index:5/);
   assert.match(styles, /\.producer-guard\{/);
   assert.match(styles, /\.map-producer>img,\.map-city>img \{ width:118%; height:118%;[^}]*align-self:end; transform:scale\(1\.65\); transform-origin:center bottom/);
-  assert.match(styles, /\.map-city>img \{ width:145%; height:145%; transform:scale\(1\.9\)/);
+  assert.match(styles, /\.map-city>img \{ width:145%; height:145%; z-index:2; transform:scale\(1\.72\)/);
   assert.match(styles, /\.force-preview\{/);
   assert.doesNotMatch(styles, /\.site\.enemy:before/);
   assert.match(styles, /\.hill-ground/);
   assert.doesNotMatch(styles, /\.terrain-glyph/);
   assert.doesNotMatch(styles, /object-fit:fill/);
+});
+
+test("cities occupy distinct landmark clearings above roads and expose a visible gate", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(page, /className="city-location-gate"/);
+  assert.match(styles, /\.map-city:before\{[^}]*z-index:0[^}]*width:205%;height:212%[^}]*border-radius:48%/);
+  assert.match(styles, /\.map-city>img \{ width:145%; height:145%; z-index:2; transform:scale\(1\.72\)/);
+  assert.match(styles, /\.city-location-gate\{[^}]*z-index:3/);
+  assert.match(styles, /\.road-layer \{ z-index:3/);
+  assert.match(styles, /\.map-producer,\.map-city\{z-index:7/);
 });
 
 test("the adventure map supports WASD camera panning and keeps roads above forest artwork", async () => {

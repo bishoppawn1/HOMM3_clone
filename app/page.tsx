@@ -313,6 +313,7 @@ export default function Home() {
             </svg>}
             {Object.values(game.settlements).map((city) => <div key={city.id} className={`map-city ${city.owner} ${city.id}`} style={producerBounds(city.footprint ?? [city.tile])} aria-hidden="true">
               <img src={`assets/map-v2/city-${visualEra}.webp`} alt="" />
+              <span className="city-location-gate" />
             </div>)}
             {Object.values(game.producers).map((producer) => <div key={producer.id} className={`map-producer ${producer.kind} ${producer.owner} visual-${visualEra}`} style={producerBounds(producer.footprint)} aria-hidden="true">
               <img src={`assets/map-v2/${producer.kind}-${visualEra}.webp`} alt="" />

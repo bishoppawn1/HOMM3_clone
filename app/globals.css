@@ -85,7 +85,12 @@ h2 { font-size:20px; }
 .map-tile.path-target:before { content:""; position:absolute; inset:16%; border:2px solid #ffe58a; border-radius:50%; box-shadow:0 0 12px #f8dc77; z-index:7; }
 .map-producer,.map-city { position:absolute; z-index:5; pointer-events:none; display:grid; place-items:center; filter:drop-shadow(0 5px 3px #1a2017aa); }
 .map-producer>img,.map-city>img { width:118%; height:118%; object-fit:contain; position:relative; z-index:1; align-self:end; transform:scale(1.65); transform-origin:center bottom; }
-.map-city>img { width:145%; height:145%; transform:scale(1.9); }
+.map-city{isolation:isolate;overflow:visible}
+.map-city:before{content:"";position:absolute;z-index:0;left:50%;bottom:-8%;width:205%;height:212%;transform:translateX(-50%);border-radius:48% 52% 45% 55%/51% 46% 54% 49%;background:radial-gradient(ellipse at 50% 58%,#838a63 0 58%,#687451 74%,#4f5e43 84%,#4f5e43dd 88%,transparent 94%);filter:drop-shadow(0 7px 6px #162015cc) drop-shadow(0 0 3px #d8b96255)}
+.map-city.neutral:before{background:radial-gradient(ellipse at 50% 58%,#7f8060 0 58%,#696b50 74%,#525941 84%,#525941dd 88%,transparent 94%);filter:drop-shadow(0 7px 6px #162015cc) drop-shadow(0 0 3px #9b574c55)}
+.map-city>img { width:145%; height:145%; z-index:2; transform:scale(1.72); }
+.city-location-gate{position:absolute;z-index:3;left:50%;bottom:-8%;width:16px;height:16px;transform:translateX(-50%) rotate(45deg);border:2px solid #ecd27e;background:#4a3425;box-shadow:0 0 0 2px #30271dcc,0 0 8px #f4d57499}
+.city-location-gate:after{content:"";position:absolute;inset:4px;border-radius:50%;background:#e6c866}
 .map-city.aurum>img { filter:drop-shadow(0 0 8px #efd77b88); }
 .map-producer>i { position:absolute; z-index:2; right:8%; top:3%; color:#a82e27; font-size:clamp(18px,2.2vw,32px); font-style:normal; filter:drop-shadow(0 2px 1px #251715); }
 .map-producer.player:after { content:"✓"; position:absolute; z-index:2; right:8%; top:8%; width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#3e613c;color:#f1e3b5;border:1px solid #c5b36e;font:bold 11px sans-serif; }
@@ -183,7 +188,8 @@ h2 { font-size:20px; }
 .bandit-control-zone>span{position:absolute;left:50%;top:0;transform:translate(-50%,-55%);padding:2px 5px;border:1px solid #9e5545;background:#3d201bdd;color:#f0cf9a;text-transform:uppercase;white-space:nowrap;font:700 6px var(--font-display);letter-spacing:.05em}
 .map-producer,.map-city{z-index:7;filter:drop-shadow(0 7px 5px #11170fdd) drop-shadow(0 0 5px #e8ca7466)}
 .map-producer>img,.map-city>img{filter:saturate(1.18) contrast(1.1) brightness(1.1)}
-.map-city.aurum>img{filter:saturate(1.2) contrast(1.12) brightness(1.12) drop-shadow(0 0 10px #ffe58aaa)}
+.map-city>img{filter:saturate(1.24) contrast(1.3) brightness(1.02) drop-shadow(0 5px 3px #11170fcc)}
+.map-city.aurum>img{filter:saturate(1.28) contrast(1.34) brightness(1.04) drop-shadow(0 0 9px #ffe58a99)}
 .site.pickup img{filter:saturate(1.2) contrast(1.1) brightness(1.1) drop-shadow(0 4px 3px #10140fee) drop-shadow(0 0 4px #f2d27b66)}
 .site.enemy img,.producer-guard img{filter:saturate(1.15) contrast(1.14) brightness(1.08) drop-shadow(0 5px 3px #100e0ddd) drop-shadow(0 0 4px #d56b4d66)}
 
