@@ -18,6 +18,8 @@ import {
   armyStackCount,
   assessBattleThreat,
   attackCombatStack,
+  banditGuardAt,
+  banditGuardZone,
   buildInCity,
   canMoveTo,
   chooseResearch,
@@ -138,6 +140,7 @@ test("continuous winding blockers create mountain passes and routes detour aroun
   assert.equal(new Set(westernCenters).size >= 6, true);
   const freehavenRoute = findPath(game, game.settlements.freehaven.tile);
   assert.equal(freehavenRoute.some((tile) => game.sites[tile]), false);
+  assert.equal(freehavenRoute.every((tile) => banditGuardAt(game, tile) === null), true);
   const unguardedRoute = findPath({ ...game, sites: {} }, game.settlements.freehaven.tile);
   assert.equal(unguardedRoute.length < freehavenRoute.length, true);
   assert.equal(unguardedRoute.includes(game.settlements.freehaven.blockedBy), true);
@@ -277,7 +280,7 @@ test("each bandit encounter occupies one unique map tile", () => {
   assert.equal(Object.values(game.pickupGuards).every((guard) => banditTiles.includes(guard)), true);
 });
 
-test("most resource pickups sit in compact rings around visible raider camps", () => {
+test("guarded resource pickups sit exactly one square from their bandit", () => {
   const game = createGame();
   const resourceTiles = Object.entries(game.pickups).filter(([, pickup]) => pickup !== "knowledge");
   const guardedTiles = Object.entries(game.pickupGuards);
@@ -291,21 +294,32 @@ test("most resource pickups sit in compact rings around visible raider camps", (
     assert.equal(game.sites[guard] === "raiders" || game.sites[guard] === "freehaven-bandits", true);
     const horizontalDistance = Math.abs(tile % MAP_WIDTH - guard % MAP_WIDTH);
     const verticalDistance = Math.abs(Math.floor(tile / MAP_WIDTH) - Math.floor(guard / MAP_WIDTH));
-    assert.equal(horizontalDistance + verticalDistance >= 2, true);
-    assert.equal(Math.max(horizontalDistance, verticalDistance) <= 2, true);
+    assert.equal(Math.max(horizontalDistance, verticalDistance), 1);
     perCamp.set(guard, (perCamp.get(guard) ?? 0) + 1);
   }
   assert.deepEqual([...perCamp.values()].sort(), [4, 4, 4, 4]);
 });
 
-test("targeting supplies near a living camp routes to the bandits first", () => {
+test("entering or targeting any tile in a bandit's three-by-three zone prompts combat", () => {
   const game = createGame();
   const camp = siteTile(game, "raiders");
+  const guardedZone = banditGuardZone(camp);
+  assert.equal(guardedZone.length, 9);
+  for (const tile of guardedZone.filter(isTerrainPassable)) assert.equal(scoutEnemyForce(game, tile).target, tile);
   const cache = Number(Object.keys(game.pickupGuards).find((tile) => game.pickupGuards[tile] === camp));
   const route = findPath(game, cache);
-  assert.equal(route.at(-1), camp);
-  assert.equal(route.includes(cache), false);
+  assert.equal(route.at(-1), cache);
   assert.match(routeCommand(game, null, cache).notice, /must defeat the bandits/i);
+
+  const emptyGuardedTile = guardedZone.find((tile) => tile !== camp && game.pickups[tile] === undefined && isTerrainPassable(tile));
+  const preview = routeCommand(game, null, emptyGuardedTile);
+  assert.equal(preview.scouting.name, "March Raiders");
+  assert.match(preview.notice, /3-by-3 area/);
+
+  const approached = moveAlongPath(game, route);
+  assert.equal(banditGuardAt(game, approached.hero), camp);
+  assert.equal(approached.pendingBattle.siteTile, camp);
+  assert.equal(approached.pickups[cache], game.pickups[cache]);
 });
 
 test("supplies near camps cannot be collected until their bandits are defeated", () => {
@@ -314,7 +328,7 @@ test("supplies near camps cannot be collected until their bandits are defeated",
   const cache = Number(Object.keys(initial.pickupGuards).find((tile) => initial.pickupGuards[tile] === camp));
   const refused = collectAt({ ...initial, hero: cache });
   assert.equal(refused.pickups[cache], initial.pickups[cache]);
-  assert.match(refused.notice, /must defeat the bandits/i);
+  assert.equal(refused.pendingBattle.siteTile, camp);
 
   const confronted = collectAt({ ...initial, hero: camp });
   const cleared = resolveBattle(markCombatVictory(confronted));
@@ -408,8 +422,9 @@ test("a commander may hold position instead of entering a prompted battle", () =
   const raiders = siteTile(game, "raiders");
   const route = findPath(game, raiders);
   const approached = moveAlongPath(game, route);
-  const returnTile = route.at(-2) ?? game.hero;
-  assert.equal(approached.hero, raiders);
+  const encounterIndex = route.findIndex((tile) => banditGuardAt(game, tile) === raiders);
+  const returnTile = encounterIndex > 0 ? route[encounterIndex - 1] : game.hero;
+  assert.equal(approached.hero, route[encounterIndex]);
   assert.equal(approached.pendingBattle.type, "field");
   assert.equal(approached.pendingBattle.returnTile, returnTile);
 

@@ -160,5 +160,15 @@ h2 { font-size:20px; }
 .battle-decline-button{border:1px solid #716443;background:#b9a77d;color:#3e382c;padding:12px 30px;font:600 10px var(--font-display);text-transform:uppercase;cursor:pointer}
 .battle-decline-button:hover{background:#d0bd8e}
 
+/* Keep the atmospheric vignette behind the objects the player can interact with. */
+.map-grid:after{z-index:3}
+.bandit-control-zone{position:absolute;z-index:4;pointer-events:none;border:2px dashed #8d2f27;background:radial-gradient(circle,#a9473424 0 42%,#67271d14 65%,transparent 72%);box-shadow:inset 0 0 18px #5d1f1955,0 0 10px #e16c4944}
+.bandit-control-zone>span{position:absolute;left:50%;top:0;transform:translate(-50%,-55%);padding:2px 5px;border:1px solid #9e5545;background:#3d201bdd;color:#f0cf9a;text-transform:uppercase;white-space:nowrap;font:700 6px var(--font-display);letter-spacing:.05em}
+.map-producer,.map-city{z-index:7;filter:drop-shadow(0 7px 5px #11170fdd) drop-shadow(0 0 5px #e8ca7466)}
+.map-producer>img,.map-city>img{filter:saturate(1.18) contrast(1.1) brightness(1.1)}
+.map-city.aurum>img{filter:saturate(1.2) contrast(1.12) brightness(1.12) drop-shadow(0 0 10px #ffe58aaa)}
+.site.pickup img{filter:saturate(1.2) contrast(1.1) brightness(1.1) drop-shadow(0 4px 3px #10140fee) drop-shadow(0 0 4px #f2d27b66)}
+.site.enemy img,.producer-guard img{filter:saturate(1.15) contrast(1.14) brightness(1.08) drop-shadow(0 5px 3px #100e0ddd) drop-shadow(0 0 4px #d56b4d66)}
+
 .combat-controls{grid-template-columns:1fr repeat(4,115px)}
 @media(max-width:820px){.combat-controls{grid-template-columns:1fr repeat(4,72px)}}
