@@ -81,11 +81,11 @@ const terrainArtwork = [
   { kind: "forest", col: 63, row: 18, size: 5, turn: -5 },
   { kind: "forest", col: 54, row: 37, size: 8, turn: 6 },
   { kind: "forest", col: 60, row: 39, size: 7, turn: -7 },
-  ...[-2, 3, 8, 16, 21, 26, 35, 40].flatMap((row, index) => [
-    { kind: "mountain", col: 26 + [1, 2, 3, 1, -1, 0, 2, 1][index], row, size: 5, turn: [-8, -3, 5, 8, 3, -5, -8, 4][index] },
-    { kind: "mountain", col: 50 + [2, 0, -1, -2, 0, 2, 1, -1][index], row, size: 5, turn: [6, 2, -6, -9, -3, 5, 8, -4][index] },
-  ]),
 ];
+
+const mountainFootprint = BOARD.flatMap((terrain, tile) => terrain === "mountain"
+  ? [`M ${tile % MAP_WIDTH} ${Math.floor(tile / MAP_WIDTH)} h 1 v 1 h -1 Z`]
+  : []).join(" ");
 
 type ResearchChoice = { id: string; name: string; icon: string; cost: number; bonus: number; description: string };
 type Settlement = { id: string; name: string; tile: number; footprint?: number[]; territory?: number[][]; blockedBy?: number | null; owner: string; population: number; defenders: number; recruits: Record<string, number>; garrison?: number };
@@ -237,6 +237,15 @@ export default function Home() {
             <div className="terrain-patches" aria-hidden="true">
               {terrainArtwork.map((patch, index) => <img key={`${patch.kind}-${index}`} className={`terrain-patch ${patch.kind}`} style={terrainPatchBounds(patch)} src={`assets/map-v2/terrain-${patch.kind}.webp`} alt="" />)}
             </div>
+            <svg className="mountain-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <pattern id="mountain-art" width="5" height="4.49" patternUnits="userSpaceOnUse">
+                  <rect width="5" height="4.49" className="mountain-ground" />
+                  <image href="assets/map-v2/terrain-mountain.webp" width="5" height="4.49" preserveAspectRatio="xMidYMid slice" />
+                </pattern>
+              </defs>
+              <path className="mountain-footprint" d={mountainFootprint} />
+            </svg>
             <svg className="road-layer" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
               {adventureRoads.map((path) => <path key={`shadow-${path}`} className="road-shadow" d={path} />)}
               {adventureRoads.map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}

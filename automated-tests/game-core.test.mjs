@@ -655,13 +655,18 @@ test("tier-two troops stay locked until their required building exists", () => {
   assert.equal(recruited.army.swordsmen, 1);
 });
 
-test("resource producers occupy multiple tiles and route visitors to their entrance", () => {
+test("resource producers occupy multiple tiles and route visitors beside their artwork", () => {
   const game = createGame();
   const sawmill = game.producers.pinewater;
   const quarry = game.producers.redcliff;
   assert.equal(sawmill.footprint.length, 4);
   assert.equal(quarry.footprint.length, 6);
   assert.equal(producerAt(game, sawmill.footprint[0]).id, sawmill.id);
+  assert.equal(producerAt(game, sawmill.entrance).id, sawmill.id);
+  for (const producer of Object.values(game.producers)) {
+    assert.equal(producer.footprint.includes(producer.entrance), false);
+    assert.equal(isTerrainPassable(producer.entrance), true);
+  }
   const route = findPath(game, quarry.footprint[0]);
   assert.equal(route.at(-1), quarry.entrance);
 });
@@ -672,6 +677,8 @@ test("guarded producers require victory before generating timber, stone, and mag
   assert.equal(sawmillBattle.pendingBattle.type, "producer");
   const sawmillCaptured = resolveBattle(markCombatVictory(sawmillBattle));
   assert.equal(sawmillCaptured.producers.pinewater.owner, "player");
+  assert.equal(sawmillCaptured.hero, initial.producers.pinewater.entrance);
+  assert.equal(sawmillCaptured.producers.pinewater.footprint.includes(sawmillCaptured.hero), false);
   const quarryBattle = collectAt({ ...sawmillCaptured, hero: initial.producers.redcliff.entrance });
   const bothCaptured = resolveBattle(markCombatVictory(quarryBattle));
   const dustBattle = collectAt({ ...bothCaptured, hero: initial.producers.violetworks.entrance });

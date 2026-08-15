@@ -96,12 +96,16 @@ test("the map uses proportioned terrain, winding roads, enemies, pickups, and su
   assert.doesNotMatch(page, /Bandit camp spoils/);
   assert.match(page, /const adventureRoads/);
   assert.match(page, /const terrainArtwork/);
+  assert.match(page, /const mountainFootprint = BOARD\.flatMap/);
+  assert.match(page, /className="mountain-layer"/);
+  assert.match(page, /className="mountain-footprint"/);
   assert.match(page, /className="hill-ground"/);
   assert.match(page, /className="road-rut"/);
   assert.doesNotMatch(page, /terrain-glyph/);
   assert.match(page, /terrainPatchBounds/);
   assert.doesNotMatch(page, /className="territory-layer"/);
   assert.match(styles, /\.terrain-patch\{[^}]*height:auto/);
+  assert.match(styles, /\.mountain-footprint \{ fill:url\(#mountain-art\); stroke:url\(#mountain-art\)/);
   assert.match(styles, /\.site\.enemy\{inset:-50% -10%;z-index:5/);
   assert.match(styles, /\.producer-guard\{/);
   assert.match(styles, /\.force-preview\{/);

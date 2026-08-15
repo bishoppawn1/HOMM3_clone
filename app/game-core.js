@@ -723,9 +723,9 @@ export function createGame() {
       freehaven: { id: "freehaven", name: "Freehaven", tile: freehaven, footprint: [adventureTile(60, 12), adventureTile(61, 12), adventureTile(62, 12), adventureTile(60, 13), freehaven, adventureTile(62, 13)], territory: [[56, 8], [61, 7], [65, 9], [66, 13], [64, 17], [59, 19], [55, 16], [54, 12]], blockedBy: freehavenBandits, owner: "neutral", population: 680, defenders: 0, recruits: { spearmen: 8, slingers: 5, scouts: 2, swordsmen: 0, horsemen: 0, artillery: 0, armor: 0, aircraft: 0 }, garrison: 0 },
     },
     producers: {
-      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(7, 7), adventureTile(8, 7), adventureTile(7, 8), pinewater], entrance: pinewater, owner: "neutral", garrison: 24 },
-      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(40, 36), adventureTile(41, 36), adventureTile(42, 36), adventureTile(40, 37), redcliff, adventureTile(42, 37)], entrance: redcliff, owner: "neutral", garrison: 32 },
-      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(60, 28), adventureTile(61, 28), adventureTile(62, 28), adventureTile(60, 29), violetworks, adventureTile(62, 29)], entrance: violetworks, owner: "neutral", garrison: 38 },
+      pinewater: { id: "pinewater", name: "Pinewater Sawmill", kind: "sawmill", resource: "wood", amount: 10, footprint: [adventureTile(7, 7), adventureTile(8, 7), adventureTile(7, 8), pinewater], entrance: adventureTile(8, 9), owner: "neutral", garrison: 24 },
+      redcliff: { id: "redcliff", name: "Redcliff Quarry", kind: "quarry", resource: "stone", amount: 8, footprint: [adventureTile(40, 36), adventureTile(41, 36), adventureTile(42, 36), adventureTile(40, 37), redcliff, adventureTile(42, 37)], entrance: adventureTile(41, 38), owner: "neutral", garrison: 32 },
+      violetworks: { id: "violetworks", name: "Violet Mineral Works", kind: "dustworks", resource: "magicDust", amount: 2, footprint: [adventureTile(60, 28), adventureTile(61, 28), adventureTile(62, 28), adventureTile(60, 29), violetworks, adventureTile(62, 29)], entrance: adventureTile(61, 30), owner: "neutral", garrison: 38 },
     },
     sites: { [raiderPass]: "raiders", [freehavenBandits]: "freehaven-bandits", [quarryRaiders]: "raiders", [southernRaiders]: "raiders" },
     pickups: {
@@ -748,7 +748,7 @@ export function settlementAt(game, tile) {
 }
 
 export function producerAt(game, tile) {
-  return Object.values(game.producers ?? {}).find((producer) => producer.footprint.includes(tile)) ?? null;
+  return Object.values(game.producers ?? {}).find((producer) => producer.entrance === tile || producer.footprint.includes(tile)) ?? null;
 }
 
 function resourceName(resource) {
