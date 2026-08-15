@@ -46,6 +46,8 @@ import {
   unitsForEra,
   armyStackCount,
   assessBattleThreat,
+  banditGuardAt,
+  banditGuardZone,
   maxRecruitableIntoArmy,
 } from "./game-core.js";
 
@@ -93,7 +95,7 @@ type Producer = { id: string; name: string; kind: string; resource: string; amou
 type CombatStack = { id: string; side: "player" | "enemy"; unitId: string; era?: string; position: number; totalHealth: number; maxHealth?: number; shots: number; waited: boolean; defending: boolean; retaliated: boolean; done: boolean; movementUsed: number };
 type CombatState = {
   width: number; height: number; round: number; activeStackId: string | null; result: "victory" | "defeat" | "retreat" | null;
-  battle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number; returnTile?: number};
+  battle: {type: string; settlementId?: string; producerId?: string; siteTile?: number; name: string; strength: number; returnTile?: number};
   stacks: CombatStack[]; obstacles: {tile: number; kind: string}[]; log: string[];
   actionSerial: number;
   lastAction: {id: number; type: "move" | "melee" | "ranged"; stackId: string; from: number; to: number; target?: number; path?: number[]} | null;
@@ -105,7 +107,7 @@ type GameState = {
   army: Record<string, number>; techs: string[]; buildings: Record<string, string[]>; activeResearch: string | null;
   constructionThisTurn: Record<string, boolean>;
   techProgress: Record<string, number>; researchChoice: ResearchChoice[] | null;
-  pendingBattle: {type: string; settlementId?: string; producerId?: string; name: string; strength: number; returnTile?: number} | null;
+  pendingBattle: {type: string; settlementId?: string; producerId?: string; siteTile?: number; name: string; strength: number; returnTile?: number} | null;
   combat: CombatState | null;
   settlements: Record<string, Settlement>; sites: Record<number, string>;
   producers: Record<string, Producer>;
@@ -251,16 +253,18 @@ export default function Home() {
               {adventureRoads.map((path) => <path key={`road-${path}`} className="road-ribbon" d={path} />)}
               {adventureRoads.map((path) => <path key={`rut-${path}`} className="road-rut" d={path} />)}
             </svg>
+            {Object.entries(game.sites).filter(([, site]) => site === "raiders" || site === "freehaven-bandits").map(([tile]) => <div key={`guard-zone-${tile}`} className="bandit-control-zone" style={producerBounds(banditGuardZone(Number(tile)))} aria-hidden="true"><span>Bandit-controlled</span></div>)}
             {BOARD.map((tile, index) => {
               const pickup = game.pickups[index];
               const guardedPickup = pickup && game.pickupGuards[index] !== undefined && game.sites[game.pickupGuards[index]] !== undefined;
               const site = game.sites[index];
               const city = settlementAt(game, index) as Settlement | null;
               const producer = producerAt(game, index) as Producer | null;
+              const controllingBandit = banditGuardAt(game, index);
               const onPath = plannedPath.includes(index);
               const passable = isTerrainPassable(index);
               const terrainName = tile.replace("dense-forest", "dense forest");
-              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", guarded by nearby bandits" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
+              const description = `${terrainName}${passable ? "" : ", impassable"}${pickup ? `, ${pickup}${guardedPickup ? ", guarded by nearby bandits" : ""}` : ""}${city ? `, ${city.name}${city.owner === "neutral" ? ", guarded" : ""}` : ""}${site ? ", raiders" : controllingBandit !== null ? ", bandit-controlled ground" : ""}${producer ? `, ${producer.name}, ${producer.owner === "neutral" ? "guarded" : "controlled"}` : ""}`;
               return (
                 <button
                   key={index}

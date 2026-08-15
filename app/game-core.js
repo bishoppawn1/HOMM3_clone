@@ -694,22 +694,22 @@ export function createGame() {
   const quarryRaiders = adventureTile(41, 27);
   const southernRaiders = adventureTile(61, 34);
   const pickupGuards = {
-    [adventureTile(27, 12)]: raiderPass,
-    [adventureTile(31, 12)]: raiderPass,
-    [adventureTile(27, 15)]: raiderPass,
-    [adventureTile(29, 15)]: raiderPass,
-    [adventureTile(55, 13)]: freehavenBandits,
-    [adventureTile(58, 12)]: freehavenBandits,
-    [adventureTile(59, 15)]: freehavenBandits,
-    [adventureTile(55, 16)]: freehavenBandits,
-    [adventureTile(39, 26)]: quarryRaiders,
-    [adventureTile(42, 25)]: quarryRaiders,
-    [adventureTile(43, 28)]: quarryRaiders,
-    [adventureTile(39, 29)]: quarryRaiders,
-    [adventureTile(59, 33)]: southernRaiders,
-    [adventureTile(62, 32)]: southernRaiders,
-    [adventureTile(63, 35)]: southernRaiders,
-    [adventureTile(62, 36)]: southernRaiders,
+    [adventureTile(28, 13)]: raiderPass,
+    [adventureTile(30, 13)]: raiderPass,
+    [adventureTile(29, 14)]: raiderPass,
+    [adventureTile(28, 12)]: raiderPass,
+    [adventureTile(57, 13)]: freehavenBandits,
+    [adventureTile(58, 14)]: freehavenBandits,
+    [adventureTile(57, 15)]: freehavenBandits,
+    [adventureTile(56, 14)]: freehavenBandits,
+    [adventureTile(41, 26)]: quarryRaiders,
+    [adventureTile(42, 27)]: quarryRaiders,
+    [adventureTile(41, 28)]: quarryRaiders,
+    [adventureTile(40, 27)]: quarryRaiders,
+    [adventureTile(61, 33)]: southernRaiders,
+    [adventureTile(62, 34)]: southernRaiders,
+    [adventureTile(61, 35)]: southernRaiders,
+    [adventureTile(60, 34)]: southernRaiders,
   };
   return {
     year: 1, month: 3, monthName: MONTHS[2], era: "Ancient", hero, moves: MAX_MOVEMENT,
@@ -732,10 +732,10 @@ export function createGame() {
       [adventureTile(12, 10)]: "dust",
       [adventureTile(36, 14)]: "knowledge",
       [adventureTile(18, 21)]: "timber",
-      [adventureTile(27, 12)]: "gold", [adventureTile(31, 12)]: "stone", [adventureTile(27, 15)]: "timber", [adventureTile(29, 15)]: "dust",
-      [adventureTile(55, 13)]: "gold", [adventureTile(58, 12)]: "timber", [adventureTile(59, 15)]: "stone", [adventureTile(55, 16)]: "dust",
-      [adventureTile(39, 26)]: "stone", [adventureTile(42, 25)]: "gold", [adventureTile(43, 28)]: "timber", [adventureTile(39, 29)]: "dust",
-      [adventureTile(59, 33)]: "gold", [adventureTile(62, 32)]: "stone", [adventureTile(63, 35)]: "timber", [adventureTile(62, 36)]: "dust",
+      [adventureTile(28, 13)]: "gold", [adventureTile(30, 13)]: "stone", [adventureTile(29, 14)]: "timber", [adventureTile(28, 12)]: "dust",
+      [adventureTile(57, 13)]: "gold", [adventureTile(58, 14)]: "timber", [adventureTile(57, 15)]: "stone", [adventureTile(56, 14)]: "dust",
+      [adventureTile(41, 26)]: "stone", [adventureTile(42, 27)]: "gold", [adventureTile(41, 28)]: "timber", [adventureTile(40, 27)]: "dust",
+      [adventureTile(61, 33)]: "gold", [adventureTile(62, 34)]: "stone", [adventureTile(61, 35)]: "timber", [adventureTile(60, 34)]: "dust",
     },
     pickupGuards,
     notice: "Aurum yielded 75 gold. Choose a technology or save your research points.",
@@ -755,9 +755,29 @@ function resourceName(resource) {
   return resource === "wood" ? "timber" : resource === "magicDust" ? "magic dust" : resource;
 }
 
+export function banditGuardZone(centerTile) {
+  const centerRow = Math.floor(centerTile / MAP_WIDTH), centerCol = centerTile % MAP_WIDTH;
+  const tiles = [];
+  for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
+    for (let colOffset = -1; colOffset <= 1; colOffset += 1) {
+      const row = centerRow + rowOffset, col = centerCol + colOffset;
+      if (row >= 0 && row < MAP_HEIGHT && col >= 0 && col < MAP_WIDTH) tiles.push(adventureTile(col, row));
+    }
+  }
+  return tiles;
+}
+
+export function banditGuardAt(game, tile) {
+  const row = Math.floor(tile / MAP_WIDTH), col = tile % MAP_WIDTH;
+  for (const [centerText, site] of Object.entries(game.sites ?? {})) {
+    if (site !== "raiders" && site !== "freehaven-bandits") continue;
+    const center = Number(centerText), centerRow = Math.floor(center / MAP_WIDTH), centerCol = center % MAP_WIDTH;
+    if (Math.abs(row - centerRow) <= 1 && Math.abs(col - centerCol) <= 1) return center;
+  }
+  return null;
+}
+
 function destinationFor(game, tile) {
-  const guardingCamp = game.pickupGuards?.[tile];
-  if (guardingCamp !== undefined && game.sites[guardingCamp]) return guardingCamp;
   const producer = producerAt(game, tile);
   const settlement = settlementAt(game, tile);
   return producer?.entrance ?? settlement?.tile ?? tile;
@@ -769,14 +789,15 @@ function enemyEncounterAt(game, tile) {
     battle: { type: "producer", producerId: producer.id, name: producer.name, strength: producer.garrison },
     notice: `Bandits are holding ${producer.name}.`,
   };
-  const site = game.sites[tile];
+  const siteTile = banditGuardAt(game, tile);
+  const site = siteTile === null ? null : game.sites[siteTile];
   if (site === "freehaven-bandits") return {
-    battle: { type: "city-blocker", settlementId: "freehaven", name: "Freehaven Bandits", strength: 26 },
+    battle: { type: "city-blocker", settlementId: "freehaven", siteTile, name: "Freehaven Bandits", strength: 26 },
     notice: "The bandit company outside Freehaven prepares to fight.",
   };
   if (site === "raiders") return {
-    battle: { type: "field", name: "March Raiders", strength: 18 },
-    notice: "A raider company bars the road.",
+    battle: { type: "field", siteTile, name: "March Raiders", strength: 18 },
+    notice: "A raider company controls the surrounding ground and prepares to fight.",
   };
   return null;
 }
@@ -806,8 +827,9 @@ function isPassable(game, tile, routeTarget = null) {
   if (!isTerrainPassable(tile)) return false;
   const producer = producerAt(game, tile);
   const settlement = settlementAt(game, tile);
-  const hostileSite = game.sites[tile] === "raiders" || game.sites[tile] === "freehaven-bandits";
-  return (!producer || producer.entrance === tile) && (!settlement || settlement.tile === tile) && (!hostileSite || tile === routeTarget);
+  const guardingBandit = banditGuardAt(game, tile);
+  const targetBandit = routeTarget === null ? null : banditGuardAt(game, routeTarget);
+  return (!producer || producer.entrance === tile) && (!settlement || settlement.tile === tile) && (guardingBandit === null || guardingBandit === targetBandit);
 }
 
 export function canMoveTo(game, index) {
@@ -855,11 +877,13 @@ export function routeCommand(game, plannedTarget, requestedTile) {
   const path = findPath(game, requestedTile);
   if (!path) return { type: "invalid", target: null, path: [] };
   const target = path[path.length - 1];
-  const guardingCamp = game.pickupGuards?.[requestedTile];
+  const guardingCamp = banditGuardAt(game, target) ?? banditGuardAt(game, requestedTile);
   const type = plannedTarget === target ? "travel" : "preview";
   const scouting = type === "preview" ? scoutEnemyForce(game, requestedTile) : null;
-  const guardedNotice = guardingCamp !== undefined && game.sites[guardingCamp]
-    ? "You must defeat the bandits before claiming these supplies."
+  const guardedNotice = guardingCamp !== null && game.sites[guardingCamp]
+    ? game.pickupGuards?.[requestedTile] === guardingCamp
+      ? "You must defeat the bandits before claiming these supplies."
+      : "Bandits control this 3-by-3 area."
     : null;
   const notice = [guardedNotice, scoutingNotice(scouting)].filter(Boolean).join(" ") || null;
   return { type, target, path, reachablePath: path.slice(0, game.moves), futurePath: path.slice(game.moves), notice, scouting };
@@ -891,6 +915,8 @@ export function declineBattle(game) {
 }
 
 export function collectAt(game) {
+  const encounter = enemyEncounterAt(game, game.hero);
+  if (encounter) return { ...game, pendingBattle: encounter.battle, notice: encounter.notice };
   const settlement = settlementAt(game, game.hero);
   if (settlement) {
     if (settlement.owner === "player") return { ...game, notice: `Marcellus entered ${settlement.name}. Open Cities to recruit its available troops.` };
@@ -899,8 +925,6 @@ export function collectAt(game) {
   }
   const producer = producerAt(game, game.hero);
   if (producer?.owner === "player" && game.hero === producer.entrance) return { ...game, notice: `${producer.name} is under your control and produces ${producer.amount} ${resourceName(producer.resource)} each month.` };
-  const encounter = enemyEncounterAt(game, game.hero);
-  if (encounter) return { ...game, pendingBattle: encounter.battle, notice: encounter.notice };
   const pickup = game.pickups[game.hero];
   if (!pickup) return { ...game, notice: "The army crossed the Western Marches." };
   const guardingCamp = game.pickupGuards?.[game.hero];
@@ -957,7 +981,7 @@ export function resolveBattle(game) {
     return { ...game, army, producers, victories: game.victories + 1, pendingBattle: null, combat: null, notice: `${producer.name} is secured. It will produce ${producer.amount} ${resourceName(producer.resource)} each month.`, log: [...game.log, `Defeated the guards and took control of ${producer.name}.`] };
   }
   const sites = { ...game.sites };
-  delete sites[game.hero];
+  delete sites[battle.siteTile ?? game.hero];
   return { ...game, army, sites, gold: game.gold + 120, victories: game.victories + 1, pendingBattle: null, combat: null, notice: "The raiders were defeated; 120 gold was recovered.", log: [...game.log, "Defeated a company of raiders."] };
 }
 
