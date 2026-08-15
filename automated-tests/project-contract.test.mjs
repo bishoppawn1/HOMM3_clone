@@ -55,13 +55,15 @@ test("every troop line has an age-specific portrait and combat uses right-click 
   assert.match(page, /assets\/units\/\$\{eraVisualFamily\(era\)\}-\$\{unitId\}\.png/);
   assert.match(page, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); handleHex\(tile, stack\); \}\}/);
   assert.match(page, /className="unit-health"/);
+  assert.match(page, /className="unit-health"><b>\{stackCount\(stack\)\}<\/b>/);
+  assert.match(page, /\{stack\.totalHealth\}\/\{maximum\} HP/);
   assert.match(page, /Right-click a yellow hex to move/);
   assert.match(page, /activeUnit\?\.flying && canMove/);
   assert.doesNotMatch(page, /disabled=\{Boolean\(combat\.result\) \|\| Boolean\(obstacle\)/);
   assert.match(styles, /\.combat-unit>img/);
   assert.match(styles, /\.unit-health>small/);
   assert.match(styles, /\.combat-unit\{width:92%;height:92%;[^}]*background:none/);
-  assert.match(styles, /\.combat-unit>\.unit-health\{left:8%;right:8%;bottom:7%/);
+  assert.match(styles, /\.combat-unit>\.unit-health\{left:-13%;right:-13%;bottom:-11%/);
   assert.match(styles, /\.combat-moving-token\{[^}]*width:4\.66%;height:10%/);
   assert.match(styles, /\.combat-unit\.selected:after\{content:none\}/);
   assert.doesNotMatch(page, /className="active-marker"/);
@@ -237,7 +239,9 @@ test("the tactical battlefield renders an interlocking point-top honeycomb", asy
   assert.match(styles, /\.hex-battlefield\{[^}]*perspective\(920px\) rotateX\(42deg\)/);
   assert.match(styles, /\.combat-unit\{[^}]*rotateX\(-42deg\)[^}]*transform-origin:50% 82%/);
   assert.match(styles, /\.combat-unit>img\{[^}]*top:-112%;width:128%;height:188%/);
-  assert.match(styles, /\.combat-unit>img\{[^}]*transform:scale\(1\.45\);transform-origin:50% 78%/);
+  assert.match(styles, /\.combat-unit>img\{[^}]*transform:scale\(1\.85\);transform-origin:50% 78%/);
+  assert.match(styles, /\.combat-unit>\.unit-health\{[^}]*grid-template-columns:15px 1fr[^}]*box-shadow:[^}]*translateZ\(14px\)/);
+  assert.match(styles, /\.unit-health>b\{grid-row:1\/3/);
   assert.match(styles, /\.combat-obstacle\{transform:rotateX\(-42deg\)/);
   assert.doesNotMatch(page, /battlefield-camera|camera-rotate|camera-zoom/);
 });
