@@ -16,6 +16,7 @@ import {
   advanceMonth,
   advanceEra,
   armyStackCount,
+  assessBattleThreat,
   attackCombatStack,
   buildInCity,
   canMoveTo,
@@ -189,6 +190,16 @@ test("scouting reports approximate numerical ranges for hostile forces", () => {
   assert.deepEqual(preview.scouting.units.map((unit) => unit.name), ["Spearmen", "Slingers", "Scouts"]);
   assert.match(preview.notice, /Scouts estimate/);
   assert.equal(routeCommand(game, preview.target, raiders).scouting, null);
+});
+
+test("battle threat ratings compare the commander's army with the encountered force", () => {
+  const game = createGame();
+  const battle = { type: "field", name: "Rating Trial", strength: 18 };
+  assert.equal(assessBattleThreat(game, battle).level, "green");
+  assert.equal(assessBattleThreat({ ...game, army: { spearmen: 10, slingers: 5, scouts: 2 } }, battle).level, "yellow");
+  assert.equal(assessBattleThreat({ ...game, army: { spearmen: 6, slingers: 3, scouts: 1 } }, battle).level, "orange");
+  assert.equal(assessBattleThreat({ ...game, army: { spearmen: 2, slingers: 0, scouts: 0 } }, battle).level, "red");
+  assert.equal(assessBattleThreat({ ...game, pendingBattle: null }), null);
 });
 
 test("neutral resource producers are guarded by scoutable bandits", () => {

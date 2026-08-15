@@ -166,10 +166,16 @@ test("tactical combat exposes active-unit and movement feedback for both sides",
 });
 
 test("a prompted encounter offers deployment or holding position", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
   assert.match(page, /Deploy on the battlefield/);
   assert.match(page, /Hold position/);
   assert.match(page, /declineBattle/);
+  assert.match(page, /assessBattleThreat/);
+  assert.match(page, /threat-rating/);
+  for (const rating of ["green", "yellow", "orange", "red"]) assert.match(styles, new RegExp(`\\.threat-rating\\.${rating}`));
 });
 
 test("the tactical battlefield renders an interlocking point-top honeycomb", async () => {

@@ -154,6 +154,8 @@ h2 { font-size:20px; }
 
 .battle-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
 .battle-actions button{min-width:190px}
+.threat-rating{--threat-color:#68745f;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 12px;max-width:440px;margin:16px auto 5px;padding:12px 15px;border:2px solid var(--threat-color);background:#efe4c5;text-align:left;box-shadow:inset 5px 0 0 var(--threat-color)}
+.threat-rating>span{grid-row:1/3;display:flex;align-items:center;gap:7px;color:var(--threat-color);font:700 9px var(--font-display);text-transform:uppercase}.threat-rating>span i{width:12px;height:12px;border-radius:50%;background:var(--threat-color);box-shadow:0 0 0 3px color-mix(in srgb,var(--threat-color) 22%,transparent)}.threat-rating>b{font:700 13px var(--font-display);color:#302e25}.threat-rating>small{font-size:9px;color:#625b4a;line-height:1.45}.threat-rating.green{--threat-color:#3f6b43}.threat-rating.yellow{--threat-color:#967519}.threat-rating.orange{--threat-color:#a65324}.threat-rating.red{--threat-color:#8a2f29}
 .battle-decline-button{border:1px solid #716443;background:#b9a77d;color:#3e382c;padding:12px 30px;font:600 10px var(--font-display);text-transform:uppercase;cursor:pointer}
 .battle-decline-button:hover{background:#d0bd8e}
 

@@ -410,6 +410,36 @@ function enemyArmyFor(battle) {
   ];
 }
 
+const THREAT_BANDS = [
+  { minimumRatio: 1.6, level: "green", label: "Favorable", description: "Your army should win this fight comfortably." },
+  { minimumRatio: .9, level: "yellow", label: "Even", description: "The two armies are fairly matched." },
+  { minimumRatio: .55, level: "orange", label: "Improbable", description: "The enemy has the advantage, so victory is improbable." },
+  { minimumRatio: 0, level: "red", label: "Overwhelming", description: "The enemy is overwhelmingly stronger, so victory is nearly impossible." },
+];
+
+function strategicUnitPower(unit) {
+  const averageDamage = (unit.damage[0] + unit.damage[1]) / 2;
+  const rangedFactor = unit.ranged ? 1.08 : 1;
+  const mobilityFactor = 1 + (unit.speed + unit.initiative) / 100;
+  return (unit.health + unit.attack * 2 + unit.defense * 2 + averageDamage * 5) * rangedFactor * mobilityFactor;
+}
+
+function strategicArmyPower(army, era) {
+  return Object.entries(army).reduce((total, [unitId, count]) => {
+    const unit = unitById(unitId, era);
+    return total + Math.max(0, count) * strategicUnitPower(unit);
+  }, 0);
+}
+
+export function assessBattleThreat(game, battle = game.pendingBattle) {
+  if (!battle) return null;
+  const playerPower = strategicArmyPower(game.army, game.era);
+  const enemyPower = strategicArmyPower(Object.fromEntries(enemyArmyFor(battle)), game.era);
+  const ratio = enemyPower > 0 ? playerPower / enemyPower : Infinity;
+  const band = THREAT_BANDS.find((candidate) => ratio >= candidate.minimumRatio) ?? THREAT_BANDS.at(-1);
+  return { ...band, ratio, playerPower, enemyPower };
+}
+
 const SCOUTING_RANGES = [
   [1, 5], [6, 11], [12, 25], [26, 50], [51, 100],
   [101, 250], [251, 500], [501, 1000], [1001, Infinity],

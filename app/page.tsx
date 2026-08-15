@@ -45,6 +45,7 @@ import {
   unitForEra,
   unitsForEra,
   armyStackCount,
+  assessBattleThreat,
   maxRecruitableIntoArmy,
 } from "./game-core.js";
 
@@ -123,6 +124,7 @@ export default function Home() {
   const readiness = useMemo(() => eraReadiness(game), [game]);
   const currentResearch = useMemo(() => RESEARCH.filter(technology => technology.era === game.era), [game.era]);
   const currentUnits = useMemo(() => unitsForEra(game.era).filter((unit): unit is NonNullable<typeof unit> => unit !== null), [game.era]);
+  const battleThreat = useMemo(() => assessBattleThreat(game), [game]);
   const visualEra = eraVisualFamily(game.era);
   const activeCity = panel === "cities" && selectedCity ? game.settlements[selectedCity] : null;
 
@@ -348,7 +350,12 @@ export default function Home() {
           <section className="choice-modal battle-modal" role="dialog" aria-modal="true" aria-labelledby="battle-title">
             <span className="discovery-mark">⚔</span><p className="section-kicker">Battle required</p>
             <h2 id="battle-title">{game.pendingBattle.name} blocks your advance</h2>
-            <p>Enemy strength: {game.pendingBattle.strength}. Deploy to fight, or hold outside the enemy position and choose another action.</p>
+            {battleThreat && <div className={`threat-rating ${battleThreat.level}`} role="status" aria-label={`${battleThreat.level} threat: ${battleThreat.label}`}>
+              <span><i aria-hidden="true" />{battleThreat.level} threat</span>
+              <b>{battleThreat.label}</b>
+              <small>{battleThreat.description}</small>
+            </div>}
+            <p>Enemy strength: {game.pendingBattle.strength}. This estimate compares your current army with the force ahead. Deploy to fight, or hold outside the enemy position and choose another action.</p>
             <div className="battle-actions">
               <button className="battle-button" onClick={() => setGame(g => startCombat(g))}>Deploy on the battlefield</button>
               <button className="battle-decline-button" onClick={() => setGame(g => declineBattle(g))}>Hold position</button>
